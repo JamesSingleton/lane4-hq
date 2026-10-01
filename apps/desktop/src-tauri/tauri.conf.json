@@ -23,7 +23,7 @@
     "security": {
       "csp": {
         "default-src": "'self'",
-        "script-src": "'self'",
+        "script-src": "'self' 'wasm-unsafe-eval'",
         "style-src": "'self' 'unsafe-inline'",
         "img-src": "'self' data: asset: http://asset.localhost",
         "font-src": "'self' data:",
@@ -33,6 +33,11 @@
         "frame-ancestors": "'none'"
       },
       "freezePrototype": true
+    }
+  },
+  "plugins": {
+    "deep-link": {
+      "desktop": { "schemes": ["lane4"] }
     }
   },
   "bundle": {

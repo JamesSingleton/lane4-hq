@@ -22,8 +22,11 @@
   "dependencies": {
     "@fontsource-variable/geist": "^5.3.0",
     "@fontsource-variable/geist-mono": "^5.3.0",
+    "@lane4hq/meet-engine": "workspace:*",
+    "@lane4hq/reports": "workspace:*",
     "@lane4hq/swim-core": "workspace:*",
     "@lane4hq/swim-formats": "workspace:*",
+    "@lane4hq/timing-cts": "workspace:*",
     "@lane4hq/ui": "workspace:*",
     "@tauri-apps/api": "^2.12.0",
     "@tauri-apps/plugin-dialog": "^2.8.0",

@@ -1,6 +1,6 @@
 # Desktop timing companion v1: spec
 
-> **Status:** documented, not yet built. Nothing in this spec should be implemented until it's explicitly picked up (see AGENTS.md, Product posture).
+> **Status:** built (2026-09-29). Codec and simulator are in `packages/timing-cts`, serial transport in `apps/desktop/src-tauri/src/timing/`, and the meet workflow in `packages/meet-engine`. Departures from this spec are recorded in [ADR 0003, Implementation notes](../adr/0003-cts-timing-interface-split.md#implementation-notes) and [ADR 0004](../adr/0004-offline-meet-store-and-publishing.md): local storage is atomic JSON rather than SQLite, and team packs are HY3-only for now. Hardware validation ([#74](https://github.com/JamesSingleton/lane4-hq/issues/74)) is still open.
 
 Related:
 

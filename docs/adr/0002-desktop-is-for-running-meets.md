@@ -61,6 +61,8 @@ Admin itself has two problems that matter whether or not desktop exists:
 
    These are versioned route handlers (`apps/admin/app/api/v1/...`) with better-auth bearer tokens, built on the team operations module. They are built when meet running starts, not before.
 
+   *Superseded by [ADR 0005](0005-lane4-api-service.md): these endpoints live in a separate API service, `apps/api`.*
+
 ## Consequences
 
 - Admin gets cleaner on its own. Server Actions shrink to adapters, so `meets/actions.ts` and `roster/actions.ts` stop being where the logic lives.

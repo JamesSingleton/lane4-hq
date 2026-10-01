@@ -26,6 +26,12 @@
         "MICROSOFT_*",
         "OPENAI_API_KEY",
         "USA_SWIMMING_*",
+        "API_ALLOWED_ORIGINS",
+        "UPSTASH_REDIS_REST_URL",
+        "UPSTASH_REDIS_REST_TOKEN",
+        "DESKTOP_RELEASES_REPO",
+        "GITHUB_RELEASE_TOKEN",
+        "LANE4_*",
         "SKIP_ENV_VALIDATION"
       ]
     },
@@ -50,6 +56,12 @@
         "MICROSOFT_*",
         "OPENAI_API_KEY",
         "USA_SWIMMING_*",
+        "API_ALLOWED_ORIGINS",
+        "UPSTASH_REDIS_REST_URL",
+        "UPSTASH_REDIS_REST_TOKEN",
+        "DESKTOP_RELEASES_REPO",
+        "GITHUB_RELEASE_TOKEN",
+        "LANE4_*",
         "SKIP_ENV_VALIDATION"
       ]
     },

@@ -136,21 +136,30 @@ export const auditLog = pgTable(
   "audit_log",
   {
     id: text("id").primaryKey(),
-    organizationId: text("organization_id")
-      .notNull()
-      .references(() => organization.id, { onDelete: "cascade" }),
+    /** Null for account events (sign-ins, sessions) that belong to no team. */
+    organizationId: text("organization_id").references(() => organization.id, {
+      onDelete: "cascade",
+    }),
     actorUserId: text("actor_user_id").notNull(),
     action: text("action").notNull(),
     resourceType: text("resource_type").notNull(),
     resourceId: text("resource_id").notNull(),
     metadata: jsonb("metadata"),
     ipAddress: text("ip_address"),
+    /** `admin`, `api`, or `auth`. */
+    source: text("source").notNull().default("admin"),
+    userAgent: text("user_agent"),
+    requestId: text("request_id"),
     createdAt: timestamp("created_at").notNull().defaultNow(),
   },
   (table) => [
     index("idx_audit_log_org_created").on(
       table.organizationId,
       table.createdAt.desc().nullsFirst(),
+    ),
+    index("idx_audit_log_actor_created").on(
+      table.actorUserId,
+      table.createdAt.desc(),
     ),
   ],
 );

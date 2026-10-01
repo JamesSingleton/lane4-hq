@@ -1,0 +1,40 @@
+{
+  "name": "@lane4hq/api",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Lane4 public API: desktop meet manager, mobile apps, and live results",
+  "type": "module",
+  "scripts": {
+    "dev": "tsx watch --clear-screen=false src/index.ts",
+    "build": "node build.mjs",
+    "start": "node dist/index.mjs",
+    "openapi": "tsx scripts/write-openapi.ts",
+    "check:types": "tsc --noEmit",
+    "lint": "biome check .",
+    "lint:fix": "biome check --write .",
+    "test": "vitest run --coverage",
+    "test:watch": "vitest"
+  },
+  "dependencies": {
+    "@hono/node-server": "^2.1.3",
+    "@hono/zod-openapi": "^1.6.3",
+    "@lane4hq/auth": "workspace:*",
+    "@lane4hq/db": "workspace:*",
+    "@scalar/hono-api-reference": "^0.12.8",
+    "@upstash/ratelimit": "^2.2.0",
+    "@upstash/redis": "^1.39.0",
+    "hono": "^4.13.12",
+    "zod": "catalog:"
+  },
+  "devDependencies": {
+    "@lane4hq/meet-engine": "workspace:*",
+    "@lane4hq/typescript-config": "workspace:*",
+    "@types/node": "catalog:",
+    "@vitest/coverage-v8": "catalog:",
+    "esbuild": "^0.28.2",
+    "tsx": "^4.23.15",
+    "typescript": "catalog:",
+    "vite": "catalog:",
+    "vitest": "catalog:"
+  }
+}

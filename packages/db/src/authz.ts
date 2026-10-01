@@ -5,9 +5,9 @@ import {
   type TeamType,
 } from "@lane4hq/swim-core/team-types";
 import { and, eq, gt, inArray, isNull, or } from "drizzle-orm";
+import { writeAuditLog } from "./audit";
 import { db } from "./client";
 import {
-  auditLog,
   member,
   organization,
   staffCredentials,
@@ -28,6 +28,7 @@ import {
   canManageTeam,
   EXPORT_ROLES,
   getTeamCapabilities,
+  MEET_HOSTING_ROLES,
   ROSTER_MANAGEMENT_ROLES,
   type RosterManagementRole,
   roleHasExportAccess,
@@ -43,6 +44,7 @@ export {
   canManageTeam,
   EXPORT_ROLES,
   getTeamCapabilities,
+  MEET_HOSTING_ROLES,
   ROSTER_MANAGEMENT_ROLES,
   type RosterManagementRole,
   roleHasExportAccess,
@@ -271,26 +273,7 @@ export async function requireCoachSafeSportCurrent(
   return m;
 }
 
-export async function writeAuditLog(data: {
-  organizationId: string;
-  actorUserId: string;
-  action: string;
-  resourceType: string;
-  resourceId: string;
-  metadata?: Record<string, unknown>;
-  ipAddress?: string;
-}) {
-  await db.insert(auditLog).values({
-    id: crypto.randomUUID(),
-    organizationId: data.organizationId,
-    actorUserId: data.actorUserId,
-    action: data.action,
-    resourceType: data.resourceType,
-    resourceId: data.resourceId,
-    metadata: data.metadata ?? null,
-    ipAddress: data.ipAddress ?? null,
-  });
-}
+export { writeAuditLog } from "./audit";
 
 export async function requireMinorPiiAccess(
   userId: string | undefined,

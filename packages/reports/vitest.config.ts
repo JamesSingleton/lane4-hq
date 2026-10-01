@@ -11,6 +11,7 @@ export default defineConfig({
         "src/meet-entries/**/*.ts",
         "src/split-sheet/**/*.ts",
         "src/team-best-times/**/*.ts",
+        "src/meet-program/build.ts",
         "src/types.ts",
       ],
       exclude: ["src/templates/**"],

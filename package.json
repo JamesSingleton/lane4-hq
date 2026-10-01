@@ -16,6 +16,7 @@
     "clean:workspaces": "turbo clean",
     "dev": "dotenv -e .env.local -- turbo dev --parallel --filter=!@lane4hq/desktop",
     "dev:admin": "dotenv -e .env.local -- turbo dev --filter=@lane4hq/admin",
+    "dev:api": "dotenv -e .env.local -- turbo dev --filter=@lane4hq/api",
     "dev:desktop": "pnpm --filter @lane4hq/desktop dev",
     "bundle:desktop": "pnpm --filter @lane4hq/desktop bundle",
     "dev:docs": "turbo run dev --filter=@lane4hq/docs",

@@ -47,10 +47,15 @@ describe("eventLabelsByNumber", () => {
 describe("formatDateRange", () => {
   it("collapses single-day and missing dates", () => {
     expect(formatDateRange()).toBeNull();
-    expect(formatDateRange("2026-01-10")).toBe("2026-01-10");
-    expect(formatDateRange("2026-01-10", "2026-01-10")).toBe("2026-01-10");
-    expect(formatDateRange("2026-01-10", "2026-01-11")).toBe(
-      "2026-01-10 – 2026-01-11",
+    expect(formatDateRange("2026-01-10")).toBe("Jan 10, 2026");
+    expect(formatDateRange("2026-01-10", "2026-01-10")).toBe("Jan 10, 2026");
+    expect(formatDateRange("2026-01-10", "2026-01-11")).toBe("Jan 10–11, 2026");
+    expect(formatDateRange("2026-01-30", "2026-02-01")).toBe(
+      "Jan 30 – Feb 1, 2026",
     );
+    expect(formatDateRange("2026-12-31", "2027-01-02")).toBe(
+      "Dec 31, 2026 – Jan 2, 2027",
+    );
+    expect(formatDateRange("TBD")).toBe("TBD");
   });
 });

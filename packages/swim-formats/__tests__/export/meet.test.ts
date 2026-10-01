@@ -615,6 +615,81 @@ describe("exportHy3", () => {
     ]);
   });
 
+  it("round-trips relay results through HY3 F2", () => {
+    const meet: ParsedMeet = {
+      name: "Relay Results",
+      course: "SCY",
+      teamCode: "RLY",
+      importKind: "results",
+      events: [
+        {
+          eventNumber: 3,
+          distance: 200,
+          stroke: "free_relay",
+          gender: "female",
+          eventKey: "200_free_relay_scy_f",
+        },
+      ],
+      entries: [],
+      results: [],
+      relays: [
+        {
+          eventNumber: 3,
+          teamCode: "RLY",
+          relayLetter: "A",
+          swimmerNames: ["Ann One", "Bea Two", "Cat Three", "Dee Four"],
+          results: [
+            {
+              time: "1:45.67",
+              place: 2,
+              heat: 1,
+              lane: 4,
+              resultType: "finals",
+            },
+          ],
+        },
+        {
+          eventNumber: 3,
+          teamCode: "RLY",
+          relayLetter: "B",
+          swimmerNames: ["Eve Five", "Fay Six", "Gia Seven", "Hal Eight"],
+          results: [
+            {
+              time: "",
+              isDq: true,
+              dqCode: "9A",
+              heat: 1,
+              lane: 5,
+              resultType: "prelim",
+            },
+            { time: "1:50.00", heat: 2, lane: 3, resultType: "swimoff" },
+          ],
+        },
+        {
+          eventNumber: 3,
+          teamCode: "RLY",
+          relayLetter: "C",
+          swimmerNames: ["Ivy Nine", "Joy Ten", "Kim Eleven", "Lou Twelve"],
+          results: [{ time: "", isDq: true }],
+        },
+      ],
+    };
+    const hy3 = exportHy3(meet);
+    const f2 = hy3.split("\r\n").filter((l) => l.startsWith("F2"));
+    expect(f2).toHaveLength(4);
+    expect(f2[3]!.slice(12, 15)).toBe("DDQ");
+    const parsed = parseHy3(hy3);
+    const a = parsed.relays?.find((r) => r.relayLetter === "A");
+    expect(a?.results?.[0]).toMatchObject({
+      time: "1:45.67",
+      place: 2,
+      heat: 1,
+      lane: 4,
+    });
+    const b = parsed.relays?.find((r) => r.relayLetter === "B");
+    expect(b?.results?.some((r) => r.isDq)).toBe(true);
+  });
+
   it("derives the A1 title from importKind for results/roster/entries", () => {
     const base = { ...baseMeet, entries: [], results: [] };
     expect(

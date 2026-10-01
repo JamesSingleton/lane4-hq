@@ -9,6 +9,7 @@
     "./client": "./src/client.ts",
     "./session": "./src/session.ts",
     "./roles": "./src/roles.ts",
+    "./device-clients": "./src/device-clients.ts",
     "./keys": "./src/keys.ts"
   },
   "scripts": {

@@ -57,6 +57,20 @@
       "when": 1790629605965,
       "tag": "0007_meet_commitment_declined_to_not_going",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1790802336778,
+      "tag": "0008_hosted_meets_device_code",
+      "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1790823330000,
+      "tag": "0009_audit_log_sources",
+      "breakpoints": true
     }
   ]
 }

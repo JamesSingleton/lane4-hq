@@ -8,8 +8,8 @@ export default defineConfig({
       provider: "v8",
       reporter: ["text", "html", "lcov"],
       include: ["src/lib/**/*.ts"],
-      // Thin wrapper over Tauri IPC; exercised by running the app.
-      exclude: ["src/lib/native.ts"],
+      // Thin wrappers over Tauri IPC; exercised by running the app.
+      exclude: ["src/lib/native.ts", "src/lib/tauri-repository.ts"],
     },
   },
 });

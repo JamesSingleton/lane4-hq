@@ -34,3 +34,9 @@ catalog:
   "@vitest/coverage-v8": "^5.0.1"
   zod: "^4.6.5"
   "@t3-oss/env-nextjs": "^0.13.11"
+
+minimumReleaseAgeExclude:
+  - '@scalar/client-side-rendering@0.4.7'
+  - '@scalar/hono-api-reference@0.12.8'
+  - '@scalar/types@0.22.3'
+  - hono@4.13.12

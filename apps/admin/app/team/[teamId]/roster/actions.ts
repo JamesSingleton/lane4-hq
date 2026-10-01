@@ -30,10 +30,7 @@ import {
   removeSwimmerFromTeam,
   updateSwimmer,
 } from "@lane4hq/db/queries/roster";
-import {
-  createMaappAcknowledgment,
-  logAuditEvent,
-} from "@lane4hq/db/queries/safesport";
+import { createMaappAcknowledgment } from "@lane4hq/db/queries/safesport";
 import { organization } from "@lane4hq/db/schema";
 import {
   sendRosterImportComplete,
@@ -574,7 +571,7 @@ export async function recordMaappAcknowledgmentAction(
   });
 
   if (session?.user?.id) {
-    await logAuditEvent({
+    await writeAuditLog({
       organizationId: teamId,
       actorUserId: session.user.id,
       action: "maapp.acknowledged",

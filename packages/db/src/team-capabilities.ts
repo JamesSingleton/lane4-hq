@@ -17,6 +17,9 @@ export const ROSTER_MANAGEMENT_ROLES = [
 
 export type RosterManagementRole = (typeof ROSTER_MANAGEMENT_ROLES)[number];
 
+/** Running a hosted meet: publishing results, downloading its program. */
+export const MEET_HOSTING_ROLES = ROSTER_MANAGEMENT_ROLES;
+
 export type TeamCapabilities = {
   canManageTeam: boolean;
   canManageRosterFiles: boolean;

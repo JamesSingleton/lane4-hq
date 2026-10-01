@@ -1,4 +1,5 @@
 import { drizzleAdapter } from "@better-auth/drizzle-adapter";
+import { writeAuditLog } from "@lane4hq/db/audit";
 import { db } from "@lane4hq/db/client";
 import {
   createDefaultSubscription,
@@ -30,9 +31,22 @@ import {
 } from "@polar-sh/better-auth";
 import { Polar } from "@polar-sh/sdk";
 import { betterAuth } from "better-auth";
+import {
+  APIError,
+  createAuthMiddleware,
+  getSessionFromCtx,
+} from "better-auth/api";
+import { bearer } from "better-auth/plugins/bearer";
+import { deviceAuthorization } from "better-auth/plugins/device-authorization";
 import { organization } from "better-auth/plugins/organization";
 import { twoFactor } from "better-auth/plugins/two-factor";
 import { eq } from "drizzle-orm";
+import {
+  authAuditContext,
+  authAuditEvent,
+  isAuditedAuthPath,
+} from "./audit-events";
+import { isDeviceClient } from "./device-clients";
 import { keys } from "./keys";
 import { orgAc, orgRoles } from "./organization-ac";
 
@@ -115,6 +129,7 @@ const authSchema = {
   organization: schema.organization,
   member: schema.member,
   invitation: schema.invitation,
+  deviceCode: schema.deviceCode,
   userRelations: schema.userRelations,
   sessionRelations: schema.sessionRelations,
   accountRelations: schema.accountRelations,
@@ -218,6 +233,30 @@ function createAuth(polarClient: Polar) {
           }
         : {}),
     },
+    hooks: {
+      after: createAuthMiddleware(async (ctx) => {
+        if (!isAuditedAuthPath(ctx.path)) return;
+        if (ctx.context.returned instanceof APIError) return;
+        const session =
+          ctx.context.session ??
+          (await getSessionFromCtx(ctx).catch(() => null));
+        const event = authAuditEvent({
+          path: ctx.path,
+          userId: session?.user.id,
+          body: ctx.body,
+        });
+        if (!event) return;
+        try {
+          await writeAuditLog({
+            ...event,
+            context: authAuditContext(ctx.headers),
+          });
+        } catch (error) {
+          // A failed audit write must not undo a sign-in the user already saw succeed.
+          console.error("Audit log write failed", error);
+        }
+      }),
+    },
     databaseHooks: {
       user: {
         create: {
@@ -236,6 +275,16 @@ function createAuth(polarClient: Polar) {
       },
     },
     plugins: [
+      // Desktop and mobile apps send the session token as a bearer header.
+      bearer(),
+      // Desktop sign-in: the app shows a code, the user approves it at /device
+      // in admin, and the app receives a session token.
+      deviceAuthorization({
+        verificationUri: "/device",
+        expiresIn: "15m",
+        interval: "5s",
+        validateClient: isDeviceClient,
+      }),
       twoFactor({
         issuer: "Lane4 HQ",
         otpOptions: {

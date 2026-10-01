@@ -26,7 +26,7 @@
       },
       {
         "group": "Meets",
-        "pages": ["meets", "meet-files", "entries-and-results"]
+        "pages": ["meets", "meet-files", "entries-and-results", "desktop-app"]
       },
       {
         "group": "Manage your account",

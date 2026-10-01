@@ -4,6 +4,7 @@ export * from "./billing";
 export * from "./calendar";
 export * from "./events";
 export * from "./groups";
+export * from "./hosted-meets";
 export * from "./meets";
 export * from "./notifications";
 export * from "./preferences";

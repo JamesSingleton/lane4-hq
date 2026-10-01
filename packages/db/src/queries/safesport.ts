@@ -1,7 +1,6 @@
 import { and, eq, gt, inArray, isNull, or, sql } from "drizzle-orm";
 import { db } from "../client";
 import {
-  auditLog,
   maappAcknowledgments,
   member,
   safesportReports,
@@ -287,25 +286,4 @@ export async function getCoachSafeSportStatus(memberId: string) {
     .limit(1);
 
   return row ?? null;
-}
-
-export async function logAuditEvent(data: {
-  organizationId: string;
-  actorUserId: string;
-  action: string;
-  resourceType: string;
-  resourceId: string;
-  metadata?: Record<string, unknown>;
-  ipAddress?: string;
-}) {
-  await db.insert(auditLog).values({
-    id: generateId(),
-    organizationId: data.organizationId,
-    actorUserId: data.actorUserId,
-    action: data.action,
-    resourceType: data.resourceType,
-    resourceId: data.resourceId,
-    metadata: data.metadata ?? null,
-    ipAddress: data.ipAddress ?? null,
-  });
 }

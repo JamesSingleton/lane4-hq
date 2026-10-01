@@ -15,6 +15,13 @@ describe("getCallbackURL", () => {
     expect(getCallbackURL(params)).toBe("/accept-invite?id=abc");
   });
 
+  it("returns to device sign-in with its code", () => {
+    const params = new URLSearchParams({
+      callbackUrl: "/device?user_code=ABCD1234",
+    });
+    expect(getCallbackURL(params)).toBe("/device?user_code=ABCD1234");
+  });
+
   it("rejects open redirects", () => {
     const params = new URLSearchParams({
       callbackUrl: "https://evil.example",
