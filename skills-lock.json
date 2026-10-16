@@ -23,7 +23,7 @@
       "source": "leonxlnx/taste-skill",
       "sourceType": "github",
       "skillPath": "skills/taste-skill/SKILL.md",
-      "computedHash": "6d838b246d0e35d0b53f4f23f98ba7a1dd561937e64f7d0c7553b0928e376c3e"
+      "computedHash": "18f81679d2b0247ce9da298b03ed8e47ecd3c206f2951d70eefb1b65d3219345"
     },
     "email-and-password-best-practices": {
       "source": "better-auth/skills",
@@ -77,19 +77,19 @@
       "source": "neondatabase/agent-skills",
       "sourceType": "github",
       "skillPath": "skills/neon/SKILL.md",
-      "computedHash": "72813af523242dc39715b225fb3b37d255e3dbf4ea276e7f01ef6064b53b47af"
+      "computedHash": "e3860ad516498440f5a35a169cc92e3fb3ad80d29a5af8f27c2398f47d732afd"
     },
     "neon-object-storage": {
       "source": "neondatabase/agent-skills",
       "sourceType": "github",
       "skillPath": "skills/neon-object-storage/SKILL.md",
-      "computedHash": "be0c3d0c362e51dadc4146e04e1067db30c81cd21c45517b511523a14e6ed19a"
+      "computedHash": "2e89a92b76636bd15b6834133b23b6a1eb90bc08eaec6c45f7371ccafa91b016"
     },
     "neon-postgres": {
       "source": "neondatabase/agent-skills",
       "sourceType": "github",
       "skillPath": "skills/neon-postgres/SKILL.md",
-      "computedHash": "b9763d379a3c5039e5555540a1333b1c529e2365d4f0b8fe2998ba41509814c5"
+      "computedHash": "0d936096676b18674d47828a87b21fcabf37cf0d7e3ed002e46e169eb7e0a7da"
     },
     "neon-postgres-branches": {
       "source": "neondatabase/agent-skills",
@@ -119,7 +119,7 @@
       "source": "resend/resend-skills",
       "sourceType": "github",
       "skillPath": "skills/resend/SKILL.md",
-      "computedHash": "82b26e4f038c5dc4f5e6d94e83ceb09b655418919845ae4a2e7c5496d2c1b01f"
+      "computedHash": "a4d4719c9e40bb8aeccf9cbbe59de19c950df55a45ddc8d93110374850f745c9"
     },
     "resend-design-skills": {
       "source": "resend/design-skills",
@@ -131,7 +131,7 @@
       "source": "shadcn/ui",
       "sourceType": "github",
       "skillPath": "skills/shadcn/SKILL.md",
-      "computedHash": "da388f632cd83783c02967446e21941c9ee8291ccb43ba74c23f7d4e9b7c298c"
+      "computedHash": "b864a958765563321f485a96f4d59c0bb6539f4286ab6d8b8b66895b7ebd302d"
     },
     "turborepo": {
       "source": "vercel/turborepo",

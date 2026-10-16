@@ -28,8 +28,8 @@
     "@lane4hq/swim-formats": "workspace:*",
     "@lane4hq/timing-cts": "workspace:*",
     "@lane4hq/ui": "workspace:*",
-    "@tauri-apps/api": "^2.12.2",
-    "@tauri-apps/plugin-dialog": "^2.8.1",
+    "@tauri-apps/api": "^2.12.4",
+    "@tauri-apps/plugin-dialog": "^2.8.3",
     "lucide-react": "catalog:",
     "react": "catalog:",
     "react-dom": "catalog:"
@@ -37,7 +37,7 @@
   "devDependencies": {
     "@lane4hq/typescript-config": "workspace:*",
     "@tailwindcss/vite": "^4.3.3",
-    "@tauri-apps/cli": "^2.12.1",
+    "@tauri-apps/cli": "^2.12.3",
     "@types/node": "catalog:",
     "@types/react": "catalog:",
     "@types/react-dom": "catalog:",
