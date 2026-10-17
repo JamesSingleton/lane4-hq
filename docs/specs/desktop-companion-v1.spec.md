@@ -1,6 +1,6 @@
 # Desktop timing companion v1: spec
 
-> **Status:** documented, not yet built. Nothing in this spec should be implemented until it's explicitly picked up (see AGENTS.md, Product posture).
+> **Status:** built (2026-09-29). Codec and simulator are in `packages/timing-cts`, serial transport in `apps/desktop/src-tauri/src/timing/`, and the meet workflow in `packages/meet-engine`. Departures from this spec are recorded in [ADR 0003, Implementation notes](../adr/0003-cts-timing-interface-split.md#implementation-notes) and [ADR 0004](../adr/0004-offline-meet-store-and-publishing.md): local storage is atomic JSON rather than SQLite, and team packs are HY3-only for now. Hardware validation ([#74](https://github.com/JamesSingleton/lane4-hq/issues/74)) is still open.
 
 Related:
 
@@ -18,7 +18,7 @@ At a meet, race results live on the timing console. Getting them into Lane4 toda
 1. Connect to a Colorado Time Systems console (System 6, System 5, 4000A, Gen7) over RS232 or USB-serial, on **macOS and Windows**.
 2. Pull finished races (read-only): place, final time, splits, backup and individual button times, and relay exchange judging.
 3. Match each race to a Lane4 meet event, heat, and lane, and show it for review before accepting.
-4. Store accepted results locally first. Sync them to `apps/admin` when online, and export them to Hy-Tek formats.
+4. Store accepted results locally first. Publish them to `apps/api` when online, and export them to Hy-Tek formats.
 5. Develop and test entirely without hardware, using a timer simulator.
 
 ## Non-goals (v1)
@@ -26,7 +26,6 @@ At a meet, race results live on the timing console. Getting them into Lane4 toda
 - Writing setups to the timer (`I…` commands: event sequences, labels, pool setup). See "Risks".
 - Scoreboard control, printing, or start-system integration.
 - Timing systems from other vendors (Daktronics, Omega). The transport and codec layout should allow them later.
-- Host-side entry merge.
 
 ## CTS meet management interface
 
@@ -164,11 +163,11 @@ flowchart LR
     Screen[Timing screen]
     Codec["@lane4hq/timing-cts codec"]
     Sim[Timer simulator]
-    Store[(Local SQLite)]
   end
   subgraph rust [Rust core]
     Ports[Port discovery]
     Transport["Transport: frame, DIC, timeouts, retry"]
+    Store[(Atomic JSON meet files)]
   end
   Console[CTS console]
   Screen --> Codec
@@ -177,7 +176,7 @@ flowchart LR
   Transport -->|"verified DATA"| Codec
   Codec -.->|"dev / CI"| Sim
   Codec --> Store
-  Store -.->|"sync when online"| Admin[apps/admin API]
+  Store -.->|"publish when online"| Api[apps/api]
 ```
 
 - **Rust transport** (`src-tauri/src/timing/`):
@@ -203,9 +202,9 @@ flowchart LR
   - Use the race's `event_16_bit` (or `event`) and `heat` against the Lane4 meet's heat sheet.
   - When the timer wasn't titled, the operator assigns the race to an event and heat, and later races auto-advance from there.
 - **Storage and sync:**
-  - Accepted races are written to local SQLite along with the raw timer bytes (for audit and re-decoding).
-  - They publish to admin through the meet API (roadmap milestone 2, [ADR 0002](../adr/0002-desktop-is-for-running-meets.md)) with an idempotency key of timer serial/version, meet date, and race number.
-  - They can also be exported to HY3 or CL2 results through `@lane4hq/swim-formats/export`.
+  - The meet is one atomic JSON file in the app data directory (`meets/<id>.json`, previous save kept as `.json.bak`). Each race pulled from the timer is also appended to `meets/<id>.captures.jsonl` with the raw DATA bytes, so timing can be replayed onto a restored meet ([ADR 0004](../adr/0004-offline-meet-store-and-publishing.md)).
+  - Verified heats publish to `apps/api` (`POST /v1/teams/{team}/hosted-meets/{meetId}/heats`) when a connection is available. The idempotency key is the meet, event, round, heat, and revision.
+  - They can also be exported to HY3 results through `@lane4hq/swim-formats/export`.
 
 ## Distribution
 

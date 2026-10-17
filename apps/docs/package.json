@@ -7,6 +7,6 @@
     "lint": "mint validate"
   },
   "devDependencies": {
-    "mint": "^4.2.909"
+    "mint": "^4.2.1048"
   }
 }

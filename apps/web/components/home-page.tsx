@@ -19,25 +19,26 @@ export function HomePage() {
       <Section className="grid items-end gap-12 pt-20 md:pt-28 lg:grid-cols-[minmax(0,1fr)_minmax(0,22rem)] lg:gap-16">
         <div className="hero-copy flex max-w-3xl flex-col items-start gap-6">
           <h1 className="font-display text-[2.6rem] font-semibold tracking-tight text-pretty sm:text-6xl lg:text-[4.35rem] lg:leading-[0.95]">
-            Your roster. Your entries. Their times.
+            Stop retyping seed times the night before entries are due.
           </h1>
           <p className="max-w-xl text-lg text-muted-foreground text-pretty">
-            Software for swim coaches. Who&apos;s on the team, who&apos;s
-            entered this weekend, and how they&apos;re swimming — in one place.
-            We don&apos;t run the meet.
+            Lane4 fills each seed from the swimmer&apos;s best time, keeps the
+            lineup for a club invitational or a high school dual, and puts
+            Sunday&apos;s results next to previous best. Export the HY3, CL2, or
+            SDIF the host asked for. If you coach both, each team keeps its own
+            times.
           </p>
           <div className="flex flex-wrap items-center gap-3">
             <CtaLink href={SIGN_UP_URL} icon>
               {PRIMARY_CTA}
             </CtaLink>
-            <CtaLink href="#product" variant="outline">
-              See the team
+            <CtaLink href="#meet-week" variant="outline">
+              See a meet week
             </CtaLink>
           </div>
         </div>
         <p className="max-w-xs text-sm text-muted-foreground text-pretty lg:justify-self-end">
-          One login for the club team and the high school. Times stay with the
-          team you&apos;re coaching today.
+          Free for one coach, on a club or a high school. No card to start.
         </p>
       </Section>
 
@@ -61,12 +62,12 @@ export function HomePage() {
       <Section className="grid gap-12 lg:grid-cols-[minmax(0,18rem)_minmax(0,1fr)] lg:gap-20">
         <div className="flex flex-col gap-4">
           <h2 className="font-display text-3xl font-semibold tracking-tight md:text-4xl">
-            The work that never makes the heat sheet.
+            The jobs that still take the evening before a meet.
           </h2>
           <p className="text-muted-foreground text-pretty">
-            Every meet still asks the same things of a coach: who&apos;s going,
-            what they seed, and whether Sunday&apos;s results make it back onto
-            the roster. None of that shows up on the heat sheet.
+            A club invitational and a high school dual ask for the same work.
+            Seed times, a lineup, and Sunday&apos;s results usually live in Team
+            Manager, a spreadsheet, and a whiteboard that do not match.
           </p>
         </div>
         <ul className="flex flex-col">
@@ -89,16 +90,44 @@ export function HomePage() {
         </ul>
       </Section>
 
+      <Section id="meet-week">
+        <div className="flex max-w-2xl flex-col gap-4">
+          <h2 className="font-display text-3xl font-semibold tracking-tight md:text-4xl">
+            Take one meet from the host&apos;s event file to Sunday&apos;s
+            results.
+          </h2>
+          <p className="text-muted-foreground text-pretty">
+            Import the file, mark who is going, send what the host asked for,
+            and read the results next to previous best. The same steps for a
+            Tuesday dual and a Saturday invitational.
+          </p>
+        </div>
+        <ol className="mt-14 grid gap-10 md:grid-cols-2">
+          {meetWeek.map((step) => (
+            <li
+              key={step.title}
+              className="flex flex-col gap-2 border-t border-foreground/10 pt-6"
+            >
+              <h3 className="text-lg font-medium">{step.title}</h3>
+              <p className="text-muted-foreground text-sm text-pretty">
+                {step.body}
+              </p>
+            </li>
+          ))}
+        </ol>
+      </Section>
+
       <Section className="grid items-center gap-10 lg:grid-cols-[minmax(0,26rem)_minmax(0,1fr)] lg:gap-16">
         <div className="flex flex-col gap-5">
           <h2 className="font-display text-3xl font-semibold tracking-tight md:text-5xl md:leading-[1.05]">
-            Entries in meet order, not a spreadsheet of names by event.
+            The lineup is in the order the meet is swum, with seeds already
+            filled.
           </h2>
           <p className="text-muted-foreground text-pretty">
-            Individuals and relays in event order, the way the meet is swum.
-            Switch to by-swimmer when you&apos;re checking who has too many
-            events. Seed times come from best times. High school event limits
-            show up before you send the file.
+            Individuals and relays in event order. Switch to by-swimmer when you
+            are checking who has too many events. Seed times come from best
+            times. Qualifying times from the host file, and high school
+            association limits, show up before you export.
           </p>
           <CtaLink
             href="/product/meets"
@@ -106,7 +135,7 @@ export function HomePage() {
             size="default"
             className="w-fit"
           >
-            Meet entries
+            Meets and entries
           </CtaLink>
         </div>
         <ProductShot shot="entries" showCaption={false} />
@@ -115,12 +144,14 @@ export function HomePage() {
       <Section className="grid items-center gap-10 lg:grid-cols-[minmax(0,26rem)_minmax(0,1fr)] lg:gap-16">
         <div className="flex flex-col gap-5">
           <h2 className="font-display text-3xl font-semibold tracking-tight md:text-5xl md:leading-[1.05]">
-            Sunday results next to last best, not a paste into Excel.
+            Import Sunday&apos;s file and read the new time next to previous
+            best.
           </h2>
           <p className="text-muted-foreground text-pretty">
-            Bring the results file back in. Previous best is on the row. Turn on
-            JO or sectionals without leaving the meet. See who was at practice,
-            how much they swam, and who already made the cut.
+            Previous best is on the row. Turn on a cut you entered — JO,
+            sectionals, or a high school standard — without leaving the meet.
+            Faster swims update best times. Yardage and attendance stay with the
+            practices you already ran.
           </p>
           <div className="flex flex-wrap gap-3">
             <CtaLink
@@ -175,38 +206,14 @@ export function HomePage() {
         </ul>
       </Section>
 
-      <Section id="meet-week">
-        <div className="flex max-w-2xl flex-col gap-4">
-          <h2 className="font-display text-3xl font-semibold tracking-tight md:text-4xl">
-            Event file in. Entries out. Results back.
-          </h2>
-          <p className="text-muted-foreground text-pretty">
-            The same week you already have. We don&apos;t run the pool.
-          </p>
-        </div>
-        <ol className="mt-14 grid gap-10 md:grid-cols-2">
-          {meetWeek.map((step) => (
-            <li
-              key={step.title}
-              className="flex flex-col gap-2 border-t border-foreground/10 pt-6"
-            >
-              <h3 className="text-lg font-medium">{step.title}</h3>
-              <p className="text-muted-foreground text-sm text-pretty">
-                {step.body}
-              </p>
-            </li>
-          ))}
-        </ol>
-      </Section>
-
       <Section className="overflow-hidden">
         <div className="flex max-w-xl flex-col gap-4">
           <h2 className="font-display text-3xl font-semibold tracking-tight md:text-4xl">
-            Files they already know how to open.
+            Send the file the host already knows how to open.
           </h2>
           <p className="text-muted-foreground text-pretty">
-            You build the lineup once. The people running the meet still get the
-            file they asked for.
+            You build the lineup once. Meet Manager, SwimTopia, SwimCloud, and
+            TeamUnify still get the interchange they already use.
           </p>
         </div>
         <ul
@@ -225,7 +232,7 @@ export function HomePage() {
           size="default"
           className="mt-10 w-fit"
         >
-          Format details
+          File formats
         </CtaLink>
       </Section>
 
@@ -233,11 +240,11 @@ export function HomePage() {
         <div className="grid gap-12 lg:grid-cols-[minmax(0,20rem)_minmax(0,1fr)]">
           <div className="flex flex-col gap-4">
             <h2 className="font-display text-3xl font-semibold tracking-tight md:text-4xl">
-              What this is not
+              Coaches ask these questions before they move a team over.
             </h2>
             <p className="text-muted-foreground text-pretty">
-              This is for the coach. Not a parent app, not dues, not the timing
-              system.
+              This is the workspace for the coach taking a club or a high school
+              to the meet.
             </p>
           </div>
           <FaqList />

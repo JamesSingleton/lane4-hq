@@ -16,6 +16,7 @@
     "clean:workspaces": "turbo clean",
     "dev": "dotenv -e .env.local -- turbo dev --parallel --filter=!@lane4hq/desktop",
     "dev:admin": "dotenv -e .env.local -- turbo dev --filter=@lane4hq/admin",
+    "dev:api": "dotenv -e .env.local -- turbo dev --filter=@lane4hq/api",
     "dev:desktop": "pnpm --filter @lane4hq/desktop dev",
     "bundle:desktop": "pnpm --filter @lane4hq/desktop bundle",
     "dev:docs": "turbo run dev --filter=@lane4hq/docs",
@@ -37,12 +38,12 @@
     "email:dev": "turbo email:dev"
   },
   "devDependencies": {
-    "@biomejs/biome": "^2.5.14",
-    "@neon/config": "^1.7.2",
+    "@biomejs/biome": "^2.5.15",
     "@lane4hq/typescript-config": "workspace:*",
+    "@neon/config": "^1.9.2",
     "@types/node": "catalog:",
     "dotenv-cli": "^11.0.0",
-    "turbo": "^2.11.0",
+    "turbo": "^2.11.8",
     "typescript": "catalog:"
   }
 }

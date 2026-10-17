@@ -4,23 +4,22 @@ import {
   AlertTitle,
 } from "@lane4hq/ui/components/alert";
 import { Button } from "@lane4hq/ui/components/button";
-import type { Metadata } from "next";
 import { PageIntro, Section } from "@/components/section";
 import { SupportForm } from "@/components/support-form";
+import { pageMetadata } from "@/lib/metadata";
 import { GITHUB_ISSUES_URL } from "@/lib/site";
 
-export const metadata: Metadata = {
-  title: "Support",
-  description:
-    "Ask about meet files, billing, or something that broke on a real pack. Bugs can go to GitHub issues.",
-};
+export const metadata = pageMetadata(
+  "Support",
+  "Questions about club or high school meet files, billing, or an import that failed. Bugs can also go to GitHub.",
+);
 
 export default function SupportPage() {
   return (
     <>
       <PageIntro
-        title="If the HY3 will not open, tell us."
-        description="Product questions, billing, and import failures belong here. Feature ideas and bugs can also go on GitHub."
+        title="If a meet file will not import, send it here."
+        description="Questions about entries, billing, and imports that failed belong here. Feature ideas and bugs can also go on GitHub."
       />
       <Section className="grid gap-10 pt-0 lg:grid-cols-[minmax(0,1fr)_minmax(0,20rem)]">
         <SupportForm />

@@ -1,42 +1,40 @@
-import type { Metadata } from "next";
 import { FeatureBlock, FeaturePage } from "@/components/feature-page";
+import { pageMetadata } from "@/lib/metadata";
 
-export const metadata: Metadata = {
-  title: "Roster",
-  description:
-    "Add swimmers, import CL2/HY3 or CSV, assign groups, and keep club, high school, and college fields on the season enrollment.",
-};
+export const metadata = pageMetadata(
+  "Roster",
+  "Import CL2, HY3, SD3, or CSV, roll returning swimmers into the new season, and keep club and high school fields apart.",
+);
 
 export default function RosterProductPage() {
   return (
     <FeaturePage
-      title="A roster that survives the season change."
-      description="Keep club and high school separate, on the same login. Archive a season and bring returning swimmers back without retyping birthdays."
+      title="Roll returning swimmers into next season without retyping birthdays."
+      description="Club and high school stay separate, on the same login. Start a new season and bring the roster forward."
       shot="roster"
     >
       <FeatureBlock title="What you record">
         <p>
-          Name, date of birth, and gender are the core. Club teams keep a USA
-          Swimming ID on the membership. High school keeps class year on the
-          season enrollment. College keeps eligibility year.
-        </p>
-        <p>
-          Training groups sit on the season, so varsity, age group, or senior
+          Name, date of birth, and gender are the core. A club team can store a
+          USA Swimming ID on the membership. A high school team stores class
+          year — freshman through senior — on the season. A college team can
+          record academic standing and eligibility status on the season.
+          Training groups sit on the season, so senior, age group, or varsity
           can change without rewriting the person.
         </p>
       </FeatureBlock>
       <FeatureBlock title="Import and export">
         <p>
-          Bring a spreadsheet or a CL2/HY3 roster pack. Row-level errors stay
-          visible instead of dropping names. Export CSV when you need a snapshot
-          for staff.
+          Bring a CSV, or a CL2, HY3, or SD3 roster pack. Row-level errors stay
+          on the preview. Export CSV when staff need a snapshot.
         </p>
       </FeatureBlock>
-      <FeatureBlock title="SWIMS and SafeSport">
+      <FeatureBlock title="Club and high school fields">
         <p>
-          USA Swimming club teams can sync the roster with SWIMS 3.0 on the free
-          plan. SafeSport credential checks gate minor contact and medical
-          fields.
+          A club roster can store a USA Swimming ID on the membership. SafeSport
+          training gates minor contact and medical fields. When training or a
+          minor&apos;s acknowledgment is missing, the dashboard says so. A high
+          school roster uses class year on the season.
         </p>
       </FeatureBlock>
     </FeaturePage>

@@ -1,0 +1,14 @@
+{
+  "extends": "@lane4hq/typescript-config/base.json",
+  "compilerOptions": {
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "jsx": "react-jsx",
+    "noEmit": true,
+    "paths": {
+      "@api/*": ["./src/*"]
+    }
+  },
+  "include": ["src", "__tests__", "scripts"],
+  "exclude": ["node_modules", "dist"]
+}

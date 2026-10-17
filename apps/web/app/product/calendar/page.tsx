@@ -1,38 +1,37 @@
-import type { Metadata } from "next";
 import { FeatureBlock, FeaturePage } from "@/components/feature-page";
+import { pageMetadata } from "@/lib/metadata";
 
-export const metadata: Metadata = {
-  title: "Calendar",
-  description:
-    "Team calendar for practices and meets, attendance roll, recurring schedules, and Google or Microsoft calendar sync.",
-};
+export const metadata = pageMetadata(
+  "Calendar",
+  "Team calendar for practices, duals, and invitationals, plus attendance, a recurring schedule, and Google, Outlook, or ICS sync.",
+);
 
 export default function CalendarProductPage() {
   return (
     <FeaturePage
-      title="Practices and meets on one calendar."
-      description="Practices, meets, and attendance live on the team calendar. Subscribe from Google or Microsoft, or pull an ICS feed when you need a read-only copy."
+      title="Keep practices, duals, and invitationals on one team calendar."
+      description="Attendance lives on that calendar too. Subscribe with an ICS feed, or connect Google Calendar or Outlook."
       shot="calendar"
     >
       <FeatureBlock title="Schedule">
         <p>
-          Add one-off sessions or a recurring practice pattern. Meets you
-          created or imported appear on the same calendar so entry deadlines are
-          not hiding in email.
+          Add a single session or a recurring practice. Meets you created or
+          imported show on the same calendar, including the entry deadline when
+          the host file had one.
         </p>
       </FeatureBlock>
       <FeatureBlock title="Attendance">
         <p>
-          Take roll for a session from the calendar or the attendance list.
-          History stays with the team so you can see who has been on deck before
-          you name a relay.
+          Take roll from the calendar or the attendance list. The history stays
+          with this team, so you can see who has been on deck before you name a
+          relay.
         </p>
       </FeatureBlock>
       <FeatureBlock title="Sync">
         <p>
-          Connect Google Calendar or Microsoft Calendar, or share the team ICS
-          feed. The feed is scoped to that team. Switching programs in the app
-          does not mix the two schedules.
+          Connect Google Calendar or Outlook, or share a team ICS feed. The feed
+          belongs to that team. Switching from the club to the high school does
+          not mix the two schedules.
         </p>
       </FeatureBlock>
     </FeaturePage>

@@ -683,6 +683,28 @@ export function exportHy3(meet: ParsedMeet): string {
       ),
     );
 
+    for (const result of relay.results ?? []) {
+      const kindCode =
+        result.resultType === "prelim"
+          ? "P"
+          : result.resultType === "swimoff"
+            ? "S"
+            : "F";
+      lines.push(
+        hy3Line(
+          new FixedLine()
+            .set(1, 2, "F2")
+            .set(3, 1, kindCode)
+            .set(4, 8, result.isDq ? "" : toHy3Seconds(result.time))
+            .set(13, 1, result.isDq ? "D" : "")
+            .set(14, 2, result.isDq ? (result.dqCode ?? "DQ").slice(0, 2) : "")
+            .set(21, 3, result.heat != null ? String(result.heat) : "")
+            .set(24, 3, result.lane != null ? String(result.lane) : "")
+            .set(30, 4, result.place != null ? String(result.place) : ""),
+        ),
+      );
+    }
+
     const legLine = new FixedLine().set(1, 2, "F3");
     relay.swimmerNames.slice(0, 8).forEach((name, i) => {
       const rec = registry.get(swimmerRegistryKey(name))!;

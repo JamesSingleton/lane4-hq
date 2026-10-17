@@ -1,3 +1,4 @@
+import { parseLocalDateOnly } from "@lane4hq/swim-core/calendar-date";
 import type { ParsedEvent } from "@lane4hq/swim-formats";
 
 const GENDER_LABEL: Record<string, string> = {
@@ -35,8 +36,19 @@ export function eventLabelsByNumber(
   return labels;
 }
 
+/** "Jan 10, 2026", "Jan 10–11, 2026", or "Jan 30 – Feb 1, 2026". */
 export function formatDateRange(start?: string, end?: string): string | null {
   if (!start) return null;
-  if (!end || end === start) return start;
-  return `${start} – ${end}`;
+  const from = parseLocalDateOnly(start);
+  const to = end && end !== start ? parseLocalDateOnly(end) : undefined;
+  if (!from) return end && end !== start ? `${start} – ${end}` : start;
+  const day = (d: Date, opts: Intl.DateTimeFormatOptions) =>
+    d.toLocaleDateString("en-US", opts);
+  if (!to)
+    return day(from, { month: "short", day: "numeric", year: "numeric" });
+  const sameYear = from.getFullYear() === to.getFullYear();
+  if (sameYear && from.getMonth() === to.getMonth()) {
+    return `${day(from, { month: "short", day: "numeric" })}–${to.getDate()}, ${to.getFullYear()}`;
+  }
+  return `${day(from, sameYear ? { month: "short", day: "numeric" } : { month: "short", day: "numeric", year: "numeric" })} – ${day(to, { month: "short", day: "numeric", year: "numeric" })}`;
 }

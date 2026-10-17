@@ -109,6 +109,24 @@ export const twoFactor = pgTable(
   ],
 );
 
+/** Better Auth device authorization: desktop and TV-style sign-in by code. */
+export const deviceCode = pgTable(
+  "device_code",
+  {
+    id: text("id").primaryKey(),
+    deviceCode: text("device_code").notNull().unique(),
+    userCode: text("user_code").notNull().unique(),
+    userId: text("user_id").references(() => user.id, { onDelete: "cascade" }),
+    expiresAt: timestamp("expires_at").notNull(),
+    status: text("status").notNull(),
+    lastPolledAt: timestamp("last_polled_at"),
+    pollingInterval: integer("polling_interval"),
+    clientId: text("client_id"),
+    scope: text("scope"),
+  },
+  (table) => [index("device_code_user_id_idx").on(table.userId)],
+);
+
 export const teamTypeEnum = pgEnum("team_type", [
   "club",
   "high_school",

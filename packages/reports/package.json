@@ -14,7 +14,11 @@
     "./templates/pdf/split-sheet": "./src/templates/pdf/split-sheet.tsx",
     "./templates/pdf/team-best-times": "./src/templates/pdf/team-best-times.tsx",
     "./templates/html/meet-entries": "./src/templates/html/meet-entries.tsx",
-    "./templates/html/split-sheet": "./src/templates/html/split-sheet.tsx"
+    "./templates/html/split-sheet": "./src/templates/html/split-sheet.tsx",
+    "./meet-program": "./src/meet-program/build.ts",
+    "./meet-program/render": "./src/meet-program/render.ts",
+    "./templates/pdf/heat-sheet": "./src/templates/pdf/heat-sheet.tsx",
+    "./templates/pdf/meet-results": "./src/templates/pdf/meet-results.tsx"
   },
   "scripts": {
     "check:types": "tsc --noEmit",
@@ -24,6 +28,7 @@
     "test:watch": "vitest"
   },
   "dependencies": {
+    "@lane4hq/meet-engine": "workspace:*",
     "@lane4hq/swim-core": "workspace:*",
     "@react-pdf/renderer": "catalog:",
     "react": "catalog:",

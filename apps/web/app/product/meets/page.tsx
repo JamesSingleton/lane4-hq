@@ -1,18 +1,17 @@
-import type { Metadata } from "next";
 import { FeatureBlock, FeaturePage } from "@/components/feature-page";
 import { ProductShot } from "@/components/product-shot";
+import { pageMetadata } from "@/lib/metadata";
 
-export const metadata: Metadata = {
-  title: "Meets and entries",
-  description:
-    "Import the event file, mark who’s going, export HY3, CL2, or SDIF, print paper reports, and bring results back next to last best and the cut.",
-};
+export const metadata = pageMetadata(
+  "Meets and entries",
+  "Fill seeds from best times, export HY3, CL2, or SDIF, and bring Sunday's results back next to previous best and a cut you entered.",
+);
 
 export default function MeetsProductPage() {
   return (
     <FeaturePage
-      title="Build the lineup once."
-      description="Individuals, relays, going or scratch. The file you send is that lineup — not a second copy of the team."
+      title="Fill seeds from best times, then export the file the host asked for."
+      description="Individuals, relays, going or scratch. The file you send is that lineup, for a club invitational or a high school dual."
       shot="meets"
     >
       <ProductShot shot="entries" />
@@ -20,39 +19,45 @@ export default function MeetsProductPage() {
       <FeatureBlock title="From the event file">
         <p>
           Import EV3, HYV, XLS, or a ZIP. Sessions, events, qualifying times,
-          and JV/Varsity divisions come with it. Combined swim/dive meets skip
-          dive events so a swim-only team is not stuck.
+          and JV or Varsity divisions come with the file. Dive events in a
+          combined meet stay off the swim entry board.
         </p>
       </FeatureBlock>
       <FeatureBlock title="Building entries">
         <p>
           Mark who is attending, including relay-only swimmers. Seed times fill
-          from best times; you can override. Relays take four legs plus
-          alternates when the meet requires them. Pro can suggest a lineup and
-          relay order given entry limits and cuts.
+          from best times, and you can override them. Relays take four legs,
+          plus alternates when the meet asks for them. On Pro, lineup
+          suggestions fill open individual spots from eligible best times,
+          within the meet&apos;s entry limits. Relays stay as you staffed them.
+          Relay-order suggestions are on every plan, inside the monthly draft
+          pool shared with practice drafts.
         </p>
         <p>
-          Validation catches per-meet and per-day caps, association event caps,
-          and QT misses before export. Scratch keeps the row.
+          Before export, validation flags entry limits from the file —
+          individual, relay, and combined — and qualifying-time misses. On a
+          high school team it also checks association scoring caps: max scoring
+          names in an individual event, and max relay teams. A scratch keeps the
+          row.
         </p>
       </FeatureBlock>
       <FeatureBlock title="The file they asked for, and paper">
         <p>
-          Export HY3/CL2 for Meet Manager, or SDIF for TeamUnify and SwimTopia.
-          Print the individual meet entries report and a split sheet. Default
-          omits relay alternates; you can include them. Split cadence is
-          print-only.
+          Export HY3 or CL2 for Meet Manager, or SDIF for hosts that asked for
+          it, including TeamUnify and SwimTopia. Print the individual entries
+          report and a split sheet. The default print omits relay alternates;
+          you can include them. Split cadence is print-only and is not saved.
         </p>
       </FeatureBlock>
-      <FeatureBlock title="Results, last best, and the cut">
+      <FeatureBlock title="Results, previous best, and the cut">
         <p>
-          Import the results file after the meet. Each row displays the new time
-          right next to their previous best, so you can see the drops without
-          opening a second sheet.
+          Import the results file after the meet. Each row shows the new time
+          next to previous best.
         </p>
         <p>
-          Toggle time standards on the same page. Pick JO, sectionals, or a set
-          you imported. Under, at, or over the cut sits on the row. Faster swims
+          Turn on a time standard you created or imported. That can be JO,
+          sectionals, or a high school cut. Under, at, or over sits on the row.
+          Lane4 HQ does not include a built-in standards book. Faster swims
           update best times. Unmatched names stay on a review list.
         </p>
       </FeatureBlock>

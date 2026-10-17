@@ -28,7 +28,7 @@ export function SupportForm() {
       <Alert>
         <AlertTitle>Message received</AlertTitle>
         <AlertDescription>
-          We will reply to the email you entered.
+          We&apos;ll reply to the email you entered.
         </AlertDescription>
       </Alert>
     );
@@ -67,7 +67,8 @@ export function SupportForm() {
           <FieldLabel htmlFor="message">Message</FieldLabel>
           <Textarea id="message" name="message" required minLength={10} />
           <FieldDescription>
-            Product questions, billing, or a meet file that would not import.
+            A file that would not import, a billing question, or a meet week
+            that broke.
           </FieldDescription>
         </Field>
       </FieldGroup>

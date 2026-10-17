@@ -1,41 +1,40 @@
-import type { Metadata } from "next";
 import { FeatureBlock, FeaturePage } from "@/components/feature-page";
 import { ProductShot } from "@/components/product-shot";
+import { pageMetadata } from "@/lib/metadata";
 
-export const metadata: Metadata = {
-  title: "Analytics",
-  description:
-    "Training volume, attendance, team top times, and Pro cut tracking from the practices and results you already have.",
-};
+export const metadata = pageMetadata(
+  "Analytics",
+  "Yardage, attendance, and team top times from practices and results you already have. The roster-wide cut list is on Pro.",
+);
 
 export default function AnalyticsProductPage() {
   return (
     <FeaturePage
-      title="Who dropped. Who made the cut. Who was on deck."
-      description="Attendance, yardage, and top times from the practices and meets you already ran. No extra spreadsheet."
+      title="See who dropped time, who is under a cut, and who has been at practice."
+      description="Yardage, attendance, and top times come from the practices and meets you already ran. The roster-wide cut list is on Pro."
       shot="analytics"
     >
       <ProductShot shot="cutTracker" />
-      <FeatureBlock title="Volume and attendance">
+      <FeatureBlock title="Yardage and attendance">
         <p>
-          Seven-day and thirty-day yardage, plus who showed up. That's the roll
-          you already took. Use it before you name a relay or ask why a 200 died
-          on Saturday.
+          Seven-day and thirty-day yardage, and who showed up. That is the roll
+          you already took, before you name a relay or look back at a race that
+          died on Saturday.
         </p>
       </FeatureBlock>
       <FeatureBlock title="Team top times">
         <p>
-          Fastest best times grouped by event, swimmer, or course. Filter the
-          roster when you are staffing a relay, not reconstructing last year’s
-          PDF.
+          Fastest best times by event, swimmer, or course. Filter the list when
+          you are staffing a relay.
         </p>
       </FeatureBlock>
-      <FeatureBlock title="Cut tracker on Pro">
+      <FeatureBlock title="Cut list on Pro">
         <p>
-          Import JO, sectionals, or a team standard. Anyone already at or under
-          the cut shows up in one list, with their time next to the standard.
-          Free still keeps best times and results. Pro is the roster-wide cut
-          view.
+          Enter a standard — JO, sectionals, or a high school cut — and Pro
+          lists anyone already at or under it, with their time next to the
+          standard. Free still keeps best times, and any plan can turn a
+          standard on for one meet&apos;s results. Pro is the roster-wide list.
+          These are standards you enter.
         </p>
       </FeatureBlock>
     </FeaturePage>

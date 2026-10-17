@@ -1,6 +1,7 @@
 const ALLOWED_CALLBACK_PREFIXES = [
   "/onboarding",
   "/accept-invite",
+  "/device",
   "/team/",
 ] as const;
 

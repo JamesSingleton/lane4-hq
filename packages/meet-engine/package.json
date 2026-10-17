@@ -1,0 +1,44 @@
+{
+  "name": "@lane4hq/meet-engine",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Run a swim meet: meet database, entry merge, seeding, timer adjudication, places, scoring, results export",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./model": "./src/model.ts",
+    "./create": "./src/create.ts",
+    "./entries": "./src/entries.ts",
+    "./event-edits": "./src/event-edits.ts",
+    "./seeding": "./src/seeding.ts",
+    "./adjudicate": "./src/adjudicate.ts",
+    "./standings": "./src/standings.ts",
+    "./export": "./src/export.ts",
+    "./publish": "./src/publish.ts",
+    "./labels": "./src/labels.ts",
+    "./diving": "./src/diving.ts",
+    "./finals": "./src/finals.ts",
+    "./templates": "./src/templates.ts"
+  },
+  "scripts": {
+    "check:types": "tsc --noEmit",
+    "lint": "biome check .",
+    "lint:fix": "biome check --write .",
+    "test": "vitest run --coverage",
+    "test:watch": "vitest"
+  },
+  "dependencies": {
+    "@lane4hq/swim-core": "workspace:*",
+    "@lane4hq/swim-formats": "workspace:*",
+    "@lane4hq/timing-cts": "workspace:*",
+    "fflate": "^0.8.3"
+  },
+  "devDependencies": {
+    "@lane4hq/typescript-config": "workspace:*",
+    "@types/node": "catalog:",
+    "@vitest/coverage-v8": "catalog:",
+    "typescript": "catalog:",
+    "vite": "catalog:",
+    "vitest": "catalog:"
+  }
+}

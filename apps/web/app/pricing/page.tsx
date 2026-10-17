@@ -15,17 +15,16 @@ import {
   TableHeader,
   TableRow,
 } from "@lane4hq/ui/components/table";
-import type { Metadata } from "next";
 import { CtaLink } from "@/components/cta-link";
 import { MarketingCta } from "@/components/marketing-cta";
 import { PageIntro } from "@/components/section";
+import { pageMetadata } from "@/lib/metadata";
 import { plans } from "@/lib/site";
 
-export const metadata: Metadata = {
-  title: "Pricing",
-  description:
-    "Free includes unlimited swimmers, meet import, seed times, and progression. Pro adds staff seats, lineup suggestions, and advanced analytics.",
-};
+export const metadata = pageMetadata(
+  "Pricing",
+  "Free covers unlimited swimmers, meet files, seed times, and progression for one coach. Pro adds seats, lineup suggestions, and a roster-wide cut list.",
+);
 
 const comparison = [
   {
@@ -48,19 +47,41 @@ const comparison = [
     enterprise: "Yes",
   },
   { feature: "Progression", free: "Yes", pro: "Yes", enterprise: "Yes" },
-  { feature: "SWIMS roster sync", free: "Yes", pro: "Yes", enterprise: "Yes" },
   {
-    feature: "Lineup and relay suggestions",
+    feature: "Time standard on one meet's results",
+    free: "Yes",
+    pro: "Yes",
+    enterprise: "Yes",
+  },
+  {
+    feature: "High school event limits",
+    free: "Yes",
+    pro: "Yes",
+    enterprise: "Yes",
+  },
+  {
+    feature: "Yardage, attendance, and top times",
+    free: "Yes",
+    pro: "Yes",
+    enterprise: "Yes",
+  },
+  {
+    feature: "Lineup suggestions",
     free: "No",
     pro: "Yes",
     enterprise: "Yes",
   },
-  { feature: "Advanced analytics", free: "No", pro: "Yes", enterprise: "Yes" },
   {
-    feature: "AI draft generations / month",
+    feature: "Roster-wide cut list",
+    free: "No",
+    pro: "Yes",
+    enterprise: "Yes",
+  },
+  {
+    feature: "Practice drafts and relay suggestions / month",
     free: "5",
-    pro: "20 + overage",
-    enterprise: "100 + overage",
+    pro: "20, then overage",
+    enterprise: "100, then overage",
   },
 ] as const;
 
@@ -68,8 +89,8 @@ export default function PricingPage() {
   return (
     <>
       <PageIntro
-        title="Pay when the staff grows, not when you enter a meet."
-        description="Free is enough to run a season: unlimited swimmers, meet files, seed times, and progression. Pro adds staff seats and lineup suggestions. Billing is per team, not per athlete."
+        title="One coach can take a full season of meets on Free."
+        description="Unlimited swimmers, meet files, seed times from best times, and progression, for a club or a high school. Pro adds coach seats, lineup suggestions for open individual spots, and a roster-wide cut list. Billing is per team."
       />
       <section className="mx-auto grid w-full max-w-6xl items-stretch gap-4 px-4 pb-16 md:grid-cols-3 md:px-6">
         {plans.map((plan) => (
@@ -128,8 +149,8 @@ export default function PricingPage() {
       </section>
       <Separator className="mx-auto max-w-6xl" />
       <MarketingCta
-        title="Upgrade from billing, after you have a team."
-        body="Create the team on Free, import a meet, then add seats from team settings when the staff needs to share the desk."
+        title="Start on Free with the meet you are entering now."
+        body="Import the event file and export the lineup before you add coach seats. The same plans cover a club and a high school."
       />
     </>
   );

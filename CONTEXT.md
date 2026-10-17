@@ -33,3 +33,15 @@ The physical pool course for a meet: SCY, SCM, or LCM. It identifies event keys,
 
 **Entry-time policy**:
 The host software’s rule for selecting a swimmer’s seed time. A Hy-Tek code such as `Y`, `YO`, or `YLS` may require conversion, an exact-course time, or course-priority qualifying checks. It is distinct from the competition course.
+
+**Capture**:
+A race pulled from the timing console, stored verbatim with its raw bytes. It is assigned to an event and heat but isn't official until verified. Captures are never deleted; false starts and test swims are marked ignored.
+_Avoid_: result, race result
+
+**Verified heat**:
+A heat an official has reviewed against the heat sheet and made official. Only verified heats count toward places, team scores, exports, and publishing. Re-verifying bumps the heat's revision.
+_Avoid_: finished heat, completed race
+
+**Heat publication**:
+One verified heat sent from the deck machine to Lane4 (`lane4.heat-results/v1`). Its idempotency key is meet, event, heat, and revision.
+_Avoid_: sync, upload

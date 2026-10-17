@@ -1,4 +1,5 @@
 import { drizzleAdapter } from "@better-auth/drizzle-adapter";
+import { writeAuditLog } from "@lane4hq/db/audit";
 import { db } from "@lane4hq/db/client";
 import {
   createDefaultSubscription,
@@ -6,6 +7,7 @@ import {
   updateSubscription,
 } from "@lane4hq/db/queries/billing";
 import { ensureCurrentSeason } from "@lane4hq/db/queries/seasons";
+import { extendSessionExpiry } from "@lane4hq/db/queries/sessions";
 import * as schema from "@lane4hq/db/schema";
 import {
   sendCoachInvitation,
@@ -30,9 +32,29 @@ import {
 } from "@polar-sh/better-auth";
 import { Polar } from "@polar-sh/sdk";
 import { betterAuth } from "better-auth";
+import {
+  APIError,
+  createAuthMiddleware,
+  getSessionFromCtx,
+} from "better-auth/api";
+import { bearer } from "better-auth/plugins/bearer";
+import { deviceAuthorization } from "better-auth/plugins/device-authorization";
 import { organization } from "better-auth/plugins/organization";
 import { twoFactor } from "better-auth/plugins/two-factor";
 import { eq } from "drizzle-orm";
+import {
+  authAuditContext,
+  authAuditEvent,
+  isAuditedAuthPath,
+} from "./audit-events";
+import { isDeviceClient } from "./device-clients";
+import {
+  bearerToken,
+  deviceSessionCreateOverride,
+  deviceSessionExpiresAt,
+  refreshedDeviceExpiry,
+  shouldRenewDeviceSession,
+} from "./device-session";
 import { keys } from "./keys";
 import { orgAc, orgRoles } from "./organization-ac";
 
@@ -115,6 +137,7 @@ const authSchema = {
   organization: schema.organization,
   member: schema.member,
   invitation: schema.invitation,
+  deviceCode: schema.deviceCode,
   userRelations: schema.userRelations,
   sessionRelations: schema.sessionRelations,
   accountRelations: schema.accountRelations,
@@ -129,7 +152,7 @@ function createAuth(polarClient: Polar) {
     .map((origin) => origin.trim())
     .filter(Boolean);
 
-  return betterAuth({
+  const instance = betterAuth({
     database: drizzleAdapter(db, {
       provider: "pg",
       schema: authSchema,
@@ -169,6 +192,8 @@ function createAuth(polarClient: Polar) {
       // Password, 2FA, and revoke-session still require a recent login.
       // Listing sessions on Account uses the DB, not listSessions (freshAge).
       freshAge: 60 * 60 * 24,
+      // Web sessions stay on Better Auth's 7-day lifetime. Desktop device
+      // sessions are lengthened in databaseHooks and renewed on use below.
     },
     emailAndPassword: {
       enabled: true,
@@ -218,7 +243,66 @@ function createAuth(polarClient: Polar) {
           }
         : {}),
     },
+    hooks: {
+      after: createAuthMiddleware(async (ctx) => {
+        if (!isAuditedAuthPath(ctx.path)) return;
+        if (ctx.context.returned instanceof APIError) return;
+        const session =
+          ctx.context.session ??
+          (await getSessionFromCtx(ctx).catch(() => null));
+        const event = authAuditEvent({
+          path: ctx.path,
+          userId: session?.user.id,
+          body: ctx.body,
+        });
+        if (!event) return;
+        try {
+          await writeAuditLog({
+            ...event,
+            context: authAuditContext(ctx.headers),
+          });
+        } catch (error) {
+          // A failed audit write must not undo a sign-in the user already saw succeed.
+          console.error("Audit log write failed", error);
+        }
+      }),
+    },
     databaseHooks: {
+      session: {
+        create: {
+          before: async (session, context) => {
+            const override = deviceSessionCreateOverride(
+              session,
+              context?.path,
+            );
+            if (!override) return;
+            return { data: { expiresAt: override.expiresAt } };
+          },
+        },
+        update: {
+          before: async (session, context) => {
+            if (!session.expiresAt) return;
+            const authorization =
+              context?.headers && typeof context.headers.get === "function"
+                ? context.headers.get("authorization")
+                : null;
+            const token = bearerToken(authorization);
+            if (!token) return;
+            try {
+              const [row] = await db
+                .select({ userAgent: schema.session.userAgent })
+                .from(schema.session)
+                .where(eq(schema.session.token, token))
+                .limit(1);
+              const expiresAt = refreshedDeviceExpiry(row?.userAgent);
+              if (!expiresAt) return;
+              return { data: { expiresAt } };
+            } catch (error) {
+              console.error("Desktop session refresh lookup failed", error);
+            }
+          },
+        },
+      },
       user: {
         create: {
           after: async (user) => {
@@ -236,6 +320,16 @@ function createAuth(polarClient: Polar) {
       },
     },
     plugins: [
+      // Desktop and mobile apps send the session token as a bearer header.
+      bearer(),
+      // Desktop sign-in: the app shows a code, the user approves it at /device
+      // in admin, and the app receives a session token.
+      deviceAuthorization({
+        verificationUri: "/device",
+        expiresIn: "15m",
+        interval: "5s",
+        validateClient: isDeviceClient,
+      }),
       twoFactor({
         issuer: "Lane4 HQ",
         otpOptions: {
@@ -407,6 +501,29 @@ function createAuth(polarClient: Polar) {
       }),
     ],
   });
+
+  // Better Auth only refreshes inside the last `updateAge` of `expiresIn`.
+  // A 180-day desktop session would otherwise sit still until its last week,
+  // then shrink back to 7 days. Renew it here, once a day of life has passed.
+  const getSession = instance.api.getSession.bind(instance.api);
+  instance.api.getSession = (async (
+    input: Parameters<typeof getSession>[0],
+  ) => {
+    const result = await getSession(input);
+    const row = result?.session;
+    if (row?.id && shouldRenewDeviceSession(row)) {
+      const expiresAt = deviceSessionExpiresAt();
+      try {
+        await extendSessionExpiry(row.id, expiresAt);
+        row.expiresAt = expiresAt;
+      } catch (error) {
+        console.error("Desktop session renewal failed", error);
+      }
+    }
+    return result;
+  }) as typeof instance.api.getSession;
+
+  return instance;
 }
 
 const polarClient = globalForAuth.polarClient ?? createPolarClient();

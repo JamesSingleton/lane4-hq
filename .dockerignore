@@ -1,0 +1,9 @@
+**/node_modules
+**/.next
+**/.turbo
+**/dist
+**/coverage
+**/src-tauri/target
+.git
+.env*
+!.env.example

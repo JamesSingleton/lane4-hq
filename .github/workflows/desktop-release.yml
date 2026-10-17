@@ -1,0 +1,89 @@
+name: Desktop release
+
+# Push a `desktop-vX.Y.Z` tag matching `version` in tauri.conf.json. This
+# builds signed updater bundles into a draft GitHub release; publishing the
+# draft is what ships it, because the API's /v1/desktop/update skips drafts.
+on:
+  push:
+    tags:
+      - "desktop-v*"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: desktop-release-${{ github.ref }}
+
+jobs:
+  release:
+    name: Release (${{ matrix.name }})
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: macOS universal
+            os: macos-latest
+            rust-targets: aarch64-apple-darwin,x86_64-apple-darwin
+            target-args: --target universal-apple-darwin
+          - name: Windows x64
+            os: windows-latest
+            rust-targets: ""
+            target-args: ""
+    runs-on: ${{ matrix.os }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+      - name: Check the tag matches the app version
+        shell: bash
+        run: |
+          version=$(node -p 'require("./apps/desktop/src-tauri/tauri.conf.json").version')
+          if [ "desktop-v$version" != "$GITHUB_REF_NAME" ]; then
+            echo "::error::Tag $GITHUB_REF_NAME doesn't match tauri.conf.json version $version"
+            exit 1
+          fi
+      - name: Set up Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: "24"
+      - uses: pnpm/action-setup@v6
+      - name: Set up Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.rust-targets }}
+      - name: Cache Rust build
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: apps/desktop/src-tauri -> target
+      - name: Install dependencies
+        run: pnpm install
+      - name: Build and upload
+        uses: tauri-apps/tauri-action@v0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # From `pnpm --filter @lane4hq/desktop tauri signer generate`.
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+          # Optional overrides; release builds default to lane4hq.com.
+          LANE4_API_URL: ${{ vars.LANE4_API_URL }}
+          LANE4_ADMIN_URL: ${{ vars.LANE4_ADMIN_URL }}
+          # macOS code signing and notarization, once the Apple secrets exist.
+          APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
+          APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
+          APPLE_SIGNING_IDENTITY: ${{ secrets.APPLE_SIGNING_IDENTITY }}
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_PASSWORD: ${{ secrets.APPLE_PASSWORD }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+        with:
+          projectPath: apps/desktop
+          tauriScript: pnpm tauri
+          # The public key turns the updater on in this build (see update.rs).
+          args: >-
+            ${{ matrix.target-args }}
+            --config {"bundle":{"createUpdaterArtifacts":true},"plugins":{"updater":{"pubkey":"${{ vars.LANE4_UPDATER_PUBKEY }}"}}}
+          tagName: ${{ github.ref_name }}
+          releaseName: Lane4 Meet Manager ${{ github.ref_name }}
+          releaseBody: See the changes since the last desktop release.
+          releaseDraft: true
+          prerelease: false
+          includeUpdaterJson: true
+          updaterJsonPreferNsis: true

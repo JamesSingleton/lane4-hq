@@ -1,0 +1,32 @@
+{
+  "name": "@lane4hq/timing-cts",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Colorado Time Systems meet management interface codec (F397 Rev. F) and timer simulator",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./frame": "./src/frame.ts",
+    "./commands": "./src/commands.ts",
+    "./race": "./src/race.ts",
+    "./errors": "./src/errors.ts",
+    "./setups": "./src/setups.ts",
+    "./client": "./src/client.ts",
+    "./simulator": "./src/simulator.ts"
+  },
+  "scripts": {
+    "check:types": "tsc --noEmit",
+    "lint": "biome check .",
+    "lint:fix": "biome check --write .",
+    "test": "vitest run --coverage",
+    "test:watch": "vitest"
+  },
+  "devDependencies": {
+    "@lane4hq/typescript-config": "workspace:*",
+    "@types/node": "catalog:",
+    "@vitest/coverage-v8": "catalog:",
+    "typescript": "catalog:",
+    "vite": "catalog:",
+    "vitest": "catalog:"
+  }
+}

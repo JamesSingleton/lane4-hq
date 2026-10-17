@@ -14,13 +14,13 @@
   },
   "dependencies": {
     "@lane4hq/ui": "workspace:*",
-    "geist": "^1.7.2",
+    "geist": "^1.8.1",
     "lucide-react": "catalog:",
     "next": "catalog:",
     "next-themes": "catalog:",
     "react": "catalog:",
     "react-dom": "catalog:",
-    "resend": "^6.28.1"
+    "resend": "^6.34.1"
   },
   "devDependencies": {
     "@lane4hq/typescript-config": "workspace:*",

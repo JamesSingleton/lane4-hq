@@ -61,6 +61,8 @@ Admin itself has two problems that matter whether or not desktop exists:
 
    These are versioned route handlers (`apps/admin/app/api/v1/...`) with better-auth bearer tokens, built on the team operations module. They are built when meet running starts, not before.
 
+   *Superseded by [ADR 0005](0005-lane4-api-service.md): these endpoints live in a separate API service, `apps/api`.*
+
 ## Consequences
 
 - Admin gets cleaner on its own. Server Actions shrink to adapters, so `meets/actions.ts` and `roster/actions.ts` stop being where the logic lives.
@@ -72,6 +74,6 @@ Admin itself has two problems that matter whether or not desktop exists:
   2. Visiting clubs and parents see its published results.
   3. Some of those clubs adopt admin.
 
-## Open questions
+## Resolved
 
-- How meet running works offline: the local source of truth, checking a meet out onto the deck machine, publishing when a connection is available, and conflicts. It also decides whether SQLite is enough or a sync engine is needed. This gets its own ADR before meet running is built.
+- How meet running works offline is [ADR 0004](0004-offline-meet-store-and-publishing.md). The deck machine stores each meet as an atomic JSON file plus an append-only timing journal, and a publish queue sends verified heats when a connection is available. SQLite and a sync engine are not used.

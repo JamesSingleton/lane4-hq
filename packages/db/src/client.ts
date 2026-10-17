@@ -23,3 +23,13 @@ globalForDb.client = client;
 export const db = drizzle(client, { schema });
 
 export type Database = typeof db;
+
+/** Resolves once Postgres answers a trivial query. */
+export async function pingDatabase(): Promise<void> {
+  await client`select 1`;
+}
+
+/** Let in-flight queries finish (up to `timeoutSeconds`), then close the pool. */
+export async function closeDatabase(timeoutSeconds = 5): Promise<void> {
+  await client.end({ timeout: timeoutSeconds });
+}

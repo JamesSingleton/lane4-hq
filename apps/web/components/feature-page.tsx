@@ -20,7 +20,7 @@ export function FeaturePage({
     <>
       <PageIntro title={title} description={description}>
         <CtaLink href="/product" variant="outline" size="sm" className="w-fit">
-          All product
+          Product overview
         </CtaLink>
       </PageIntro>
       {shot ? (

@@ -1,38 +1,37 @@
-import type { Metadata } from "next";
 import { FeatureBlock, FeaturePage } from "@/components/feature-page";
+import { pageMetadata } from "@/lib/metadata";
 
-export const metadata: Metadata = {
-  title: "Progression",
-  description:
-    "Best times by course, season charts, CSV import, time standards, and top-times reports scoped to the current team.",
-};
+export const metadata = pageMetadata(
+  "Progression",
+  "Best times by course, season charts, CSV import, and top times scoped to the current team.",
+);
 
 export default function ProgressionProductPage() {
   return (
     <FeaturePage
-      title="Times that stay attached to the right team."
-      description="Best times, season charts, and cuts are scoped to the program you are coaching. An athlete who also swims for your club team does not rewrite the high school progression."
+      title="Keep best times with the club or the high school you have open."
+      description="Season charts belong to that team. An athlete who also swims for your other program keeps a separate set of times there."
       shot="progression"
     >
       <FeatureBlock title="Best times">
         <p>
-          Course and event, with meet name and date after a results import. Add
-          a time trial by hand when the file has not arrived. Bulk-load history
-          from CSV at season start.
+          Course and event, with the meet name and date after a results import.
+          Add a time trial by hand when the file has not arrived. Load history
+          from CSV at the start of the season.
         </p>
       </FeatureBlock>
       <FeatureBlock title="After the meet">
         <p>
-          Results import writes faster swims here. On the meet itself you can
-          still toggle a time-standard set to see who went under without leaving
-          the heat sheet.
+          A faster swim from a results import updates the best time here. On the
+          meet, you can still turn on a time standard to see who went under.
         </p>
       </FeatureBlock>
-      <FeatureBlock title="Cuts and top times">
+      <FeatureBlock title="Standards and top times">
         <p>
-          Track qualifying, motivational, and team-record standards against the
-          roster. Filter by training group when you only want one cohort. Team
-          top times by event staff relays before you guess from memory.
+          Compare times with a standard you entered: a JO or sectional cut, a
+          high school standard, or a team record you typed in. Filter
+          progression by training group when you only want one cohort. Team top
+          times by event are there when you are staffing a relay.
         </p>
       </FeatureBlock>
     </FeaturePage>

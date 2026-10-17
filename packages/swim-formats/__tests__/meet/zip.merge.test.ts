@@ -514,6 +514,35 @@ describe("mergeParsedMeets", () => {
     expect(merged.relays).toHaveLength(2);
   });
 
+  it("matches relays that omit event number and letter on the primary row", () => {
+    const merged = mergeParsedMeets(
+      {
+        ...primary,
+        relays: [
+          {
+            teamCode: "MARI",
+            swimmerNames: ["Bennett Munkirs"],
+          },
+        ],
+      },
+      [
+        {
+          ...supplement,
+          relays: [
+            {
+              teamCode: "AZMARI",
+              swimmerNames: ["Someone Else"],
+              seedTime: "2:00.00",
+            },
+          ],
+        },
+      ],
+    );
+    expect(merged.relays).toHaveLength(1);
+    expect(merged.relays?.[0]?.swimmerNames).toEqual(["Bennett Munkirs"]);
+    expect(merged.relays?.[0]?.seedTime).toBe("2:00.00");
+  });
+
   it("fills empty primary relay legs from the companion file", () => {
     const merged = mergeParsedMeets(
       {

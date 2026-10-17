@@ -8,7 +8,11 @@ export default defineConfig({
       provider: "v8",
       reporter: ["text", "html", "lcov"],
       // Pure role helpers only — Better Auth server/client/session need runtime mocks.
-      include: ["src/roles.ts"],
+      include: [
+        "src/roles.ts",
+        "src/device-clients.ts",
+        "src/device-session.ts",
+      ],
       exclude: [
         "src/index.ts",
         "src/client.ts",

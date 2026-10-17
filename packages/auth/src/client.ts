@@ -1,5 +1,6 @@
 import { polarClient } from "@polar-sh/better-auth/client";
 import {
+  deviceAuthorizationClient,
   inferAdditionalFields,
   organizationClient,
   twoFactorClient,
@@ -42,6 +43,7 @@ export const authClient = createAuthClient({
       },
     }),
     polarClient(),
+    deviceAuthorizationClient(),
     twoFactorClient({
       onTwoFactorRedirect() {
         window.location.href = "/2fa";
@@ -57,6 +59,7 @@ export const {
   useSession,
   organization,
   twoFactor,
+  device,
   changePassword,
   updateUser,
   requestPasswordReset,
