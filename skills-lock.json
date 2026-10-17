@@ -77,7 +77,7 @@
       "source": "neondatabase/agent-skills",
       "sourceType": "github",
       "skillPath": "skills/neon/SKILL.md",
-      "computedHash": "e3860ad516498440f5a35a169cc92e3fb3ad80d29a5af8f27c2398f47d732afd"
+      "computedHash": "1be07bf84ddf85b14f1f26a4d782d1374c480b378f1716a155d4ac3d31389ca2"
     },
     "neon-object-storage": {
       "source": "neondatabase/agent-skills",
@@ -119,7 +119,7 @@
       "source": "resend/resend-skills",
       "sourceType": "github",
       "skillPath": "skills/resend/SKILL.md",
-      "computedHash": "a4d4719c9e40bb8aeccf9cbbe59de19c950df55a45ddc8d93110374850f745c9"
+      "computedHash": "e12ac96a3c05509aabf1b03f40a3112e710e1bda060161b6495f851b7ac18f34"
     },
     "resend-design-skills": {
       "source": "resend/design-skills",

@@ -20,7 +20,7 @@
     "@hono/zod-openapi": "^1.6.3",
     "@lane4hq/auth": "workspace:*",
     "@lane4hq/db": "workspace:*",
-    "@scalar/hono-api-reference": "^0.12.12",
+    "@scalar/hono-api-reference": "^0.12.13",
     "@upstash/ratelimit": "^2.2.0",
     "@upstash/redis": "^1.39.0",
     "hono": "^4.13.13",

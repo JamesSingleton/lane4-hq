@@ -40,7 +40,7 @@
   "devDependencies": {
     "@biomejs/biome": "^2.5.15",
     "@lane4hq/typescript-config": "workspace:*",
-    "@neon/config": "^1.9.1",
+    "@neon/config": "^1.9.2",
     "@types/node": "catalog:",
     "dotenv-cli": "^11.0.0",
     "turbo": "^2.11.8",
