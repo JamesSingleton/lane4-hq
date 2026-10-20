@@ -21,6 +21,12 @@ export function parseResultRoundType(
     return roundFromCode(trailing[1]);
   }
 
+  // SDIF G0 column 144 is the prelims/finals/swim-off code.
+  if (line.length >= 144) {
+    const fromSpec = roundFromCode(line.charAt(143).toUpperCase());
+    if (fromSpec) return fromSpec;
+  }
+
   const col = line.substring(115, 116).trim().toUpperCase();
   return roundFromCode(col);
 }

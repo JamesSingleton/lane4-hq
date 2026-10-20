@@ -88,6 +88,87 @@ describe("parseCl2Meet", () => {
     expect(meet.entries.every((e) => (e.eventNumber ?? 0) < 500)).toBe(true);
   });
 
+  it("reads D0 prelim, swim-off, and finals columns when G0 splits are present", () => {
+    const line = (tag: string) => `${tag}${" ".repeat(158)}`.slice(0, 160);
+    const put = (raw: string, col: number, value: string) => {
+      const chars = raw.split("");
+      for (let i = 0; i < value.length; i++) chars[col - 1 + i] = value[i]!;
+      return chars.join("");
+    };
+    let prelim = line("D0");
+    prelim = put(prelim, 12, "Lane, Ada");
+    prelim = put(prelim, 98, "   26.04");
+    prelim = put(prelim, 107, "   27.50");
+    prelim = put(prelim, 116, "      DQ");
+    let skipped = line("D0");
+    skipped = put(skipped, 12, "No, Time");
+    skipped = put(skipped, 98, "      NT");
+    let split = line("G0");
+    split = put(split, 12, "Lane, Ada");
+    split = put(split, 70, "26.04");
+    split = put(split, 144, "P");
+    const meet = parseCl2Meet(
+      ["A01V3      02Meet Results", prelim, skipped, split].join("\n"),
+    );
+    const lane = meet.results.filter((result) =>
+      result.swimmerName.includes("Lane"),
+    );
+    expect(
+      lane.filter((result) => result.resultType === "prelim"),
+    ).toHaveLength(1);
+    expect(lane).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ time: "26.04", resultType: "prelim" }),
+        expect.objectContaining({
+          time: "27.50",
+          resultType: "swimoff",
+          isDq: false,
+        }),
+        expect.objectContaining({
+          time: "DQ",
+          resultType: "finals",
+          isDq: true,
+        }),
+      ]),
+    );
+    expect(
+      meet.results.some((result) => result.swimmerName.includes("Time")),
+    ).toBe(false);
+  });
+
+  it("copies a D3 USA id onto a D0 result that does not have one", () => {
+    const withId = cl2AthleteLine("D0", {
+      eventNumber: 2,
+      last: "Kept",
+      first: "Ida",
+      usa: "ABCD1234567890AUSA",
+      time: "31.00",
+    });
+    const blank = cl2AthleteLine("D0", {
+      eventNumber: 1,
+      last: "Lane",
+      first: "Ada",
+      time: "30.00",
+    });
+    const d3Blank = `D3${"NEWMEMBERID123".padEnd(14, " ")}${"Ada".padEnd(15, " ")}`;
+    const d3Kept = `D3${"ZZSHOULDNOTCOPY".padEnd(14, " ")}`;
+    const meet = parseCl2Meet(
+      ["A01V3      02Meet Results", blank, d3Blank, withId, d3Kept].join("\n"),
+    );
+    const filled = meet.results.find((result) =>
+      result.swimmerName.includes("Lane"),
+    );
+    const kept = meet.results.find((result) =>
+      result.swimmerName.includes("Kept"),
+    );
+    expect(filled?.usaMemberId).toBe("NEWMEMBERID123");
+    expect(
+      meet.entries.find((entry) => entry.swimmerName.includes("Lane"))
+        ?.preferredName,
+    ).toBe("Ada");
+    expect(kept?.usaMemberId).toBe("ABCD1234567890");
+  });
+
   it("parses modern azsi results via G0 lines", () => {
     const content = readFileSync(join(fixturesDir, "azsi-results.cl2"), "utf8");
     const meet = parseCl2Meet(content);

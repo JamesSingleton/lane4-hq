@@ -255,6 +255,75 @@ function isDqTime(time: string, line: string): boolean {
   return /^(DQ|NS|SCR|DNF)$/i.test(time.trim()) || /\bDQ\b/i.test(line);
 }
 
+/**
+ * SDIF round-time slots. Each is an 8-character field immediately before
+ * its course letter (D0 courses 106/115/124, E0 courses 63/72/81).
+ * Confirmed on the scrubbed tunas AAA and Reno results.
+ */
+const D0_ROUND_SLOTS = [
+  { start: 97, resultType: "prelim" },
+  { start: 106, resultType: "swimoff" },
+  { start: 115, resultType: "finals" },
+] as const;
+
+const E0_ROUND_SLOTS = [
+  { start: 54, resultType: "prelim" },
+  { start: 63, resultType: "swimoff" },
+  { start: 72, resultType: "finals" },
+] as const;
+
+type RoundSlot = {
+  start: number;
+  resultType: "prelim" | "swimoff" | "finals";
+};
+
+function parseFixedTimeField(
+  field: string,
+): { time: string; isDq: boolean } | undefined {
+  const raw = field.trim();
+  if (!raw) return undefined;
+  if (/^\d{0,2}:?\d{1,2}\.\d{2}$/.test(raw)) {
+    return { time: raw, isDq: false };
+  }
+  if (/^(DQ|NS|SCR|DNF)$/i.test(raw)) {
+    return { time: raw.toUpperCase(), isDq: true };
+  }
+  return undefined;
+}
+
+function fixedRoundResults(
+  line: string,
+  slots: readonly RoundSlot[],
+): Array<{
+  time: string;
+  isDq: boolean;
+  resultType: RoundSlot["resultType"];
+}> {
+  const out: Array<{
+    time: string;
+    isDq: boolean;
+    resultType: RoundSlot["resultType"];
+  }> = [];
+  for (const slot of slots) {
+    const parsed = parseFixedTimeField(line.slice(slot.start, slot.start + 8));
+    if (!parsed) continue;
+    out.push({
+      time: parsed.time,
+      isDq: parsed.isDq,
+      resultType: slot.resultType,
+    });
+  }
+  return out;
+}
+
+function sameRoundResult(a: ParsedResult, b: ParsedResult): boolean {
+  return (
+    a.swimmerName.trim().toLowerCase() === b.swimmerName.trim().toLowerCase() &&
+    a.time.trim().toUpperCase() === b.time.trim().toUpperCase() &&
+    a.resultType === b.resultType
+  );
+}
+
 function looksLikeHytekStrokeCode(code: string): boolean {
   const decoded = decodeEventCode(code);
   return Boolean(decoded?.distance && decoded.stroke);
@@ -460,6 +529,7 @@ function parseD0Athlete(
   meet: ParsedMeet,
   teamCode: string | undefined,
   identityByName: Map<string, AthleteIdentityCache>,
+  pendingRoundResults: ParsedResult[],
 ): void {
   const { swimmerName, usaMemberId } = parseHytekSwimmerName(line);
   if (!swimmerName) return;
@@ -544,6 +614,25 @@ function parseD0Athlete(
     classYear,
     seedCourse: columnCourse,
   });
+
+  // Meet-results files that also carry G0 splits leave the official
+  // prelim / swim-off / finals time on the D0. The !hasG0 path above
+  // already returned, so reaching this with meet_results means G0 exists.
+  if (kind === "meet_results") {
+    for (const round of fixedRoundResults(line, D0_ROUND_SLOTS)) {
+      pendingRoundResults.push({
+        eventNumber,
+        swimmerName,
+        time: round.time,
+        isDq: round.isDq,
+        resultType: round.resultType,
+        usaMemberId: usaMemberId || undefined,
+        dateOfBirth: identity.dateOfBirth,
+        gender: rosterGender,
+        teamCode,
+      });
+    }
+  }
 }
 
 /**
@@ -621,6 +710,7 @@ export function parseCl2Meet(content: string): ParsedMeet {
   const relays: ParsedRelayEntry[] = [];
   const identityByName = new Map<string, AthleteIdentityCache>();
   const d3ByName = new Map<string, ReturnType<typeof parseCl2D3Fields>>();
+  const pendingRoundResults: ParsedResult[] = [];
   let lastTeamCode: string | undefined;
   let lastSwimmerKey: string | undefined;
 
@@ -641,6 +731,12 @@ export function parseCl2Meet(content: string): ParsedMeet {
     const cached = identityByName.get(nameKey);
     if (cached && !cached.usaMemberId && extra.usaMemberId) {
       cached.usaMemberId = extra.usaMemberId;
+    }
+    for (const result of meet.results) {
+      if (result.swimmerName.toLowerCase() !== nameKey) continue;
+      if (!result.usaMemberId && extra.usaMemberId) {
+        result.usaMemberId = extra.usaMemberId;
+      }
     }
   }
 
@@ -667,7 +763,15 @@ export function parseCl2Meet(content: string): ParsedMeet {
       }
     } else if (type === "D0" || type === "D1") {
       const before = meet.entries.length;
-      parseD0Athlete(line, kind, hasG0, meet, lastTeamCode, identityByName);
+      parseD0Athlete(
+        line,
+        kind,
+        hasG0,
+        meet,
+        lastTeamCode,
+        identityByName,
+        pendingRoundResults,
+      );
       const added = meet.entries[meet.entries.length - 1];
       if (meet.entries.length > before && added) {
         lastSwimmerKey = added.swimmerName.toLowerCase();
@@ -691,6 +795,14 @@ export function parseCl2Meet(content: string): ParsedMeet {
       const relay = parseRelayTeamLine(line);
       if (relay) {
         relay.seedCourse = firstCourse(line, E0_COURSE_COLS);
+        const rounds = fixedRoundResults(line, E0_ROUND_SLOTS);
+        if (rounds.length > 0) {
+          relay.results = rounds.map((round) => ({
+            time: round.time,
+            isDq: round.isDq,
+            resultType: round.resultType,
+          }));
+        }
         const event = relayEventFromLine(line);
         if (event) {
           ensureEvent(meet, event.eventNumber, {
@@ -720,6 +832,14 @@ export function parseCl2Meet(content: string): ParsedMeet {
         relays[relays.length - 1]!.swimmerNames.push(leg.swimmerName);
       }
     }
+  }
+
+  for (const candidate of pendingRoundResults) {
+    const already = meet.results.some((result) =>
+      sameRoundResult(result, candidate),
+    );
+    if (already) continue;
+    meet.results.push(candidate);
   }
 
   if (relays.length > 0) {

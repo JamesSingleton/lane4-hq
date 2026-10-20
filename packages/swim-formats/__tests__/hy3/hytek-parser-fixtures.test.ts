@@ -6,7 +6,7 @@ import { parseHy3 } from "../../src/hy3/parser";
 
 const fixturesDir = join(
   dirname(fileURLToPath(import.meta.url)),
-  "../../fixtures/hytek-parser",
+  "../../fixtures/third-party/hytek-parser",
 );
 
 const files = readdirSync(fixturesDir)

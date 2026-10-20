@@ -29,6 +29,9 @@ describe("g0-meta", () => {
     expect(parseResultRoundType(`${" ".repeat(115)}FX`)).toBe("finals");
     expect(parseResultRoundType(`${" ".repeat(115)}SX`)).toBe("swimoff");
     expect(parseResultRoundType(`${" ".repeat(115)}P`)).toBe("prelim");
+    expect(parseResultRoundType(`${" ".repeat(143)}P junk`)).toBe("prelim");
+    expect(parseResultRoundType(`${" ".repeat(143)}F junk`)).toBe("finals");
+    expect(parseResultRoundType(`${" ".repeat(143)}X junk`)).toBeUndefined();
   });
 
   it("reads trailing swimoff marker before the checksum suffix", () => {

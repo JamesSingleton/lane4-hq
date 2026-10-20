@@ -1,0 +1,1980 @@
+{
+  "file": "pasa_distance_intersquad.hy3",
+  "report": {
+    "files_read": 1,
+    "meets_parsed": 1,
+    "swimmers_parsed": 32,
+    "individual_swims_parsed": 61,
+    "relays_parsed": 13,
+    "splits_parsed": 20,
+    "records_skipped": 2,
+    "fields_recovered": 0
+  },
+  "warnings": [
+    {
+      "record_type": "F2",
+      "field": "event",
+      "kind": "UNKNOWN_CODE",
+      "severity": "SKIPPED",
+      "count": 1
+    },
+    {
+      "record_type": "F3",
+      "field": null,
+      "kind": "ORPHANED",
+      "severity": "SKIPPED",
+      "count": 1
+    }
+  ],
+  "meet": {
+    "name": "2021 PASA SC Distance Intersquad Meet",
+    "venue": "Rinconada",
+    "start_date": "2021-05-01",
+    "end_date": "2021-05-01",
+    "age_up_date": "2021-05-01",
+    "altitude": 0,
+    "course": "SCY",
+    "sanction_number": null
+  },
+  "source_file": {
+    "hy3_file_type": "MEET_RESULTS",
+    "software_name": "MM5 7.0Gb",
+    "created": "2021-05-02",
+    "created_time": "12:14:00",
+    "licensee": "Central Coast Section Championship Meet"
+  },
+  "clubs": [
+    {
+      "team_code": "PCPASA",
+      "lsc": "PACIFIC",
+      "full_name": "ALWZ LWEZ DELYQZCO LBFLETND",
+      "email": null,
+      "swimmer_count": 32,
+      "result_count": 74
+    }
+  ],
+  "swimmers": [
+    {
+      "sex": "MALE",
+      "last_name": "Lmfnpuz",
+      "first_name": "Rcprzcj",
+      "preferred_first_name": "Rcprzcj",
+      "middle_initial": "W",
+      "id_short": "475449RCPWLM",
+      "birthday": "1992-03-01",
+      "club_team_code": "PCPASA",
+      "swims": [
+        {
+          "event": "FREE_50_SCY",
+          "event_sex": "MALE",
+          "event_min_age": 15,
+          "event_max_age": 16,
+          "event_number": "4H",
+          "session": "FINALS",
+          "status": "SCR",
+          "time": null,
+          "rank": null,
+          "seed_time": "25.49",
+          "converted_seed_time": "25.49",
+          "dq_code": null,
+          "dq_reason": null,
+          "swimmer_age_class": "16",
+          "splits": []
+        }
+      ]
+    },
+    {
+      "sex": "MALE",
+      "last_name": "Lmfnpuz",
+      "first_name": "Xlcety",
+      "preferred_first_name": "Xlcety",
+      "middle_initial": "C",
+      "id_short": "405843XLCCLM",
+      "birthday": "1993-08-15",
+      "club_team_code": "PCPASA",
+      "swims": [
+        {
+          "event": "FREE_500_SCY",
+          "event_sex": "MALE",
+          "event_min_age": 11,
+          "event_max_age": 12,
+          "event_number": "3D",
+          "session": "FINALS",
+          "status": "OK",
+          "time": "6:51.14",
+          "rank": 2,
+          "seed_time": "7:24.38",
+          "converted_seed_time": "7:24.38",
+          "dq_code": null,
+          "dq_reason": null,
+          "swimmer_age_class": "11",
+          "splits": []
+        },
+        {
+          "event": "FREE_50_SCY",
+          "event_sex": "MALE",
+          "event_min_age": 11,
+          "event_max_age": 12,
+          "event_number": "4D",
+          "session": "FINALS",
+          "status": "OK",
+          "time": "30.21",
+          "rank": 7,
+          "seed_time": "31.39",
+          "converted_seed_time": "31.39",
+          "dq_code": null,
+          "dq_reason": null,
+          "swimmer_age_class": "11",
+          "splits": []
+        }
+      ]
+    },
+    {
+      "sex": "MALE",
+      "last_name": "Lohpcp-Mzlxls",
+      "first_name": "Uldzy",
+      "preferred_first_name": "Uldzy",
+      "middle_initial": "O",
+      "id_short": "496941ULDOLO",
+      "birthday": "1992-04-27",
+      "club_team_code": "PCPASA",
+      "swims": [
+        {
+          "event": "FREE_1000_SCY",
+          "event_sex": "MALE",
+          "event_min_age": 13,
+          "event_max_age": 14,
+          "event_number": "2F",
+          "session": "FINALS",
+          "status": "OK",
+          "time": "13:20.05",
+          "rank": 5,
+          "seed_time": null,
+          "converted_seed_time": null,
+          "dq_code": null,
+          "dq_reason": null,
+          "swimmer_age_class": "13",
+          "splits": []
+        },
+        {
+          "event": "FREE_50_SCY",
+          "event_sex": "MALE",
+          "event_min_age": 13,
+          "event_max_age": 14,
+          "event_number": "4F",
+          "session": "FINALS",
+          "status": "OK",
+          "time": "31.58",
+          "rank": 6,
+          "seed_time": "30.09",
+          "converted_seed_time": "30.09",
+          "dq_code": null,
+          "dq_reason": null,
+          "swimmer_age_class": "13",
+          "splits": []
+        }
+      ]
+    },
+    {
+      "sex": "MALE",
+      "last_name": "Lylryzdzy",
+      "first_name": "Rlmctpw",
+      "preferred_first_name": "Rlmctpw",
+      "middle_initial": "L",
+      "id_short": "486340RLMLLY",
+      "birthday": "1992-04-08",
+      "club_team_code": "PCPASA",
+      "swims": [
+        {
+          "event": "FREE_1000_SCY",
+          "event_sex": "MALE",
+          "event_min_age": 15,
+          "event_max_age": 16,
+          "event_number": "2H",
+          "session": "FINALS",
+          "status": "OK",
+          "time": "11:53.86",
+          "rank": 1,
+          "seed_time": null,
+          "converted_seed_time": null,
+          "dq_code": null,
+          "dq_reason": null,
+          "swimmer_age_class": "15",
+          "splits": []
+        },
+        {
+          "event": "FREE_50_SCY",
+          "event_sex": "MALE",
+          "event_min_age": 15,
+          "event_max_age": 16,
+          "event_number": "4H",
+          "session": "FINALS",
+          "status": "OK",
+          "time": "24.99",
+          "rank": 1,
+          "seed_time": null,
+          "converted_seed_time": null,
+          "dq_code": null,
+          "dq_reason": null,
+          "swimmer_age_class": "15",
+          "splits": []
+        }
+      ]
+    },
+    {
+      "sex": "FEMALE",
+      "last_name": "Lylryzdzy",
+      "first_name": "Wtwj",
+      "preferred_first_name": "Wtwj",
+      "middle_initial": "V",
+      "id_short": "406442WTWVLY",
+      "birthday": "1993-01-18",
+      "club_team_code": "PCPASA",
+      "swims": [
+        {
+          "event": "FREE_1000_SCY",
+          "event_sex": "FEMALE",
+          "event_min_age": 11,
+          "event_max_age": 12,
+          "event_number": "2C",
+          "session": "FINALS",
+          "status": "OK",
+          "time": "12:52.73",
+          "rank": 3,
+          "seed_time": null,
+          "converted_seed_time": null,
+          "dq_code": null,
+          "dq_reason": null,
+          "swimmer_age_class": "12",
+          "splits": []
+        },
+        {
+          "event": "FREE_50_SCY",
+          "event_sex": "FEMALE",
+          "event_min_age": 11,
+          "event_max_age": 12,
+          "event_number": "4C",
+          "session": "FINALS",
+          "status": "OK",
+          "time": "27.73",
+          "rank": 2,
+          "seed_time": "27.31",
+          "converted_seed_time": "27.31",
+          "dq_code": null,
+          "dq_reason": null,
+          "swimmer_age_class": "12",
+          "splits": []
+        }
+      ]
+    },
+    {
+      "sex": "MALE",
+      "last_name": "Mlwgl",
+      "first_name": "Xlihpww Wfvp",
+      "preferred_first_name": "Xlihpww",
+      "middle_initial": null,
+      "id_short": "424242XLILML",
+      "birthday": "1993-02-25",
+      "club_team_code": "PCPASA",
+      "swims": [
+        {
+          "event": "FREE_1000_SCY",
+          "event_sex": "MALE",
+          "event_min_age": 11,
+          "event_max_age": 12,
+          "event_number": "2D",
+          "session": "FINALS",
+          "status": "OK",
+          "time": "12:35.41",
+          "rank": 2,
+          "seed_time": "12:07.56",
+          "converted_seed_time": "12:07.56",
+          "dq_code": null,
+          "dq_reason": null,
+          "swimmer_age_class": "12",
+          "splits": []
+        },
+        {
+          "event": "FREE_50_SCY",
+          "event_sex": "MALE",
+          "event_min_age": 11,
+          "event_max_age": 12,
+          "event_number": "4D",
+          "session": "FINALS",
+          "status": "OK",
+          "time": "28.99",
+          "rank": 5,
+          "seed_time": "29.16",
+          "converted_seed_time": "29.16",
+          "dq_code": null,
+          "dq_reason": null,
+          "swimmer_age_class": "12",
+          "splits": []
+        }
+      ]
+    },
+    {
+      "sex": "FEMALE",
+      "last_name": "Mzcl",
+      "first_name": "Tdsl",
+      "preferred_first_name": "Tdsl",
+      "middle_initial": "A",
+      "id_short": "544142TDSAMZ",
+      "birthday": "1993-04-04",
+      "club_team_code": "PCPASA",
+      "swims": [
+        {
+          "event": "FREE_50_SCY",
+          "event_sex": "FEMALE",
+          "event_min_age": 11,
+          "event_max_age": 12,
+          "event_number": "4C",
+          "session": "FINALS",
+          "status": "OK",
+          "time": "31.07",
+          "rank": 6,
+          "seed_time": "29.31",
+          "converted_seed_time": "29.31",
+          "dq_code": null,
+          "dq_reason": null,
+          "swimmer_age_class": "12",
+          "splits": []
+        },
+        {
+          "event": "FREE_1000_SCY",
+          "event_sex": "FEMALE",
+          "event_min_age": 11,
+          "event_max_age": 12,
+          "event_number": "2C",
+          "session": "FINALS",
+          "status": "OK",
+          "time": "14:03.53",
+          "rank": 6,
+          "seed_time": null,
+          "converted_seed_time": null,
+          "dq_code": null,
+          "dq_reason": null,
+          "swimmer_age_class": "12",
+          "splits": []
+        }
+      ]
+    },
+    {
+      "sex": "FEMALE",
+      "last_name": "Mjcyp",
+      "first_name": "Xlcpy",
+      "preferred_first_name": "Xlcpy",
+      "middle_initial": "N",
+      "id_short": "554742XLCNMJ",
+      "birthday": "1993-04-23",
+      "club_team_code": "PCPASA",
+      "swims": [
+        {
+          "event": "FREE_1000_SCY",
+          "event_sex": "FEMALE",
+          "event_min_age": 11,
+          "event_max_age": 12,
+          "event_number": "2C",
+          "session": "FINALS",
+          "status": "OK",
+          "time": "11:46.27",
+          "rank": 1,
+          "seed_time": "12:19.37",
+          "converted_seed_time": "12:19.37",
+          "dq_code": null,
+          "dq_reason": null,
+          "swimmer_age_class": "12",
+          "splits": []
+        },
+        {
+          "event": "FREE_50_SCY",
+          "event_sex": "FEMALE",
+          "event_min_age": 11,
+          "event_max_age": 12,
+          "event_number": "4C",
+          "session": "FINALS",
+          "status": "OK",
+          "time": "26.45",
+          "rank": 1,
+          "seed_time": "25.91",
+          "converted_seed_time": "25.91",
+          "dq_code": null,
+          "dq_reason": null,
+          "swimmer_age_class": "12",
+          "splits": []
+        }
+      ]
+    },
+    {
+      "sex": "FEMALE",
+      "last_name": "Nszh",
+      "first_name": "Mczzvwjyy",
+      "preferred_first_name": "Mczzvwjyy",
+      "middle_initial": "D",
+      "id_short": "465643MCZDNS",
+      "birthday": "1993-05-31",
+      "club_team_code": "PCPASA",
+      "swims": [
+        {
+          "event": "FREE_500_SCY",
+          "event_sex": "FEMALE",
+          "event_min_age": 11,
+          "event_max_age": 12,
+          "event_number": "3C",
+          "session": "FINALS",
+          "status": "OK",
+          "time": "6:45.40",
+          "rank": 2,
+          "seed_time": "6:45.84",
+          "converted_seed_time": "6:45.84",
+          "dq_code": null,
+          "dq_reason": null,
+          "swimmer_age_class": "12",
+          "splits": []
+        },
+        {
+          "event": "FREE_50_SCY",
+          "event_sex": "FEMALE",
+          "event_min_age": 11,
+          "event_max_age": 12,
+          "event_number": "4C",
+          "session": "FINALS",
+          "status": "OK",
+          "time": "33.95",
+          "rank": 8,
+          "seed_time": "32.15",
+          "converted_seed_time": "32.15",
+          "dq_code": null,
+          "dq_reason": null,
+          "swimmer_age_class": "12",
+          "splits": []
+        }
+      ]
+    },
+    {
+      "sex": "FEMALE",
+      "last_name": "Nszh",
+      "first_name": "Pcty",
+      "preferred_first_name": "Pcty",
+      "middle_initial": "V",
+      "id_short": "474542PCTVNS",
+      "birthday": "1992-10-15",
+      "club_team_code": "PCPASA",
+      "swims": [
+        {
+          "event": "FREE_1000_SCY",
+          "event_sex": "FEMALE",
+          "event_min_age": 13,
+          "event_max_age": 14,
+          "event_number": "2E",
+          "session": "FINALS",
+          "status": "OK",
+          "time": "12:32.95",
+          "rank": 2,
+          "seed_time": null,
+          "converted_seed_time": null,
+          "dq_code": null,
+          "dq_reason": null,
+          "swimmer_age_class": "13",
+          "splits": []
+        },
+        {
+          "event": "FREE_50_SCY",
+          "event_sex": "FEMALE",
+          "event_min_age": 13,
+          "event_max_age": 14,
+          "event_number": "4E",
+          "session": "FINALS",
+          "status": "OK",
+          "time": "28.01",
+          "rank": 2,
+          "seed_time": "28.40",
+          "converted_seed_time": "28.40",
+          "dq_code": null,
+          "dq_reason": null,
+          "swimmer_age_class": "13",
+          "splits": []
+        }
+      ]
+    },
+    {
+      "sex": "FEMALE",
+      "last_name": "Nsflyr",
+      "first_name": "Wfjt",
+      "preferred_first_name": "Wfjt",
+      "middle_initial": "K",
+      "id_short": "434943WFJKNS",
+      "birthday": "1993-10-11",
+      "club_team_code": "PCPASA",
+      "swims": [
+        {
+          "event": "FREE_500_SCY",
+          "event_sex": "FEMALE",
+          "event_min_age": 11,
+          "event_max_age": 12,
+          "event_number": "3C",
+          "session": "FINALS",
+          "status": "OK",
+          "time": "6:41.30",
+          "rank": 1,
+          "seed_time": "6:52.65",
+          "converted_seed_time": "6:52.65",
+          "dq_code": null,
+          "dq_reason": null,
+          "swimmer_age_class": "11",
+          "splits": []
+        },
+        {
+          "event": "FREE_50_SCY",
+          "event_sex": "FEMALE",
+          "event_min_age": 11,
+          "event_max_age": 12,
+          "event_number": "4C",
+          "session": "FINALS",
+          "status": "OK",
+          "time": "29.98",
+          "rank": 4,
+          "seed_time": "30.80",
+          "converted_seed_time": "30.80",
+          "dq_code": null,
+          "dq_reason": null,
+          "swimmer_age_class": "11",
+          "splits": []
+        }
+      ]
+    },
+    {
+      "sex": "FEMALE",
+      "last_name": "Nkluvzhdvl",
+      "first_name": "Vtyrl",
+      "preferred_first_name": "Vtyrl",
+      "middle_initial": "A",
+      "id_short": "405141VTYANK",
+      "birthday": "1992-05-16",
+      "club_team_code": "PCPASA",
+      "swims": [
+        {
+          "event": "FREE_500_SCY",
+          "event_sex": "FEMALE",
+          "event_min_age": 13,
+          "event_max_age": 14,
+          "event_number": "3E",
+          "session": "FINALS",
+          "status": "OK",
+          "time": "6:58.14",
+          "rank": 1,
+          "seed_time": "7:30.83",
+          "converted_seed_time": "7:30.83",
+          "dq_code": null,
+          "dq_reason": null,
+          "swimmer_age_class": "13",
+          "splits": []
+        },
+        {
+          "event": "FREE_50_SCY",
+          "event_sex": "FEMALE",
+          "event_min_age": 13,
+          "event_max_age": 14,
+          "event_number": "4E",
+          "session": "FINALS",
+          "status": "OK",
+          "time": "30.60",
+          "rank": 5,
+          "seed_time": "33.71",
+          "converted_seed_time": "33.71",
+          "dq_code": null,
+          "dq_reason": null,
+          "swimmer_age_class": "13",
+          "splits": []
+        }
+      ]
+    },
+    {
+      "sex": "MALE",
+      "last_name": "Nkluvzhdvt",
+      "first_name": "Ezxldk",
+      "preferred_first_name": "Ezxldk",
+      "middle_initial": "A",
+      "id_short": "455343EZXANK",
+      "birthday": "1993-05-12",
+      "club_team_code": "PCPASA",
+      "swims": [
+        {
+          "event": "FREE_50_SCY",
+          "event_sex": "MALE",
+          "event_min_age": 11,
+          "event_max_age": 12,
+          "event_number": "4D",
+          "session": "FINALS",
+          "status": "OK",
+          "time": "27.56",
+          "rank": 3,
+          "seed_time": "30.05",
+          "converted_seed_time": "30.05",
+          "dq_code": null,
+          "dq_reason": null,
+          "swimmer_age_class": "12",
+          "splits": []
+        },
+        {
+          "event": "FREE_500_SCY",
+          "event_sex": "MALE",
+          "event_min_age": 11,
+          "event_max_age": 12,
+          "event_number": "3D",
+          "session": "FINALS",
+          "status": "OK",
+          "time": "6:02.06",
+          "rank": 1,
+          "seed_time": "6:39.35",
+          "converted_seed_time": "6:39.35",
+          "dq_code": null,
+          "dq_reason": null,
+          "swimmer_age_class": "12",
+          "splits": []
+        }
+      ]
+    },
+    {
+      "sex": "MALE",
+      "last_name": "Otktedpc",
+      "first_name": "Xtwly",
+      "preferred_first_name": "Xtwly",
+      "middle_initial": "D",
+      "id_short": "405343XTWDOT",
+      "birthday": "1993-09-03",
+      "club_team_code": "PCPASA",
+      "swims": [
+        {
+          "event": "FREE_1000_SCY",
+          "event_sex": "MALE",
+          "event_min_age": 11,
+          "event_max_age": 12,
+          "event_number": "2D",
+          "session": "FINALS",
+          "status": "OK",
+          "time": "13:40.19",
+          "rank": 4,
+          "seed_time": null,
+          "converted_seed_time": null,
+          "dq_code": null,
+          "dq_reason": null,
+          "swimmer_age_class": "11",
+          "splits": []
+        },
+        {
+          "event": "FREE_50_SCY",
+          "event_sex": "MALE",
+          "event_min_age": 11,
+          "event_max_age": 12,
+          "event_number": "4D",
+          "session": "FINALS",
+          "status": "OK",
+          "time": "31.18",
+          "rank": 8,
+          "seed_time": "30.07",
+          "converted_seed_time": "30.07",
+          "dq_code": null,
+          "dq_reason": null,
+          "swimmer_age_class": "11",
+          "splits": []
+        }
+      ]
+    },
+    {
+      "sex": "FEMALE",
+      "last_name": "Ozly",
+      "first_name": "Ecly",
+      "preferred_first_name": "Ecly",
+      "middle_initial": "M",
+      "id_short": "546841ECLMOZ",
+      "birthday": "1992-07-12",
+      "club_team_code": "PCPASA",
+      "swims": [
+        {
+          "event": "FREE_1000_SCY",
+          "event_sex": "FEMALE",
+          "event_min_age": 13,
+          "event_max_age": 14,
+          "event_number": "2E",
+          "session": "FINALS",
+          "status": "OK",
+          "time": "13:03.41",
+          "rank": 4,
+          "seed_time": "13:09.95",
+          "converted_seed_time": "13:09.95",
+          "dq_code": null,
+          "dq_reason": null,
+          "swimmer_age_class": "13",
+          "splits": []
+        },
+        {
+          "event": "FREE_50_SCY",
+          "event_sex": "FEMALE",
+          "event_min_age": 13,
+          "event_max_age": 14,
+          "event_number": "4E",
+          "session": "FINALS",
+          "status": "OK",
+          "time": "26.32",
+          "rank": 1,
+          "seed_time": "27.63",
+          "converted_seed_time": "27.63",
+          "dq_code": null,
+          "dq_reason": null,
+          "swimmer_age_class": "13",
+          "splits": []
+        }
+      ]
+    },
+    {
+      "sex": "FEMALE",
+      "last_name": "Ojp",
+      "first_name": "Vtcl",
+      "preferred_first_name": "Vtcl",
+      "middle_initial": "W",
+      "id_short": "495642VTCWOJ",
+      "birthday": "1992-12-11",
+      "club_team_code": "PCPASA",
+      "swims": [
+        {
+          "event": "FREE_1000_SCY",
+          "event_sex": "FEMALE",
+          "event_min_age": 11,
+          "event_max_age": 12,
+          "event_number": "2C",
+          "session": "FINALS",
+          "status": "OK",
+          "time": "13:05.51",
+          "rank": 5,
+          "seed_time": null,
+          "converted_seed_time": null,
+          "dq_code": null,
+          "dq_reason": null,
+          "swimmer_age_class": "12",
+          "splits": []
+        },
+        {
+          "event": "FREE_50_SCY",
+          "event_sex": "FEMALE",
+          "event_min_age": 11,
+          "event_max_age": 12,
+          "event_number": "4C",
+          "session": "FINALS",
+          "status": "OK",
+          "time": "29.84",
+          "rank": 3,
+          "seed_time": "32.40",
+          "converted_seed_time": "32.40",
+          "dq_code": null,
+          "dq_reason": null,
+          "swimmer_age_class": "12",
+          "splits": []
+        }
+      ]
+    },
+    {
+      "sex": "MALE",
+      "last_name": "Qlclmzdnst",
+      "first_name": "Lwpddlyocz",
+      "preferred_first_name": "Lwpddlyocz",
+      "middle_initial": null,
+      "id_short": "494142LWP*QL",
+      "birthday": "1992-11-22",
+      "club_team_code": "PCPASA",
+      "swims": [
+        {
+          "event": "FREE_1000_SCY",
+          "event_sex": "MALE",
+          "event_min_age": 11,
+          "event_max_age": 12,
+          "event_number": "2D",
+          "session": "FINALS",
+          "status": "OK",
+          "time": "12:13.46",
+          "rank": 1,
+          "seed_time": "12:16.86",
+          "converted_seed_time": "12:16.86",
+          "dq_code": null,
+          "dq_reason": null,
+          "swimmer_age_class": "12",
+          "splits": []
+        },
+        {
+          "event": "FREE_50_SCY",
+          "event_sex": "MALE",
+          "event_min_age": 11,
+          "event_max_age": 12,
+          "event_number": "4D",
+          "session": "FINALS",
+          "status": "OK",
+          "time": "26.84",
+          "rank": 2,
+          "seed_time": "26.33",
+          "converted_seed_time": "26.33",
+          "dq_code": null,
+          "dq_reason": null,
+          "swimmer_age_class": "12",
+          "splits": []
+        }
+      ]
+    },
+    {
+      "sex": "FEMALE",
+      "last_name": "Slcl",
+      "first_name": "Jfvl",
+      "preferred_first_name": "Jfvl",
+      "middle_initial": null,
+      "id_short": "464242JFV*SL",
+      "birthday": "1992-09-07",
+      "club_team_code": "PCPASA",
+      "swims": [
+        {
+          "event": "FREE_1000_SCY",
+          "event_sex": "FEMALE",
+          "event_min_age": 13,
+          "event_max_age": 14,
+          "event_number": "2E",
+          "session": "FINALS",
+          "status": "OK",
+          "time": "11:48.99",
+          "rank": 1,
+          "seed_time": "12:45.04",
+          "converted_seed_time": "12:45.04",
+          "dq_code": null,
+          "dq_reason": null,
+          "swimmer_age_class": "13",
+          "splits": []
+        },
+        {
+          "event": "FREE_50_SCY",
+          "event_sex": "FEMALE",
+          "event_min_age": 13,
+          "event_max_age": 14,
+          "event_number": "4E",
+          "session": "FINALS",
+          "status": "OK",
+          "time": "29.04",
+          "rank": 4,
+          "seed_time": "31.00",
+          "converted_seed_time": "31.00",
+          "dq_code": null,
+          "dq_reason": null,
+          "swimmer_age_class": "13",
+          "splits": []
+        }
+      ]
+    },
+    {
+      "sex": "FEMALE",
+      "last_name": "Vlclnsthlwl",
+      "first_name": "Lvlctvz",
+      "preferred_first_name": "Lvlctvz",
+      "middle_initial": null,
+      "id_short": "406643LVL*VL",
+      "birthday": "1993-09-22",
+      "club_team_code": "PCPASA",
+      "swims": [
+        {
+          "event": "FREE_1000_SCY",
+          "event_sex": "FEMALE",
+          "event_min_age": 11,
+          "event_max_age": 12,
+          "event_number": "2C",
+          "session": "FINALS",
+          "status": "OK",
+          "time": "12:47.63",
+          "rank": 2,
+          "seed_time": null,
+          "converted_seed_time": null,
+          "dq_code": null,
+          "dq_reason": null,
+          "swimmer_age_class": "11",
+          "splits": []
+        }
+      ]
+    },
+    {
+      "sex": "FEMALE",
+      "last_name": "Vtcv",
+      "first_name": "Vlespctyp",
+      "preferred_first_name": "Vlespctyp",
+      "middle_initial": "X",
+      "id_short": "484843VLEXVT",
+      "birthday": "1993-07-08",
+      "club_team_code": "PCPASA",
+      "swims": [
+        {
+          "event": "FREE_1000_SCY",
+          "event_sex": "FEMALE",
+          "event_min_age": 11,
+          "event_max_age": 12,
+          "event_number": "2C",
+          "session": "FINALS",
+          "status": "OK",
+          "time": "13:03.76",
+          "rank": 4,
+          "seed_time": null,
+          "converted_seed_time": null,
+          "dq_code": null,
+          "dq_reason": null,
+          "swimmer_age_class": "12",
+          "splits": []
+        },
+        {
+          "event": "FREE_50_SCY",
+          "event_sex": "FEMALE",
+          "event_min_age": 11,
+          "event_max_age": 12,
+          "event_number": "4C",
+          "session": "FINALS",
+          "status": "OK",
+          "time": "30.35",
+          "rank": 5,
+          "seed_time": "32.82",
+          "converted_seed_time": "32.82",
+          "dq_code": null,
+          "dq_reason": null,
+          "swimmer_age_class": "12",
+          "splits": []
+        }
+      ]
+    },
+    {
+      "sex": "MALE",
+      "last_name": "Wpp",
+      "first_name": "Potdzy",
+      "preferred_first_name": "Potdzy",
+      "middle_initial": "D",
+      "id_short": "496242POTDWP",
+      "birthday": "1992-12-30",
+      "club_team_code": "PCPASA",
+      "swims": [
+        {
+          "event": "FREE_1000_SCY",
+          "event_sex": "MALE",
+          "event_min_age": 11,
+          "event_max_age": 12,
+          "event_number": "2D",
+          "session": "FINALS",
+          "status": "OK",
+          "time": "13:36.83",
+          "rank": 3,
+          "seed_time": "13:04.80",
+          "converted_seed_time": "13:04.80",
+          "dq_code": null,
+          "dq_reason": null,
+          "swimmer_age_class": "12",
+          "splits": []
+        },
+        {
+          "event": "FREE_50_SCY",
+          "event_sex": "MALE",
+          "event_min_age": 11,
+          "event_max_age": 12,
+          "event_number": "4D",
+          "session": "FINALS",
+          "status": "OK",
+          "time": "27.89",
+          "rank": 4,
+          "seed_time": "29.29",
+          "converted_seed_time": "29.29",
+          "dq_code": null,
+          "dq_reason": null,
+          "swimmer_age_class": "12",
+          "splits": []
+        }
+      ]
+    },
+    {
+      "sex": "MALE",
+      "last_name": "Wty",
+      "first_name": "Szyrjf",
+      "preferred_first_name": "Szyrjf",
+      "middle_initial": null,
+      "id_short": "455342SZY*WT",
+      "birthday": "1992-08-19",
+      "club_team_code": "PCPASA",
+      "swims": [
+        {
+          "event": "FREE_50_SCY",
+          "event_sex": "MALE",
+          "event_min_age": 13,
+          "event_max_age": 14,
+          "event_number": "4F",
+          "session": "FINALS",
+          "status": "OK",
+          "time": "26.01",
+          "rank": 2,
+          "seed_time": "25.94",
+          "converted_seed_time": "25.94",
+          "dq_code": null,
+          "dq_reason": null,
+          "swimmer_age_class": "13",
+          "splits": []
+        },
+        {
+          "event": "FREE_1000_SCY",
+          "event_sex": "MALE",
+          "event_min_age": 13,
+          "event_max_age": 14,
+          "event_number": "2F",
+          "session": "FINALS",
+          "status": "OK",
+          "time": "12:23.18",
+          "rank": 2,
+          "seed_time": null,
+          "converted_seed_time": null,
+          "dq_code": null,
+          "dq_reason": null,
+          "swimmer_age_class": "13",
+          "splits": []
+        }
+      ]
+    },
+    {
+      "sex": "MALE",
+      "last_name": "YT",
+      "first_name": "Pctn",
+      "preferred_first_name": "Pctn",
+      "middle_initial": null,
+      "id_short": "434041PCT*YT",
+      "birthday": "1992-06-04",
+      "club_team_code": "PCPASA",
+      "swims": [
+        {
+          "event": "FREE_50_SCY",
+          "event_sex": "MALE",
+          "event_min_age": 13,
+          "event_max_age": 14,
+          "event_number": "4F",
+          "session": "FINALS",
+          "status": "OK",
+          "time": "28.11",
+          "rank": 3,
+          "seed_time": "29.39",
+          "converted_seed_time": "29.39",
+          "dq_code": null,
+          "dq_reason": null,
+          "swimmer_age_class": "13",
+          "splits": []
+        },
+        {
+          "event": "FREE_1000_SCY",
+          "event_sex": "MALE",
+          "event_min_age": 13,
+          "event_max_age": 14,
+          "event_number": "2F",
+          "session": "FINALS",
+          "status": "OK",
+          "time": "13:04.70",
+          "rank": 4,
+          "seed_time": null,
+          "converted_seed_time": null,
+          "dq_code": null,
+          "dq_reason": null,
+          "swimmer_age_class": "13",
+          "splits": []
+        }
+      ]
+    },
+    {
+      "sex": "FEMALE",
+      "last_name": "ZS",
+      "first_name": "Vctdepy",
+      "preferred_first_name": "Vctdepy",
+      "middle_initial": "D",
+      "id_short": "475243VCTDZS",
+      "birthday": "1993-06-19",
+      "club_team_code": "PCPASA",
+      "swims": [
+        {
+          "event": "FREE_50_SCY",
+          "event_sex": "FEMALE",
+          "event_min_age": 11,
+          "event_max_age": 12,
+          "event_number": "4C",
+          "session": "FINALS",
+          "status": "OK",
+          "time": "34.89",
+          "rank": 9,
+          "seed_time": "32.41",
+          "converted_seed_time": "32.41",
+          "dq_code": null,
+          "dq_reason": null,
+          "swimmer_age_class": "12",
+          "splits": []
+        },
+        {
+          "event": "FREE_1000_SCY",
+          "event_sex": "FEMALE",
+          "event_min_age": 11,
+          "event_max_age": 12,
+          "event_number": "2C",
+          "session": "FINALS",
+          "status": "OK",
+          "time": "16:07.01",
+          "rank": 7,
+          "seed_time": null,
+          "converted_seed_time": null,
+          "dq_code": null,
+          "dq_reason": null,
+          "swimmer_age_class": "12",
+          "splits": []
+        }
+      ]
+    },
+    {
+      "sex": "FEMALE",
+      "last_name": "Alcrpee",
+      "first_name": "Lwpilyoctl",
+      "preferred_first_name": "Lwpilyoctl",
+      "middle_initial": "D",
+      "id_short": "406349LWPDAL",
+      "birthday": "1992-03-20",
+      "club_team_code": "PCPASA",
+      "swims": [
+        {
+          "event": "FREE_1000_SCY",
+          "event_sex": "FEMALE",
+          "event_min_age": 15,
+          "event_max_age": 16,
+          "event_number": "2G",
+          "session": "FINALS",
+          "status": "OK",
+          "time": "12:16.45",
+          "rank": 1,
+          "seed_time": "12:36.29",
+          "converted_seed_time": "12:36.29",
+          "dq_code": null,
+          "dq_reason": null,
+          "swimmer_age_class": "15",
+          "splits": []
+        },
+        {
+          "event": "FREE_50_SCY",
+          "event_sex": "FEMALE",
+          "event_min_age": 15,
+          "event_max_age": 16,
+          "event_number": "4G",
+          "session": "FINALS",
+          "status": "OK",
+          "time": "27.18",
+          "rank": 1,
+          "seed_time": "27.01",
+          "converted_seed_time": "27.01",
+          "dq_code": null,
+          "dq_reason": null,
+          "swimmer_age_class": "15",
+          "splits": []
+        }
+      ]
+    },
+    {
+      "sex": "MALE",
+      "last_name": "Dslcxl",
+      "first_name": "Dlstc",
+      "preferred_first_name": "Dlstc",
+      "middle_initial": "D",
+      "id_short": "544841DLSDDS",
+      "birthday": "1992-06-23",
+      "club_team_code": "PCPASA",
+      "swims": [
+        {
+          "event": "FREE_1000_SCY",
+          "event_sex": "MALE",
+          "event_min_age": 13,
+          "event_max_age": 14,
+          "event_number": "2F",
+          "session": "FINALS",
+          "status": "OK",
+          "time": "11:43.99",
+          "rank": 1,
+          "seed_time": "12:12.84",
+          "converted_seed_time": "12:12.84",
+          "dq_code": null,
+          "dq_reason": null,
+          "swimmer_age_class": "13",
+          "splits": []
+        },
+        {
+          "event": "FREE_50_SCY",
+          "event_sex": "MALE",
+          "event_min_age": 13,
+          "event_max_age": 14,
+          "event_number": "4F",
+          "session": "FINALS",
+          "status": "OK",
+          "time": "25.05",
+          "rank": 1,
+          "seed_time": "24.87",
+          "converted_seed_time": "24.87",
+          "dq_code": null,
+          "dq_reason": null,
+          "swimmer_age_class": "13",
+          "splits": []
+        }
+      ]
+    },
+    {
+      "sex": "FEMALE",
+      "last_name": "Dezytns",
+      "first_name": "Ufwtlyyl",
+      "preferred_first_name": "Ufwtlyyl",
+      "middle_initial": "C",
+      "id_short": "484243UFWCDE",
+      "birthday": "1993-07-27",
+      "club_team_code": "PCPASA",
+      "swims": [
+        {
+          "event": "FREE_500_SCY",
+          "event_sex": "FEMALE",
+          "event_min_age": 11,
+          "event_max_age": 12,
+          "event_number": "3C",
+          "session": "FINALS",
+          "status": "OK",
+          "time": "6:48.21",
+          "rank": 3,
+          "seed_time": "7:25.20",
+          "converted_seed_time": "7:25.20",
+          "dq_code": null,
+          "dq_reason": null,
+          "swimmer_age_class": "12",
+          "splits": []
+        },
+        {
+          "event": "FREE_50_SCY",
+          "event_sex": "FEMALE",
+          "event_min_age": 11,
+          "event_max_age": 12,
+          "event_number": "4C",
+          "session": "FINALS",
+          "status": "OK",
+          "time": "31.69",
+          "rank": 7,
+          "seed_time": "34.08",
+          "converted_seed_time": "34.08",
+          "dq_code": null,
+          "dq_reason": null,
+          "swimmer_age_class": "12",
+          "splits": []
+        }
+      ]
+    },
+    {
+      "sex": "MALE",
+      "last_name": "Estjlrlcluly",
+      "first_name": "Etwlv",
+      "preferred_first_name": "Etwlv",
+      "middle_initial": null,
+      "id_short": "424042ETW*ES",
+      "birthday": "1993-02-06",
+      "club_team_code": "PCPASA",
+      "swims": [
+        {
+          "event": "FREE_1000_SCY",
+          "event_sex": "MALE",
+          "event_min_age": 11,
+          "event_max_age": 12,
+          "event_number": "2D",
+          "session": "FINALS",
+          "status": "OK",
+          "time": "15:19.50",
+          "rank": 5,
+          "seed_time": null,
+          "converted_seed_time": null,
+          "dq_code": null,
+          "dq_reason": null,
+          "swimmer_age_class": "12",
+          "splits": []
+        },
+        {
+          "event": "FREE_50_SCY",
+          "event_sex": "MALE",
+          "event_min_age": 11,
+          "event_max_age": 12,
+          "event_number": "4D",
+          "session": "FINALS",
+          "status": "OK",
+          "time": "29.60",
+          "rank": 6,
+          "seed_time": "32.25",
+          "converted_seed_time": "32.25",
+          "dq_code": null,
+          "dq_reason": null,
+          "swimmer_age_class": "12",
+          "splits": []
+        }
+      ]
+    },
+    {
+      "sex": "MALE",
+      "last_name": "Hpt",
+      "first_name": "Xleesph",
+      "preferred_first_name": "Xleesph",
+      "middle_initial": null,
+      "id_short": "484742XLE*HP",
+      "birthday": "1992-11-03",
+      "club_team_code": "PCPASA",
+      "swims": [
+        {
+          "event": "FREE_1000_SCY",
+          "event_sex": "MALE",
+          "event_min_age": 13,
+          "event_max_age": 14,
+          "event_number": "2F",
+          "session": "FINALS",
+          "status": "OK",
+          "time": "12:27.90",
+          "rank": 3,
+          "seed_time": "12:16.61",
+          "converted_seed_time": "12:16.61",
+          "dq_code": null,
+          "dq_reason": null,
+          "swimmer_age_class": "13",
+          "splits": []
+        },
+        {
+          "event": "FREE_50_SCY",
+          "event_sex": "MALE",
+          "event_min_age": 13,
+          "event_max_age": 14,
+          "event_number": "4F",
+          "session": "FINALS",
+          "status": "OK",
+          "time": "28.91",
+          "rank": 4,
+          "seed_time": "28.84",
+          "converted_seed_time": "28.84",
+          "dq_code": null,
+          "dq_reason": null,
+          "swimmer_age_class": "13",
+          "splits": []
+        }
+      ]
+    },
+    {
+      "sex": "MALE",
+      "last_name": "HF",
+      "first_name": "Lyocph",
+      "preferred_first_name": "Lyocph",
+      "middle_initial": null,
+      "id_short": "424342LYO*HF",
+      "birthday": "1993-03-16",
+      "club_team_code": "PCPASA",
+      "swims": [
+        {
+          "event": "FREE_50_SCY",
+          "event_sex": "MALE",
+          "event_min_age": 11,
+          "event_max_age": 12,
+          "event_number": "4D",
+          "session": "FINALS",
+          "status": "OK",
+          "time": "26.26",
+          "rank": 1,
+          "seed_time": "26.89",
+          "converted_seed_time": "26.89",
+          "dq_code": null,
+          "dq_reason": null,
+          "swimmer_age_class": "12",
+          "splits": []
+        }
+      ]
+    },
+    {
+      "sex": "FEMALE",
+      "last_name": "Jfly",
+      "first_name": "Lxpwtl",
+      "preferred_first_name": "Lxpwtl",
+      "middle_initial": "A",
+      "id_short": "554541LXPAJF",
+      "birthday": "1992-07-31",
+      "club_team_code": "PCPASA",
+      "swims": [
+        {
+          "event": "FREE_1000_SCY",
+          "event_sex": "FEMALE",
+          "event_min_age": 13,
+          "event_max_age": 14,
+          "event_number": "2E",
+          "session": "FINALS",
+          "status": "OK",
+          "time": "12:34.51",
+          "rank": 3,
+          "seed_time": "13:03.19",
+          "converted_seed_time": "13:03.19",
+          "dq_code": null,
+          "dq_reason": null,
+          "swimmer_age_class": "13",
+          "splits": []
+        },
+        {
+          "event": "FREE_50_SCY",
+          "event_sex": "FEMALE",
+          "event_min_age": 13,
+          "event_max_age": 14,
+          "event_number": "4E",
+          "session": "FINALS",
+          "status": "OK",
+          "time": "28.08",
+          "rank": 3,
+          "seed_time": "27.87",
+          "converted_seed_time": "27.87",
+          "dq_code": null,
+          "dq_reason": null,
+          "swimmer_age_class": "13",
+          "splits": []
+        }
+      ]
+    },
+    {
+      "sex": "MALE",
+      "last_name": "Kslyr",
+      "first_name": "Rlgty",
+      "preferred_first_name": "Rlgty",
+      "middle_initial": "X",
+      "id_short": "466142RLGXKS",
+      "birthday": "1992-09-26",
+      "club_team_code": "PCPASA",
+      "swims": [
+        {
+          "event": "FREE_50_SCY",
+          "event_sex": "MALE",
+          "event_min_age": 13,
+          "event_max_age": 14,
+          "event_number": "4F",
+          "session": "FINALS",
+          "status": "OK",
+          "time": "29.38",
+          "rank": 5,
+          "seed_time": "40.36",
+          "converted_seed_time": "40.36",
+          "dq_code": null,
+          "dq_reason": null,
+          "swimmer_age_class": "13",
+          "splits": []
+        },
+        {
+          "event": "FREE_500_SCY",
+          "event_sex": "MALE",
+          "event_min_age": 13,
+          "event_max_age": 14,
+          "event_number": "3F",
+          "session": "FINALS",
+          "status": "OK",
+          "time": "7:20.39",
+          "rank": 1,
+          "seed_time": null,
+          "converted_seed_time": null,
+          "dq_code": null,
+          "dq_reason": null,
+          "swimmer_age_class": "13",
+          "splits": []
+        }
+      ]
+    }
+  ],
+  "relays": [
+    {
+      "event": "MEDLEY_400_RELAY_SCY",
+      "event_sex": "MIXED",
+      "event_min_age": null,
+      "event_max_age": null,
+      "event_number": "1",
+      "relay_letter": "A",
+      "session": "FINALS",
+      "status": "OK",
+      "time": "4:14.89",
+      "rank": 1,
+      "dq_code": null,
+      "dq_reason": null,
+      "splits": [
+        {
+          "distance": 100,
+          "time": "1:17.57"
+        },
+        {
+          "distance": 200,
+          "time": "4:14.89"
+        }
+      ],
+      "legs": [
+        {
+          "order": "LEG_1",
+          "swimmer_id_short": "406442WTWVLY"
+        },
+        {
+          "order": "LEG_2",
+          "swimmer_id_short": "494142LWP*QL"
+        },
+        {
+          "order": "LEG_3",
+          "swimmer_id_short": "424342LYO*HF"
+        },
+        {
+          "order": "LEG_4",
+          "swimmer_id_short": "554742XLCNMJ"
+        }
+      ]
+    },
+    {
+      "event": "MEDLEY_400_RELAY_SCY",
+      "event_sex": "MIXED",
+      "event_min_age": null,
+      "event_max_age": null,
+      "event_number": "1",
+      "relay_letter": "B",
+      "session": "FINALS",
+      "status": "OK",
+      "time": "4:22.81",
+      "rank": 2,
+      "dq_code": null,
+      "dq_reason": null,
+      "splits": [
+        {
+          "distance": 100,
+          "time": "1:08.01"
+        },
+        {
+          "distance": 150,
+          "time": "4:22.81"
+        }
+      ],
+      "legs": [
+        {
+          "order": "LEG_1",
+          "swimmer_id_short": "474542PCTVNS"
+        },
+        {
+          "order": "LEG_2",
+          "swimmer_id_short": "546841ECLMOZ"
+        },
+        {
+          "order": "LEG_3",
+          "swimmer_id_short": "455342SZY*WT"
+        },
+        {
+          "order": "LEG_4",
+          "swimmer_id_short": "544841DLSDDS"
+        }
+      ]
+    },
+    {
+      "event": "MEDLEY_400_RELAY_SCY",
+      "event_sex": "MIXED",
+      "event_min_age": null,
+      "event_max_age": null,
+      "event_number": "1",
+      "relay_letter": "D",
+      "session": "FINALS",
+      "status": "OK",
+      "time": "4:40.67",
+      "rank": 3,
+      "dq_code": null,
+      "dq_reason": null,
+      "splits": [
+        {
+          "distance": 100,
+          "time": "1:09.20"
+        },
+        {
+          "distance": 150,
+          "time": "4:40.67"
+        }
+      ],
+      "legs": [
+        {
+          "order": "LEG_1",
+          "swimmer_id_short": "554541LXPAJF"
+        },
+        {
+          "order": "LEG_2",
+          "swimmer_id_short": "484742XLE*HP"
+        },
+        {
+          "order": "LEG_3",
+          "swimmer_id_short": "464242JFV*SL"
+        },
+        {
+          "order": "LEG_4",
+          "swimmer_id_short": "496941ULDOLO"
+        }
+      ]
+    },
+    {
+      "event": "MEDLEY_400_RELAY_SCY",
+      "event_sex": "MIXED",
+      "event_min_age": null,
+      "event_max_age": null,
+      "event_number": "1",
+      "relay_letter": "E",
+      "session": "FINALS",
+      "status": "DQ",
+      "time": null,
+      "rank": null,
+      "dq_code": "6T",
+      "dq_reason": "Other",
+      "splits": [
+        {
+          "distance": 100,
+          "time": "1:17.70"
+        }
+      ],
+      "legs": [
+        {
+          "order": "LEG_1",
+          "swimmer_id_short": "465643MCZDNS"
+        },
+        {
+          "order": "LEG_2",
+          "swimmer_id_short": "475243VCTDZS"
+        },
+        {
+          "order": "LEG_3",
+          "swimmer_id_short": "484243UFWCDE"
+        },
+        {
+          "order": "LEG_4",
+          "swimmer_id_short": "484843VLEXVT"
+        }
+      ]
+    },
+    {
+      "event": "MEDLEY_400_RELAY_SCY",
+      "event_sex": "MIXED",
+      "event_min_age": null,
+      "event_max_age": null,
+      "event_number": "1",
+      "relay_letter": "F",
+      "session": "FINALS",
+      "status": "OK",
+      "time": "5:00.34",
+      "rank": 5,
+      "dq_code": null,
+      "dq_reason": null,
+      "splits": [
+        {
+          "distance": 100,
+          "time": "1:17.57"
+        },
+        {
+          "distance": 150,
+          "time": "5:00.34"
+        }
+      ],
+      "legs": [
+        {
+          "order": "LEG_1",
+          "swimmer_id_short": "544142TDSAMZ"
+        },
+        {
+          "order": "LEG_2",
+          "swimmer_id_short": "495642VTCWOJ"
+        },
+        {
+          "order": "LEG_3",
+          "swimmer_id_short": "405843XLCCLM"
+        },
+        {
+          "order": "LEG_4",
+          "swimmer_id_short": "455343EZXANK"
+        }
+      ]
+    },
+    {
+      "event": "MEDLEY_400_RELAY_SCY",
+      "event_sex": "MIXED",
+      "event_min_age": null,
+      "event_max_age": null,
+      "event_number": "1",
+      "relay_letter": "G",
+      "session": "FINALS",
+      "status": "OK",
+      "time": "4:51.57",
+      "rank": 4,
+      "dq_code": null,
+      "dq_reason": null,
+      "splits": [],
+      "legs": [
+        {
+          "order": "LEG_1",
+          "swimmer_id_short": "486340RLMLLY"
+        },
+        {
+          "order": "LEG_2",
+          "swimmer_id_short": "405141VTYANK"
+        },
+        {
+          "order": "LEG_3",
+          "swimmer_id_short": "406349LWPDAL"
+        },
+        {
+          "order": "LEG_4",
+          "swimmer_id_short": "434041PCT*YT"
+        }
+      ]
+    },
+    {
+      "event": "FREE_400_RELAY_SCY",
+      "event_sex": "MIXED",
+      "event_min_age": null,
+      "event_max_age": null,
+      "event_number": "5",
+      "relay_letter": "A",
+      "session": "FINALS",
+      "status": "OK",
+      "time": "3:52.21",
+      "rank": 1,
+      "dq_code": null,
+      "dq_reason": null,
+      "splits": [
+        {
+          "distance": 100,
+          "time": "58.42"
+        },
+        {
+          "distance": 150,
+          "time": "3:52.21"
+        }
+      ],
+      "legs": [
+        {
+          "order": "LEG_1",
+          "swimmer_id_short": "494142LWP*QL"
+        },
+        {
+          "order": "LEG_2",
+          "swimmer_id_short": "406442WTWVLY"
+        },
+        {
+          "order": "LEG_3",
+          "swimmer_id_short": "424342LYO*HF"
+        },
+        {
+          "order": "LEG_4",
+          "swimmer_id_short": "554742XLCNMJ"
+        }
+      ]
+    },
+    {
+      "event": "FREE_400_RELAY_SCY",
+      "event_sex": "MIXED",
+      "event_min_age": null,
+      "event_max_age": null,
+      "event_number": "5",
+      "relay_letter": "B",
+      "session": "FINALS",
+      "status": "DQ",
+      "time": null,
+      "rank": null,
+      "dq_code": "6T",
+      "dq_reason": "Other",
+      "splits": [
+        {
+          "distance": 100,
+          "time": "1:10.84"
+        }
+      ],
+      "legs": [
+        {
+          "order": "LEG_1",
+          "swimmer_id_short": "474542PCTVNS"
+        },
+        {
+          "order": "LEG_2",
+          "swimmer_id_short": "405343XTWDOT"
+        },
+        {
+          "order": "LEG_3",
+          "swimmer_id_short": "484742XLE*HP"
+        }
+      ]
+    },
+    {
+      "event": "FREE_400_RELAY_SCY",
+      "event_sex": "MIXED",
+      "event_min_age": null,
+      "event_max_age": null,
+      "event_number": "5",
+      "relay_letter": "C",
+      "session": "FINALS",
+      "status": "OK",
+      "time": "4:22.81",
+      "rank": 3,
+      "dq_code": null,
+      "dq_reason": null,
+      "splits": [
+        {
+          "distance": 100,
+          "time": "56.41"
+        },
+        {
+          "distance": 200,
+          "time": "4:22.81"
+        }
+      ],
+      "legs": []
+    },
+    {
+      "event": "FREE_400_RELAY_SCY",
+      "event_sex": "MIXED",
+      "event_min_age": null,
+      "event_max_age": null,
+      "event_number": "5",
+      "relay_letter": "D",
+      "session": "FINALS",
+      "status": "OK",
+      "time": "4:27.93",
+      "rank": 4,
+      "dq_code": null,
+      "dq_reason": null,
+      "splits": [
+        {
+          "distance": 100,
+          "time": "1:14.23"
+        },
+        {
+          "distance": 150,
+          "time": "4:27.93"
+        }
+      ],
+      "legs": [
+        {
+          "order": "LEG_1",
+          "swimmer_id_short": "424042ETW*ES"
+        },
+        {
+          "order": "LEG_2",
+          "swimmer_id_short": "406643LVL*VL"
+        },
+        {
+          "order": "LEG_3",
+          "swimmer_id_short": "496242POTDWP"
+        },
+        {
+          "order": "LEG_4",
+          "swimmer_id_short": "424242XLILML"
+        }
+      ]
+    },
+    {
+      "event": "FREE_400_RELAY_SCY",
+      "event_sex": "MIXED",
+      "event_min_age": null,
+      "event_max_age": null,
+      "event_number": "5",
+      "relay_letter": "E",
+      "session": "FINALS",
+      "status": "OK",
+      "time": "4:06.44",
+      "rank": 2,
+      "dq_code": null,
+      "dq_reason": null,
+      "splits": [
+        {
+          "distance": 100,
+          "time": "1:12.11"
+        },
+        {
+          "distance": 200,
+          "time": "4:06.44"
+        }
+      ],
+      "legs": [
+        {
+          "order": "LEG_1",
+          "swimmer_id_short": "434943WFJKNS"
+        },
+        {
+          "order": "LEG_2",
+          "swimmer_id_short": "495642VTCWOJ"
+        },
+        {
+          "order": "LEG_3",
+          "swimmer_id_short": "484243UFWCDE"
+        },
+        {
+          "order": "LEG_4",
+          "swimmer_id_short": "465643MCZDNS"
+        }
+      ]
+    },
+    {
+      "event": "FREE_400_RELAY_SCY",
+      "event_sex": "MIXED",
+      "event_min_age": null,
+      "event_max_age": null,
+      "event_number": "5",
+      "relay_letter": "F",
+      "session": "FINALS",
+      "status": "OK",
+      "time": "5:32.47",
+      "rank": 6,
+      "dq_code": null,
+      "dq_reason": null,
+      "splits": [],
+      "legs": [
+        {
+          "order": "LEG_1",
+          "swimmer_id_short": "466142RLGXKS"
+        },
+        {
+          "order": "LEG_2",
+          "swimmer_id_short": "475243VCTDZS"
+        },
+        {
+          "order": "LEG_3",
+          "swimmer_id_short": "405141VTYANK"
+        },
+        {
+          "order": "LEG_4",
+          "swimmer_id_short": "496941ULDOLO"
+        }
+      ]
+    },
+    {
+      "event": "FREE_400_RELAY_SCY",
+      "event_sex": "MIXED",
+      "event_min_age": null,
+      "event_max_age": null,
+      "event_number": "5",
+      "relay_letter": "G",
+      "session": "FINALS",
+      "status": "OK",
+      "time": "5:21.34",
+      "rank": 5,
+      "dq_code": null,
+      "dq_reason": null,
+      "splits": [
+        {
+          "distance": 100,
+          "time": "1:08.19"
+        },
+        {
+          "distance": 200,
+          "time": "5:21.34"
+        }
+      ],
+      "legs": [
+        {
+          "order": "LEG_1",
+          "swimmer_id_short": "464242JFV*SL"
+        },
+        {
+          "order": "LEG_2",
+          "swimmer_id_short": "434041PCT*YT"
+        },
+        {
+          "order": "LEG_3",
+          "swimmer_id_short": "406349LWPDAL"
+        },
+        {
+          "order": "LEG_4",
+          "swimmer_id_short": "486340RLMLLY"
+        }
+      ]
+    }
+  ]
+}

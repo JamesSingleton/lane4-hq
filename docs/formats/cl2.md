@@ -64,6 +64,14 @@ The roster file has no `B1`, `E0`, or `F0`. It is a Swimmers Only export.
 | 77–80 | `UNOV` | yes |
 | 90–96 | Seed time | yes |
 | 97 | Seed course letter | yes |
+| 98–105 | Prelim time | yes, on the scrubbed tunas AAA and Reno results (`third-party/tunas`) |
+| 106 | Prelim course | yes, same files |
+| 107–114 | Swim-off time | column confirmed; these files leave it blank |
+| 115 | Swim-off course | column confirmed; blank in these files |
+| 116–123 | Finals time | yes, same files |
+| 124 | Finals course | yes, same files |
+
+When the file also has `G0` split lines, the official round time is the `D0` column above. `G0` repeats that time as the last split and carries the round code in column 144 (`P` / `F` / `S`).
 
 USS#, birth date, and age on `D0` are **unconfirmed** here (blank).
 
@@ -96,8 +104,9 @@ These files only show `F`. Anything past column 46 is **unconfirmed**.
 | 54 | `E0` | Seed course | yes |
 | 16–21 | `F0` | Team id | yes, glued to the relay letter in column 22 and `Last, First` at column 23 |
 
-`E0` columns 63, 72, and 81 (later-round courses) are **unconfirmed**
-(blank; these are entry files).
+`E0` columns 63 and 72 (prelim and swim-off courses) are blank on the
+Maricopa entry files and on the tunas AAA relays. AAA finals time is
+columns 73–80 with course `Y` in column 81.
 
 ## EV3 / HYV checksum
 

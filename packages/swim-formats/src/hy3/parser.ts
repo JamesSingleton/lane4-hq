@@ -656,6 +656,7 @@ function flatten(state: ParseState): ParsedMeet {
           : undefined,
       classYear: swimmer.classYear,
       meetSwimmerId: swimmer.meetId,
+      preferredName: swimmer.nickName,
       seedCourse: entry.seedCourse,
       exhibition: entry.exhibition,
       meetDivision: entry.meetDivision,
@@ -682,6 +683,7 @@ function flatten(state: ParseState): ParsedMeet {
           : undefined,
       classYear: swimmer.classYear,
       meetSwimmerId: swimmer.meetId,
+      preferredName: swimmer.nickName,
       relayOnly: !individualMeetIds.has(swimmer.meetId),
     });
   }

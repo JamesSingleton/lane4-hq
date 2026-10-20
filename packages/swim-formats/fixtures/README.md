@@ -33,12 +33,15 @@ Golden corpus for parser/integration testing. Families map to Hy-Tek export kind
 | `desert-sunrise-events.*` | Swim-only EV3+HYV |
 | `azsi-events.ev3` / `.hyv` | Championship events with QTs |
 
-## SwimComm HY3 (parse only)
+## Third-party
 
-`hytek-parser/*.hy3` is the MIT corpus from
-[SwimComm/hytek-parser](https://github.com/SwimComm/hytek-parser).
-Parse tests only. Checksums were left stale by the upstream redaction.
-No expected-state JSON from other parsers is stored here.
+`third-party/hytek-parser/` — eight MIT SwimComm HY3 results files.
+Parse tests only. Upstream redaction left the line checksums stale.
+
+`third-party/tunas/` — three MIT tunas golden files (`reno_walk_on_meet`,
+`aaa_league_championship`, `pasa_distance_intersquad`) with expected JSON.
+Names, ids, birth dates, and contacts are scrubbed; checksums were
+recomputed. Field-level oracles cover prelims, finals, relays, and D3.
 
 ## SDIF
 
