@@ -38,11 +38,6 @@ Golden corpus for parser/integration testing. Families map to Hy-Tek export kind
 `third-party/hytek-parser/` — eight MIT SwimComm HY3 results files.
 Parse tests only. Upstream redaction left the line checksums stale.
 
-`third-party/tunas/` — three MIT tunas golden files (`reno_walk_on_meet`,
-`aaa_league_championship`, `pasa_distance_intersquad`) with expected JSON.
-Names, ids, birth dates, and contacts are scrubbed; checksums were
-recomputed. Field-level oracles cover prelims, finals, relays, and D3.
-
 ## SDIF
 
 | File | Purpose |

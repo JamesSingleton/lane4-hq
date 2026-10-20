@@ -89,6 +89,9 @@ describe("parseCl2Meet", () => {
   });
 
   it("reads D0 prelim, swim-off, and finals columns when G0 splits are present", () => {
+    // AZSI, CTCC, and Maricopa leave the swim-off column blank and never
+    // put NT there, so this line covers those slots. A matching G0 prelim
+    // must not be stored twice.
     const line = (tag: string) => `${tag}${" ".repeat(158)}`.slice(0, 160);
     const put = (raw: string, col: number, value: string) => {
       const chars = raw.split("");
@@ -167,6 +170,76 @@ describe("parseCl2Meet", () => {
         ?.preferredName,
     ).toBe("Ada");
     expect(kept?.usaMemberId).toBe("ABCD1234567890");
+  });
+
+  it("reads D0 and E0 round columns from AZSI, CTCC, and Maricopa", () => {
+    const azsi = parseCl2Meet(
+      readFileSync(join(fixturesDir, "azsi-results.cl2"), "utf8"),
+    );
+    const bailey = azsi.results.filter(
+      (result) =>
+        result.swimmerName.includes("Bailey") &&
+        result.swimmerName.includes("Dusek"),
+    );
+    // 200 IM: the G0 line's first colon time is a split. The official
+    // round time is only on the D0 prelim/finals columns.
+    expect(
+      bailey.some(
+        (result) => result.resultType === "prelim" && result.time === "3:02.25",
+      ),
+    ).toBe(true);
+    expect(
+      bailey.some(
+        (result) => result.resultType === "finals" && result.time === "2:54.26",
+      ),
+    ).toBe(true);
+    expect(
+      azsi.results.some(
+        (result) =>
+          result.swimmerName.includes("Adam") &&
+          result.swimmerName.includes("Botsios") &&
+          result.resultType === "finals" &&
+          result.time === "DQ" &&
+          result.isDq,
+      ),
+    ).toBe(true);
+
+    const relay = azsi.relays?.find(
+      (row) =>
+        row.relayLetter === "A" &&
+        row.teamCode === "AZAQFO" &&
+        row.eventNumber === 26,
+    );
+    expect(relay?.seedTime).toBe("2:23.83");
+    expect(relay?.results).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          time: "2:21.41",
+          resultType: "finals",
+          isDq: false,
+        }),
+      ]),
+    );
+
+    const ctcc = parseCl2Meet(
+      readFileSync(join(fixturesDir, "ctcc-meet-results-2005.cl2"), "utf8"),
+    );
+    expect(ctcc.results).toHaveLength(9);
+    expect(
+      ctcc.results.find((result) => result.swimmerName.includes("Will"))?.time,
+    ).toMatch(/38\.01/);
+    expect(ctcc.results.every((result) => result.resultType == null)).toBe(
+      true,
+    );
+
+    const sonoran = parseCl2Meet(
+      readFileSync(join(fixturesDir, "mari-sonoran-2026.cl2"), "utf8"),
+    );
+    expect(sonoran.results).toEqual([]);
+    expect(sonoran.entries.length).toBeGreaterThan(0);
+    expect(
+      sonoran.relays?.every((row) => (row.results?.length ?? 0) === 0),
+    ).toBe(true);
   });
 
   it("parses modern azsi results via G0 lines", () => {

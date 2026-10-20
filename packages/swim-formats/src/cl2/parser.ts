@@ -258,7 +258,10 @@ function isDqTime(time: string, line: string): boolean {
 /**
  * SDIF round-time slots. Each is an 8-character field immediately before
  * its course letter (D0 courses 106/115/124, E0 courses 63/72/81).
- * Confirmed on the scrubbed tunas AAA and Reno results.
+ * D0 prelim/finals and E0 finals are on azsi-results.cl2. CTCC finals
+ * sit in the same D0 columns but that file has no G0, so the legacy
+ * reader takes the time. Swim-off uses the same width; these files
+ * leave it blank. Layout matches the tunas SDIF notes.
  */
 const D0_ROUND_SLOTS = [
   { start: 97, resultType: "prelim" },
