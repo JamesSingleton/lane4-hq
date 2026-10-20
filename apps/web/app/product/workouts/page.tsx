@@ -4,6 +4,7 @@ import { pageMetadata } from "@/lib/metadata";
 export const metadata = pageMetadata(
   "Workouts",
   "Write the practice on the same calendar as the meet, and open a saved set from the team list.",
+  "/product/workouts",
 );
 
 export default function WorkoutsProductPage() {

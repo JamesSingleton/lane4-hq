@@ -5,6 +5,7 @@ import { pageMetadata } from "@/lib/metadata";
 export const metadata = pageMetadata(
   "Analytics",
   "Yardage, attendance, and team top times from practices and results you already have. The roster-wide cut list is on Pro.",
+  "/product/analytics",
 );
 
 export default function AnalyticsProductPage() {

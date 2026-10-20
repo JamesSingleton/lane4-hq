@@ -12,7 +12,8 @@ import { formats } from "@/lib/site";
 
 export const metadata = pageMetadata(
   "File formats",
-  "HY3, CL2, EV3, HYV, SDIF/SD3, XLS event reports, and ZIP packs for club and high school meet files.",
+  "HY3, CL2, EV3, HYV, SDIF/SD3, XLS event reports, and ZIP packs for high school and club meet files.",
+  "/formats",
 );
 
 export default function FormatsPage() {

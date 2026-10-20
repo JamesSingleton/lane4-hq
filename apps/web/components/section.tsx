@@ -34,7 +34,7 @@ export function PageIntro({
   return (
     <Section className="pb-10 md:pb-12">
       <div className="flex max-w-2xl flex-col gap-4">
-        <h1 className="font-display text-4xl font-semibold tracking-tight text-pretty md:text-6xl md:leading-[0.95]">
+        <h1 className="font-display text-4xl font-medium tracking-tight text-balance md:text-6xl md:leading-[1.02]">
           {title}
         </h1>
         <p className="text-lg text-muted-foreground text-pretty">

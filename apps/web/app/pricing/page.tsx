@@ -19,11 +19,12 @@ import { CtaLink } from "@/components/cta-link";
 import { MarketingCta } from "@/components/marketing-cta";
 import { PageIntro } from "@/components/section";
 import { pageMetadata } from "@/lib/metadata";
-import { plans } from "@/lib/site";
+import { PRICE_NOTE, plans } from "@/lib/site";
 
 export const metadata = pageMetadata(
-  "Pricing",
-  "Free covers unlimited swimmers, meet files, seed times, and progression for one coach. Pro adds seats, lineup suggestions, and a roster-wide cut list.",
+  "Plans",
+  "Free covers unlimited swimmers, meet files, seed times, and progression for one coach. Pro adds seats, lineup suggestions, and a roster-wide cut list. Dollar prices are not listed here.",
+  "/pricing",
 );
 
 const comparison = [
@@ -90,8 +91,12 @@ export default function PricingPage() {
     <>
       <PageIntro
         title="One coach can take a full season of meets on Free."
-        description="Unlimited swimmers, meet files, seed times from best times, and progression, for a club or a high school. Pro adds coach seats, lineup suggestions for open individual spots, and a roster-wide cut list. Billing is per team."
-      />
+        description="Unlimited swimmers, meet files, seed times from best times, and progression, for a high school or a club. Pro adds coach seats, lineup suggestions for open individual spots, and a roster-wide cut list. Billing is per team."
+      >
+        <p className="text-muted-foreground text-sm text-pretty">
+          {PRICE_NOTE}
+        </p>
+      </PageIntro>
       <section className="mx-auto grid w-full max-w-6xl items-stretch gap-4 px-4 pb-16 md:grid-cols-3 md:px-6">
         {plans.map((plan) => (
           <Card

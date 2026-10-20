@@ -4,6 +4,7 @@ import { pageMetadata } from "@/lib/metadata";
 export const metadata = pageMetadata(
   "Calendar",
   "Team calendar for practices, duals, and invitationals, plus attendance, a recurring schedule, and Google, Outlook, or ICS sync.",
+  "/product/calendar",
 );
 
 export default function CalendarProductPage() {

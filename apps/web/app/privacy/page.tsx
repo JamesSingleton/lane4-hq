@@ -3,7 +3,8 @@ import { pageMetadata } from "@/lib/metadata";
 
 export const metadata = pageMetadata(
   "Privacy",
-  "How Lane4 HQ handles account, roster, and meet data for club and high school teams.",
+  "How Lane4 HQ handles account, roster, and meet data for high school and club teams.",
+  "/privacy",
 );
 
 export default function PrivacyPage() {

@@ -6,6 +6,7 @@ import { pageMetadata } from "@/lib/metadata";
 export const metadata = pageMetadata(
   "Story",
   "Why Lane4 HQ exists: the meet-week work of retyping seeds, chasing entries, and pasting results into a spreadsheet.",
+  "/story",
 );
 
 export default function StoryPage() {

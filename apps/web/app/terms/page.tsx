@@ -3,7 +3,8 @@ import { pageMetadata } from "@/lib/metadata";
 
 export const metadata = pageMetadata(
   "Terms",
-  "Terms for using the Lane4 HQ coach workspace for club and high school teams.",
+  "Terms for using the Lane4 HQ coach workspace for high school and club teams.",
+  "/terms",
 );
 
 export default function TermsPage() {

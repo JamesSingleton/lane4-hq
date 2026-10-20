@@ -4,6 +4,7 @@ import { pageMetadata } from "@/lib/metadata";
 export const metadata = pageMetadata(
   "Roster",
   "Import CL2, HY3, SD3, or CSV, roll returning swimmers into the new season, and keep club and high school fields apart.",
+  "/product/roster",
 );
 
 export default function RosterProductPage() {

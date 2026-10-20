@@ -11,7 +11,8 @@ import { GITHUB_ISSUES_URL } from "@/lib/site";
 
 export const metadata = pageMetadata(
   "Support",
-  "Questions about club or high school meet files, billing, or an import that failed. Bugs can also go to GitHub.",
+  "Questions about high school or club meet files, billing, or an import that failed. Bugs can also go to GitHub.",
+  "/support",
 );
 
 export default function SupportPage() {

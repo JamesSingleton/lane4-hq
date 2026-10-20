@@ -4,6 +4,7 @@ import { pageMetadata } from "@/lib/metadata";
 export const metadata = pageMetadata(
   "Progression",
   "Best times by course, season charts, CSV import, and top times scoped to the current team.",
+  "/product/progression",
 );
 
 export default function ProgressionProductPage() {

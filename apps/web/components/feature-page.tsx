@@ -46,7 +46,7 @@ export function FeatureBlock({
 }) {
   return (
     <div className="grid gap-4 border-t pt-8 md:grid-cols-[minmax(0,16rem)_minmax(0,1fr)]">
-      <h2 className="font-display text-2xl font-semibold tracking-tight">
+      <h2 className="font-display text-2xl font-medium tracking-tight text-balance">
         {title}
       </h2>
       <div className="flex flex-col gap-3 text-muted-foreground text-pretty">

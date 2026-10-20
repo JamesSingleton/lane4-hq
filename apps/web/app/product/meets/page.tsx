@@ -5,6 +5,7 @@ import { pageMetadata } from "@/lib/metadata";
 export const metadata = pageMetadata(
   "Meets and entries",
   "Fill seeds from best times, export HY3, CL2, or SDIF, and bring Sunday's results back next to previous best and a cut you entered.",
+  "/product/meets",
 );
 
 export default function MeetsProductPage() {

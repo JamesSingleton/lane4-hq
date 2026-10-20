@@ -3,7 +3,8 @@ import { pageMetadata } from "@/lib/metadata";
 
 export const metadata = pageMetadata(
   "For club teams",
-  "Club invitational weeks for USA Swimming coaches: seeds from best times, the file the host asked for, and cuts such as JO or sectionals that you enter.",
+  "Club invitational weeks: seeds from best times, the file the host asked for, and cuts such as JO or sectionals that you enter. Open beta.",
+  "/for/club",
 );
 
 export default function ClubPage() {

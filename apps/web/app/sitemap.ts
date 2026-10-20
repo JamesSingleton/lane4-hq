@@ -12,6 +12,8 @@ const paths = [
   "/product/analytics",
   "/formats",
   "/pricing",
+  "/compare",
+  "/faq",
   "/story",
   "/support",
   "/privacy",

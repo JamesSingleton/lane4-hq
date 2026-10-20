@@ -14,8 +14,10 @@ import {
 } from "@/lib/site";
 
 const companyLinks = [
+  { href: "/compare", title: "Compare" },
+  { href: "/pricing", title: "Plans" },
+  { href: "/faq", title: "FAQ" },
   { href: "/story", title: "Story" },
-  { href: "/pricing", title: "Pricing" },
   { href: "/support", title: "Support" },
   { href: DOCS_URL, title: "Docs", external: true },
   { href: GITHUB_URL, title: "GitHub", external: true },
@@ -34,12 +36,12 @@ export async function SiteFooter() {
           <Link
             href="/"
             aria-label="Lane4 HQ home"
-            className="flex items-center gap-2"
+            className="flex min-h-11 items-center gap-2"
           >
             <BrandLogo />
             <span className="text-sm font-medium">Lane4 HQ</span>
           </Link>
-          <p className="max-w-sm text-right text-muted-foreground text-sm md:text-base">
+          <p className="max-w-sm text-muted-foreground text-sm text-pretty md:text-right">
             {SITE_TAGLINE}
           </p>
         </div>
@@ -53,6 +55,7 @@ export async function SiteFooter() {
                 {item.title}
               </Link>
             ))}
+            <Link href="/formats">File formats</Link>
           </FooterColumn>
           <FooterColumn title="Teams">
             {audienceLinks.map((item) => (
@@ -60,7 +63,6 @@ export async function SiteFooter() {
                 {item.title}
               </Link>
             ))}
-            <Link href="/formats">File formats</Link>
           </FooterColumn>
           <FooterColumn title="Company">
             {companyLinks.map((item) =>
@@ -92,7 +94,11 @@ export async function SiteFooter() {
 
         <div className="flex flex-col items-start justify-between gap-4 md:flex-row md:items-center">
           <GithubStars />
-          <CtaLink href={SIGN_UP_URL} size="sm">
+          <CtaLink
+            href={SIGN_UP_URL}
+            size="sm"
+            className="min-h-11 bg-[#0e3c4e] text-[#e7f2f6] hover:bg-[#0a3040]"
+          >
             {PRIMARY_CTA}
           </CtaLink>
         </div>
@@ -111,7 +117,7 @@ function FooterColumn({
   return (
     <nav aria-label={title} className="flex flex-col gap-3">
       <p className="text-sm font-medium">{title}</p>
-      <div className="flex min-w-0 flex-col gap-2 text-muted-foreground text-sm [&_a]:transition-colors [&_a]:hover:text-foreground [&_a]:focus-visible:text-foreground">
+      <div className="flex min-w-0 flex-col gap-2 text-muted-foreground text-sm [&_a]:min-h-11 [&_a]:py-1 [&_a]:underline-offset-4 [&_a]:hover:text-foreground [&_a]:hover:underline [&_a]:focus-visible:text-foreground sm:[&_a]:min-h-0">
         {children}
       </div>
     </nav>

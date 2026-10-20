@@ -33,7 +33,7 @@ export function ProductShot({
           {ready ? (
             <Image
               src={src}
-              alt=""
+              alt={showCaption ? "" : spec.alt}
               width={1440}
               height={900}
               unoptimized
@@ -61,11 +61,9 @@ export function ProductShot({
       </div>
       {showCaption ? (
         <figcaption className="text-muted-foreground max-w-prose text-sm text-pretty">
-          {spec.caption}
+          {spec.caption} Sample data, not a customer team.
         </figcaption>
-      ) : (
-        <figcaption className="sr-only">{spec.alt}</figcaption>
-      )}
+      ) : null}
     </figure>
   );
 }
