@@ -16,6 +16,7 @@ import {
 } from "../roster/utils";
 import type { ParsedMeet, ParsedRelayEntry, ParsedResult } from "../types";
 
+import { parseCl2D3Fields } from "./d3";
 import { type Cl2FileKind, detectCl2FileKind } from "./kind";
 
 const STROKE_DIGIT: Record<string, string> = {
@@ -46,6 +47,33 @@ function courseFromSuffix(suffix: string): Course {
   if (c === "S") return "SCM";
   return "SCY";
 }
+
+/** SDIF course letter at a 1-based column: Y yards, S short-course meters, L long course. */
+function courseAt(line: string, col: number): Course | undefined {
+  const ch = line[col - 1]?.toUpperCase();
+  if (ch === "Y") return "SCY";
+  if (ch === "S") return "SCM";
+  if (ch === "L") return "LCM";
+  return undefined;
+}
+
+function firstCourse(
+  line: string,
+  cols: readonly number[],
+): Course | undefined {
+  for (const col of cols) {
+    const course = courseAt(line, col);
+    if (course) return course;
+  }
+  return undefined;
+}
+
+/** D0 seed / prelim / swim-off / finals course columns. */
+const D0_COURSE_COLS = [97, 106, 115, 124] as const;
+/** E0 seed / prelim / swim-off / finals course columns. */
+const E0_COURSE_COLS = [54, 63, 72, 81] as const;
+
+const CLASS_YEAR = /^(FR|SO|JR|SR)$/;
 
 function decodeEventCode(code: string): {
   eventNumber: number;
@@ -110,9 +138,58 @@ function parseAthleteIdentity(line: string): {
   return { dateOfBirth, gender };
 }
 
-function parseCl2TeamCode(line: string): string | undefined {
-  const m = line.match(/^C1\d?[A-Z0-9]{0,2}\s+([A-Z0-9]{2,8})/);
-  return m?.[1];
+/**
+ * SDIF C1 team id is cols 12–17: 2-char LSC + up to 4-char team (`AZMARI`).
+ * Cols 4–5 repeat the LSC on Hy-Tek meet-entry files. The bare team code is
+ * the id with that LSC prefix removed (`MARI`).
+ */
+function parseCl2TeamIdentity(line: string): {
+  lsc?: string;
+  teamCode?: string;
+  /** On-file 6-character id, kept so relay rows still match each other. */
+  fileTeamId?: string;
+  teamName?: string;
+  teamShortName?: string;
+  address1?: string;
+  address2?: string;
+  city?: string;
+  region?: string;
+  postal?: string;
+  country?: string;
+} {
+  const lscRaw = line.slice(3, 5).trim().toUpperCase();
+  const lsc = /^[A-Z]{2}$/.test(lscRaw) ? lscRaw : undefined;
+  const fileTeamId = line.slice(11, 17).trim().toUpperCase() || undefined;
+  let teamCode = fileTeamId;
+  if (lsc && fileTeamId?.startsWith(lsc) && fileTeamId.length > lsc.length) {
+    const rest = fileTeamId.slice(lsc.length);
+    if (rest.length >= 2) teamCode = rest;
+  }
+  if (!teamCode) {
+    const m = line.match(/^C1\d?[A-Z0-9]{0,2}\s+([A-Z0-9]{2,8})/);
+    teamCode = m?.[1];
+  }
+  const teamName = line.slice(17, 47).trim() || undefined;
+  const teamShortName = line.slice(47, 63).trim() || undefined;
+  const address1 = line.slice(63, 85).trim() || undefined;
+  const address2 = line.slice(85, 107).trim() || undefined;
+  const city = line.slice(107, 127).trim() || undefined;
+  const region = line.slice(127, 129).trim().toUpperCase() || undefined;
+  const postal = line.slice(129, 139).trim() || undefined;
+  const country = line.slice(139, 142).trim().toUpperCase() || undefined;
+  return {
+    lsc,
+    teamCode,
+    fileTeamId,
+    teamName,
+    teamShortName,
+    address1,
+    address2,
+    city,
+    region: region && /^[A-Z]{2}$/.test(region) ? region : undefined,
+    postal,
+    country: country && /^[A-Z]{3}$/.test(country) ? country : undefined,
+  };
 }
 
 type AthleteIdentityCache = {
@@ -391,9 +468,13 @@ function parseD0Athlete(
   const decoded = eventCode ? decodeEventCode(eventCode) : null;
   const gender = genderFromLine(line);
   const times = extractTimes(line);
-  const course = times.find((t) => t.course)?.course ?? meet.course;
+  const columnCourse = firstCourse(line, D0_COURSE_COLS);
+  const course =
+    columnCourse ?? times.find((t) => t.course)?.course ?? meet.course;
   const identity = parseAthleteIdentity(line);
   const rosterGender = identity.gender;
+  const classRaw = line.slice(7, 9).trim().toUpperCase();
+  const classYear = CLASS_YEAR.test(classRaw) ? classRaw : undefined;
 
   identityByName.set(swimmerName.toLowerCase(), {
     dateOfBirth: identity.dateOfBirth,
@@ -458,6 +539,10 @@ function parseD0Athlete(
     swimmerName,
     seedTime,
     usaMemberId: usaMemberId || undefined,
+    dateOfBirth: identity.dateOfBirth,
+    gender: rosterGender,
+    classYear,
+    seedCourse: columnCourse,
   });
 }
 
@@ -512,29 +597,82 @@ export function parseCl2Meet(content: string): ParsedMeet {
       if (dateMatches[1]) {
         meet.endDate = parseMmDdYyyy(dateMatches[1]);
       }
-      const courseFlag = line.substring(87, 100);
-      if (courseFlag.includes("L") || /\bLCM\b/.test(line)) meet.course = "LCM";
-      else if (
-        (courseFlag.includes("S") && !courseFlag.includes("Y")) ||
-        /\bSCM\b/.test(line)
-      ) {
-        meet.course = "SCM";
+      // Hy-Tek writes the meet course at col 150 (Y/S/L). Cols 88–100 are
+      // the facility/city ("Copper Sky") and must not decide the course.
+      const columnCourse = courseAt(line, 150);
+      if (columnCourse) {
+        meet.course = columnCourse;
       } else {
-        meet.course = "SCY";
+        const courseFlag = line.substring(87, 100);
+        if (courseFlag.includes("L") || /\bLCM\b/.test(line))
+          meet.course = "LCM";
+        else if (
+          (courseFlag.includes("S") && !courseFlag.includes("Y")) ||
+          /\bSCM\b/.test(line)
+        ) {
+          meet.course = "SCM";
+        } else {
+          meet.course = "SCY";
+        }
       }
     }
   }
 
   const relays: ParsedRelayEntry[] = [];
   const identityByName = new Map<string, AthleteIdentityCache>();
+  const d3ByName = new Map<string, ReturnType<typeof parseCl2D3Fields>>();
   let lastTeamCode: string | undefined;
+  let lastSwimmerKey: string | undefined;
+
+  function applyD3(nameKey: string): void {
+    const extra = d3ByName.get(nameKey);
+    if (!extra) return;
+    for (const entry of meet.entries) {
+      if (entry.swimmerName.toLowerCase() !== nameKey) continue;
+      if (!entry.usaMemberId && extra.usaMemberId) {
+        entry.usaMemberId = extra.usaMemberId;
+      }
+      if (extra.preferredName) entry.preferredName = extra.preferredName;
+      if (extra.ethnicity) entry.ethnicity = extra.ethnicity;
+      if (extra.registrationFlags) {
+        entry.registrationFlags = extra.registrationFlags;
+      }
+    }
+    const cached = identityByName.get(nameKey);
+    if (cached && !cached.usaMemberId && extra.usaMemberId) {
+      cached.usaMemberId = extra.usaMemberId;
+    }
+  }
 
   for (const line of lines) {
     const type = line.substring(0, 2);
     if (type === "C1") {
-      lastTeamCode = parseCl2TeamCode(line) ?? lastTeamCode;
+      const identity = parseCl2TeamIdentity(line);
+      if (identity.lsc) meet.lscCode = identity.lsc;
+      if (identity.teamCode) meet.teamCode = identity.teamCode;
+      if (identity.teamName) meet.teamName = identity.teamName;
+      if (identity.teamShortName) meet.teamShortName = identity.teamShortName;
+      if (identity.address1) meet.teamAddressLine1 = identity.address1;
+      if (identity.address2) meet.teamAddressLine2 = identity.address2;
+      if (identity.city) meet.teamCity = identity.city;
+      if (identity.region) meet.teamRegion = identity.region;
+      if (identity.postal) meet.teamPostalCode = identity.postal;
+      if (identity.country) meet.teamCountry = identity.country;
+      lastTeamCode = identity.fileTeamId ?? identity.teamCode ?? lastTeamCode;
+    } else if (type === "D3") {
+      const extra = parseCl2D3Fields(line);
+      if (lastSwimmerKey) {
+        d3ByName.set(lastSwimmerKey, extra);
+        applyD3(lastSwimmerKey);
+      }
     } else if (type === "D0" || type === "D1") {
+      const before = meet.entries.length;
       parseD0Athlete(line, kind, hasG0, meet, lastTeamCode, identityByName);
+      const added = meet.entries[meet.entries.length - 1];
+      if (meet.entries.length > before && added) {
+        lastSwimmerKey = added.swimmerName.toLowerCase();
+        applyD3(lastSwimmerKey);
+      }
     } else if (type === "G0" && kind !== "meet_entries") {
       const result = parseG0Result(line);
       if (result?.time) {
@@ -552,6 +690,7 @@ export function parseCl2Meet(content: string): ParsedMeet {
     } else if (type === "E0") {
       const relay = parseRelayTeamLine(line);
       if (relay) {
+        relay.seedCourse = firstCourse(line, E0_COURSE_COLS);
         const event = relayEventFromLine(line);
         if (event) {
           ensureEvent(meet, event.eventNumber, {

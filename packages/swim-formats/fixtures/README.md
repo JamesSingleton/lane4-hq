@@ -16,6 +16,9 @@ Golden corpus for parser/integration testing. Families map to Hy-Tek export kind
 | `ctcc-entries.cl2` / `.hy3` / `.zip` | Dual pack: CL2 + HY3 meet entries (E0/F0 relays) |
 | `ctcc-roster.cl2` / `.hy3` / `.zip` | Swimmers Only + Rosters Only + nested entries ZIP |
 | `mari-entries.cl2` / `mari-entries.hy3` | Modern Team Manager meet entries |
+| `mari-sonoran-2026.cl2` / `.hy3` | 2026 Sonoran Desert Invitational entries (MARI, Team Manager Lite 8.0D). Names, coach, email, and street scrubbed; CL2/HY3 checksums recomputed |
+| `mari-charger-2024.cl2` / `.hy3` | 2024 Charger entries pair, same team, scrubbed the same way so relay legs still match |
+| `mari-az-roster.cl2` / `.hy3` | Swimmers Only / Rosters Only (20 athletes), scrubbed with the same name map |
 | `roster-swimmers.cl2` / `roster-only.hy3` | Roster-only exports |
 
 ## Meet Events (pre-meet event lists)
@@ -24,9 +27,18 @@ Golden corpus for parser/integration testing. Families map to Hy-Tek export kind
 |------|---------|
 | `sonoran-events.ev3` | Bare EV3 |
 | `charger-events.ev3` / `.hyv` / `.zip` | EV3+HYV with dive events (stroke F) |
+| `charger-2024-invitational.ev3` / `.hyv` | 2024 Charger Swim Dive Invitational (Meet Manager 8.0Gh). Street scrubbed. Trailing checksum is **not** recomputed (algorithm unknown) |
 | `croswhite-2025-events.*` / `croswhite-2026-events.*` | Swim/Dive invite EV3+HYV |
+| `croswhite-2026-invite-rev.ev3` / `.hyv` | Later Croswhite Invite revision (8.0Gh). EV3 street scrubbed; HYV has no street. Trailing checksum not recomputed |
 | `desert-sunrise-events.*` | Swim-only EV3+HYV |
 | `azsi-events.ev3` / `.hyv` | Championship events with QTs |
+
+## SwimComm HY3 (parse only)
+
+`hytek-parser/*.hy3` is the MIT corpus from
+[SwimComm/hytek-parser](https://github.com/SwimComm/hytek-parser).
+Parse tests only. Checksums were left stale by the upstream redaction.
+No expected-state JSON from other parsers is stored here.
 
 ## SDIF
 

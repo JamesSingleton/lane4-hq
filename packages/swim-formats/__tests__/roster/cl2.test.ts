@@ -4,6 +4,18 @@ import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 import { parseCl2Roster, parseSdifStyleRoster } from "../../src/roster/cl2";
 
+/** SDIF D3: USS# cols 3–16, preferred first name cols 17–31. */
+function d3Line(usaId: string, preferredName: string): string {
+  const chars = Array.from({ length: 160 }, () => " ");
+  chars[0] = "D";
+  chars[1] = "3";
+  for (let i = 0; i < usaId.length && i < 14; i++) chars[2 + i] = usaId[i]!;
+  for (let i = 0; i < preferredName.length && i < 15; i++) {
+    chars[16 + i] = preferredName[i]!;
+  }
+  return chars.join("").trimEnd();
+}
+
 const fixturesDir = join(
   dirname(fileURLToPath(import.meta.url)),
   "../../fixtures",
@@ -70,22 +82,34 @@ describe("parseCl2Roster", () => {
     ).toEqual([]);
   });
 
-  it("updates preferred name when D31 matches usa member id", () => {
+  it("applies the following D3 preferred name and keeps an existing USA ID", () => {
     const usaId = "ABCDEF01234567";
     const content = [
       `D01AZ  FR  Smith, Jane                 ${usaId}AUSA04152012FF 1001 11 UNOV         1:16.69Y                                                            N26`,
-      `D31${usaId}  JoJo                                                                                                                                       N61`,
+      d3Line(usaId, "JoJo"),
     ].join("\n");
-    const rows = parseCl2Roster(content);
-    expect(rows.find((r) => r.usaMemberId === usaId)?.firstName).toBe("JoJo");
+    const row = parseCl2Roster(content).find((r) => r.usaMemberId === usaId);
+    expect(row?.firstName).toBe("JoJo");
+    expect(row?.preferredName).toBe("JoJo");
   });
 
-  it("skips D31 rows missing usa id or preferred name", () => {
+  it("skips a D3 that has neither a USA ID nor a preferred name", () => {
     const content = [
       "D01AZ  FR  Smith, Jane                                         0 F                                                                                           N33",
-      "D31                JoJo                                                                                                                                       N61",
+      d3Line("", ""),
     ].join("\n");
     expect(parseCl2Roster(content)[0]?.firstName).toBe("Jane");
+  });
+
+  it("fills a blank D0 USA ID from D3 and ignores a D3 that arrives first", () => {
+    const content = [
+      d3Line("ABCDEF01234567", "Early"),
+      "D01AZ  FR  Jones, Tim                                          0 M                                                                                           N33",
+      d3Line("ABCDEF01234567", ""),
+    ].join("\n");
+    const rows = parseCl2Roster(content);
+    expect(rows[0]?.firstName).toBe("Tim");
+    expect(rows[0]?.usaMemberId).toBe("ABCDEF01234567");
   });
 
   it("exports deprecated alias parseSdifStyleRoster", () => {
@@ -115,8 +139,10 @@ describe("parseCl2Roster", () => {
     const usaId = "ABCDEF01234567";
     const content = [
       `D01AZ  FR  Smith, Jane                 ${usaId}AUSA04152012FF 1001 11 UNOV         1:16.69Y                                                            N26`,
-      "D31ZZZZZZZZZZZZZZ  Nick                                                                                                                                       N61",
+      d3Line("ZZZZZZZZZZZZZZ", "Nick"),
     ].join("\n");
-    expect(parseCl2Roster(content)[0]?.firstName).toBe("Jane");
+    const row = parseCl2Roster(content)[0];
+    expect(row?.firstName).toBe("Nick");
+    expect(row?.usaMemberId).toBe(usaId);
   });
 });

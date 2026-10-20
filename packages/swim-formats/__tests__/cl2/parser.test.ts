@@ -617,4 +617,80 @@ describe("parseCl2Meet", () => {
     );
     expect(meet.entries[0]?.swimmerName).toMatch(/Jane/);
   });
+
+  it("reads meet course from B1 column 150, not an S inside the facility name", () => {
+    const sky = `${"B11        2026 Meet                         Copper Sky Aquatic Center".padEnd(149, " ")}Y`;
+    const meet = parseCl2Meet(
+      ["A01V3      02Meet Entries                  Hy-Tek", sky].join("\n"),
+    );
+    expect(meet.course).toBe("SCY");
+    expect(meet.name).toContain("2026 Meet");
+    const meters = parseCl2Meet(
+      [
+        "A01V3      02Meet Entries                  Hy-Tek",
+        `${"B1".padEnd(149, " ")}S`,
+      ].join("\n"),
+    );
+    expect(meters.course).toBe("SCM");
+    const longCourse = parseCl2Meet(
+      [
+        "A01V3      02Meet Entries                  Hy-Tek",
+        `${"B1".padEnd(149, " ")}L`,
+      ].join("\n"),
+    );
+    expect(longCourse.course).toBe("LCM");
+  });
+
+  it("keeps MARI as the team code when C1 stores AZMARI, and fills a blank D0 id from D3", () => {
+    const c1 = "C11AZ      AZMARIMaricopa High School          MHS";
+    const d0chars = Array.from({ length: 160 }, () => " ");
+    const put = (col: number, value: string) => {
+      for (let i = 0; i < value.length; i++) d0chars[col - 1 + i] = value[i]!;
+    };
+    put(1, "D01AZ  SR  Alden, Briar");
+    put(66, "FF");
+    put(69, "1001");
+    put(74, "12");
+    put(90, "1:11.01");
+    put(97, "Y");
+    const d3chars = Array.from({ length: 156 }, () => " ");
+    d3chars[0] = "D";
+    d3chars[1] = "3";
+    const usa = "ABCD1234567890";
+    for (let i = 0; i < usa.length; i++) d3chars[2 + i] = usa[i]!;
+    for (const [i, ch] of [..."Bri"].entries()) d3chars[16 + i] = ch;
+    d3chars[31] = "X";
+    for (let i = 0; i < 13; i++) d3chars[33 + i] = "F";
+    const meet = parseCl2Meet(
+      [
+        "A01V3      02Meet Entries                  Hy-Tek",
+        c1,
+        d0chars.join(""),
+        d3chars.join(""),
+      ].join("\n"),
+    );
+    expect(meet.teamCode).toBe("MARI");
+    expect(meet.lscCode).toBe("AZ");
+    expect(meet.teamName).toBe("Maricopa High School");
+    expect(meet.teamShortName).toBe("MHS");
+    expect(meet.entries[0]?.classYear).toBe("SR");
+    expect(meet.entries[0]?.seedCourse).toBe("SCY");
+    expect(meet.entries[0]?.usaMemberId).toBe(usa);
+    expect(meet.entries[0]?.preferredName).toBe("Bri");
+    expect(meet.entries[0]?.ethnicity).toBe("X");
+    expect(meet.entries[0]?.registrationFlags).toBe("FFFFFFFFFFFFF");
+  });
+
+  it("leaves a too-short LSC prefix in place and ignores a D3 before any swimmer", () => {
+    const meet = parseCl2Meet(
+      [
+        "A01V3      02Meet Entries                  Hy-Tek",
+        "C11AZ      AZX",
+        "D3",
+        "D01AZ      Doe, Jane                                           FF 1001  1                    1:05.00",
+      ].join("\n"),
+    );
+    expect(meet.teamCode).toBe("AZX");
+    expect(meet.entries[0]?.usaMemberId).toBeUndefined();
+  });
 });

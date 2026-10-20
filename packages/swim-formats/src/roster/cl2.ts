@@ -1,3 +1,4 @@
+import { parseCl2D3Fields } from "../cl2/d3";
 import type { ParsedRosterRow } from "../types";
 import {
   estimateDobFromClassYear,
@@ -9,6 +10,7 @@ import {
   parseLastFirstName,
   parseSdifBirthDate,
   parseUsaMemberIdFromLine,
+  swimmerKey,
 } from "./utils";
 
 function parseCl2D01Line(
@@ -92,26 +94,37 @@ export function parseCl2Roster(content: string): ParsedRosterRow[] {
   const swimmers = new Map<string, ParsedRosterRow>();
   const seasonYear = extractSeasonYear(content) ?? new Date().getFullYear();
 
+  let lastKey: string | undefined;
   for (let i = 0; i < allLines.length; i++) {
     const line = allLines[i]!;
     if (!line.trim()) continue;
-    if (line.startsWith("D01")) {
-      const parsed = parseCl2D01Line(line, seasonYear);
-      if (parsed) mergeSwimmer(swimmers, { ...parsed, sourceLine: i + 1 });
+    if (line.startsWith("D3")) {
+      const extra = parseCl2D3Fields(line);
+      if (!lastKey) continue;
+      if (!extra.usaMemberId && !extra.preferredName) continue;
+      const row = swimmers.get(lastKey);
+      // lastKey is recorded only after mergeSwimmer inserts the row.
+      const next: ParsedRosterRow = { ...(row as ParsedRosterRow) };
+      if (!next.usaMemberId && extra.usaMemberId) {
+        next.usaMemberId = extra.usaMemberId;
+      }
+      if (extra.preferredName) {
+        next.preferredName = extra.preferredName;
+        next.firstName = extra.preferredName;
+      }
+      swimmers.set(lastKey, next);
       continue;
     }
-
-    if (line.startsWith("D31")) {
-      const usaMemberId = line.substring(3, 17).trim();
-      const preferredName = line.substring(19, 23).trim();
-      if (!usaMemberId || !preferredName) continue;
-
-      for (const [key, row] of swimmers) {
-        if (row.usaMemberId === usaMemberId) {
-          swimmers.set(key, { ...row, firstName: preferredName });
-        }
-      }
-    }
+    if (!line.startsWith("D0")) continue;
+    const parsed = parseCl2D01Line(line, seasonYear);
+    if (!parsed?.gender || !parsed.dateOfBirth) continue;
+    mergeSwimmer(swimmers, { ...parsed, sourceLine: i + 1 });
+    lastKey = swimmerKey({
+      firstName: parsed.firstName,
+      lastName: parsed.lastName,
+      dateOfBirth: parsed.dateOfBirth,
+      usaMemberId: parsed.usaMemberId,
+    });
   }
 
   return [...swimmers.values()];

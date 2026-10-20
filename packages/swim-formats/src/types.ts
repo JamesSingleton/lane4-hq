@@ -55,10 +55,28 @@ export interface ParsedMeet {
   teamRegion?: string;
   teamPostalCode?: string;
   teamCountry?: string;
-  /** Head coach (or owner) name for HY3 C1. */
+  /** Head coach (or owner) name for HY3 C1 cols 56–85. */
   teamContactName?: string;
+  /** Second contact name for HY3 C1 cols 86–115, when it differs. */
+  teamContactName2?: string;
   /** Head coach (or owner) email for HY3 C3. */
   teamContactEmail?: string;
+  /** HY3 C3 daytime phone (cols 33–52). */
+  teamPhone?: string;
+  /** HY3 C3 evening phone (cols 53–72). */
+  teamPhone2?: string;
+  /** HY3 C3 fax (cols 73–92). */
+  teamFax?: string;
+  /**
+   * Age-up date (YYYY-MM-DD) from HY3 B1 cols 109–116.
+   * Competition age is computed on this date, which can differ from the meet start.
+   */
+  ageUpDate?: string;
+  /**
+   * Unconfirmed HY3 C4 free text (cols 3–122). Not present in the Maricopa
+   * or SwimComm fixtures; retained so a C4 line is not dropped.
+   */
+  teamExtra?: string;
 }
 
 export interface ParsedEntry {
@@ -71,6 +89,16 @@ export interface ParsedEntry {
   gender?: "male" | "female";
   /** High-school class year (FR/SO/JR/SR) when present. */
   classYear?: string;
+  /** HY3 D1 athlete number (cols 4–8), preserved on export. */
+  meetSwimmerId?: number;
+  /** Course letter on this entry's seed (CL2 D0 col 97 / HY3 E1 col 51). */
+  seedCourse?: "SCY" | "SCM" | "LCM";
+  /** CL2 D3 cols 17–31, when the legal first name is different. */
+  preferredName?: string;
+  /** CL2 D3 cols 32–33. */
+  ethnicity?: string;
+  /** CL2 D3 yes/no flags from col 34 (Hy-Tek writes `F`/`T` per flag). */
+  registrationFlags?: string;
   /** True when HY3 E1 col 84 is `X` (exhibition). */
   exhibition?: boolean;
   meetDivision?: string;
@@ -121,6 +149,8 @@ export interface ParsedRelayEntry {
   /** Primary legs 1–4, then alternates #5–#8 when present. */
   swimmerNames: string[];
   seedTime?: string;
+  /** Course letter on the relay seed (CL2 E0 col 54). */
+  seedCourse?: "SCY" | "SCM" | "LCM";
   teamCode?: string;
   relayLetter?: string;
   /** Recorded team attempts from HY3 F2 relay-result records. */
@@ -145,6 +175,14 @@ export interface ParsedAthlete {
   dateOfBirth?: string;
   gender?: "male" | "female";
   classYear?: string;
+  /** HY3 D1 athlete number (cols 4–8), preserved on export. */
+  meetSwimmerId?: number;
+  /** CL2 D3 preferred first name. */
+  preferredName?: string;
+  /** CL2 D3 ethnicity code (cols 32–33). */
+  ethnicity?: string;
+  /** CL2 D3 registration flags from col 34. */
+  registrationFlags?: string;
   /** Committed / attending with no individual event entries. */
   relayOnly?: boolean;
 }
