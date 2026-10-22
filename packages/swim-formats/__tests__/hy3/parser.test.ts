@@ -463,4 +463,94 @@ describe("parseHy3", () => {
     expect(meet.events[0]?.ageGroup).toBe("12&U");
     expect(meet.results[0]).toMatchObject({ time: "DQ", isDq: true });
   });
+
+  it("reads team identity, age-up date, class year, swimmer id, and C4 text", () => {
+    const line = (width = 130) => Array.from({ length: width }, () => " ");
+    const put = (chars: string[], col: number, value: string) => {
+      for (let i = 0; i < value.length; i++) chars[col - 1 + i] = value[i]!;
+    };
+    const b1 = line();
+    put(b1, 1, "B1");
+    put(b1, 3, "Age Meet");
+    put(b1, 48, "Pool");
+    put(b1, 93, "10242026");
+    put(b1, 101, "10242026");
+    put(b1, 109, "07012026");
+    put(b1, 117, "1100");
+    const c1 = line();
+    put(c1, 1, "C1MARI");
+    put(c1, 8, "Maricopa High School");
+    put(c1, 38, "MHS");
+    put(c1, 54, "AZ");
+    put(c1, 56, "Ada Lovelace");
+    put(c1, 86, "Ada Lovelace");
+    put(c1, 121, "HS");
+    const c2 = line();
+    put(c2, 1, "C2");
+    put(c2, 3, "45012 W Lane Ave");
+    put(c2, 33, "Suite 2");
+    put(c2, 63, "Maricopa");
+    put(c2, 93, "AZ");
+    put(c2, 95, "85139");
+    put(c2, 105, "USA");
+    const c3 = line();
+    put(c3, 1, "C3");
+    put(c3, 33, "480-555-0100");
+    put(c3, 53, "480-555-0101");
+    put(c3, 73, "480-555-0199");
+    put(c3, 93, "ada@example.com");
+    const c4 = line();
+    put(c4, 1, "C4extra team note");
+    const d1 = line();
+    put(d1, 1, "D1F   32Alden");
+    put(d1, 29, "Briar");
+    put(d1, 100, "SR");
+    const e1 = line();
+    put(e1, 1, "E1F   32Alden");
+    put(e1, 14, "F");
+    put(e1, 16, "   100");
+    put(e1, 22, "A");
+    put(e1, 39, "  12");
+    put(e1, 51, "Y");
+    put(e1, 52, "   71.01");
+    const content = [
+      "A102Meet Entries             Hy-Tek",
+      b1.join(""),
+      c1.join(""),
+      c2.join(""),
+      c3.join(""),
+      c4.join(""),
+      d1.join(""),
+      e1.join(""),
+    ].join("\n");
+    const meet = parseHy3(content);
+    expect(meet.ageUpDate).toBe("2026-07-01");
+    expect(meet.startDate).toBe("2026-10-24");
+    expect(meet.teamCode).toBe("MARI");
+    expect(meet.lscCode).toBe("AZ");
+    expect(meet.teamName).toBe("Maricopa High School");
+    expect(meet.teamShortName).toBe("MHS");
+    expect(meet.teamKind).toBe("HS");
+    expect(meet.teamContactName).toBe("Ada Lovelace");
+    expect(meet.teamContactName2).toBeUndefined();
+    const c1b = line();
+    put(c1b, 1, "C1TEAM");
+    put(c1b, 56, "Ada Lovelace");
+    put(c1b, 86, "Sam Coach");
+    const second = parseHy3(["A1", c1b.join("")].join("\n"));
+    expect(second.teamContactName2).toBe("Sam Coach");
+    expect(parseHy3("C4\n").teamExtra).toBeUndefined();
+    expect(meet.teamAddressLine1).toContain("Lane Ave");
+    expect(meet.teamAddressLine2).toBe("Suite 2");
+    expect(meet.teamCity).toBe("Maricopa");
+    expect(meet.teamPhone).toBe("480-555-0100");
+    expect(meet.teamPhone2).toBe("480-555-0101");
+    expect(meet.teamFax).toBe("480-555-0199");
+    expect(meet.teamContactEmail).toBe("ada@example.com");
+    expect(meet.teamExtra).toBe("extra team note");
+    expect(meet.entries[0]?.meetSwimmerId).toBe(32);
+    expect(meet.entries[0]?.classYear).toBe("SR");
+    expect(meet.entries[0]?.seedCourse).toBe("SCY");
+    expect(meet.athletes?.[0]?.meetSwimmerId).toBe(32);
+  });
 });

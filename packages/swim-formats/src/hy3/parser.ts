@@ -134,6 +134,7 @@ type ParseState = {
   lastEventKey?: string;
   lastEntry?: Hy3Entry;
   endDate?: string;
+  ageUpDate?: string;
   altitude?: number;
   sanctionNumber?: string;
   notes?: string;
@@ -279,11 +280,13 @@ function parseB1(line: string, state: ParseState): void {
   const facility = extract(line, 48, 45);
   const start = parseMmDdYyyy(extract(line, 93, 8));
   const end = parseMmDdYyyy(extract(line, 101, 8));
+  const ageUp = parseMmDdYyyy(extract(line, 109, 8));
   const altitudeRaw = extract(line, 117, 5);
   if (name) state.meet.name = name;
   if (facility) state.meet.location = facility;
   if (start) state.meet.startDate = start;
   if (end) state.endDate = end;
+  if (ageUp) state.ageUpDate = ageUp;
   const altitude = safeInt(altitudeRaw, -1);
   if (altitude >= 0) state.altitude = altitude;
 }
@@ -299,15 +302,54 @@ function parseB2(line: string, state: ParseState): void {
 
 function parseC1(line: string, state: ParseState): void {
   const code = extract(line, 3, 5);
-  if (code) state.lastTeamCode = code;
+  if (code) {
+    state.lastTeamCode = code;
+    state.meet.teamCode = code;
+  }
+  const teamName = extract(line, 8, 30);
+  const shortName = extract(line, 38, 16);
+  const lsc = extract(line, 54, 2);
+  const contact = extract(line, 56, 30);
+  const contact2 = extract(line, 86, 30);
+  const kind = extract(line, 121, 2);
+  if (teamName) state.meet.teamName = teamName;
+  if (shortName) state.meet.teamShortName = shortName;
+  if (lsc) state.meet.lscCode = lsc;
+  if (contact) state.meet.teamContactName = contact;
+  if (contact2 && contact2 !== contact) state.meet.teamContactName2 = contact2;
+  if (kind) state.meet.teamKind = kind;
 }
 
-function parseC2(_line: string, _state: ParseState): void {
-  // Team address retained in full parse path later if needed.
+function parseC2(line: string, state: ParseState): void {
+  const address1 = extract(line, 3, 30);
+  const address2 = extract(line, 33, 30);
+  const city = extract(line, 63, 30);
+  const region = extract(line, 93, 2);
+  const postal = extract(line, 95, 10);
+  const country = extract(line, 105, 3);
+  if (address1) state.meet.teamAddressLine1 = address1;
+  if (address2) state.meet.teamAddressLine2 = address2;
+  if (city) state.meet.teamCity = city;
+  if (region) state.meet.teamRegion = region;
+  if (postal) state.meet.teamPostalCode = postal;
+  if (country) state.meet.teamCountry = country;
 }
 
-function parseC3(_line: string, _state: ParseState): void {
-  // Team contact retained in full parse path later if needed.
+function parseC3(line: string, state: ParseState): void {
+  const phone = extract(line, 33, 20);
+  const phone2 = extract(line, 53, 20);
+  const fax = extract(line, 73, 20);
+  const email = extract(line, 93, 36);
+  if (phone) state.meet.teamPhone = phone;
+  if (phone2) state.meet.teamPhone2 = phone2;
+  if (fax) state.meet.teamFax = fax;
+  if (email) state.meet.teamContactEmail = email;
+}
+
+/** C4 is not in the SwimComm or Maricopa corpora. Keep the text so it is not dropped. */
+function parseC4(line: string, state: ParseState): void {
+  const extra = extract(line, 3, 120);
+  if (extra) state.meet.teamExtra = extra;
 }
 
 function resolveSwimmerDob(
@@ -588,6 +630,7 @@ function flatten(state: ParseState): ParsedMeet {
         eventNumber: entry.eventNumber,
         swimmerNames: names,
         seedTime: secondsToTimeString(entry.seedSeconds),
+        seedCourse: entry.seedCourse,
         teamCode: entry.teamCode,
         relayLetter: entry.relayLetter,
         results: relayResults.length > 0 ? relayResults : undefined,
@@ -611,6 +654,10 @@ function flatten(state: ParseState): ParsedMeet {
         swimmer.gender === "male" || swimmer.gender === "female"
           ? swimmer.gender
           : undefined,
+      classYear: swimmer.classYear,
+      meetSwimmerId: swimmer.meetId,
+      preferredName: swimmer.nickName,
+      seedCourse: entry.seedCourse,
       exhibition: entry.exhibition,
       meetDivision: entry.meetDivision,
     });
@@ -634,6 +681,9 @@ function flatten(state: ParseState): ParsedMeet {
         swimmer.gender === "male" || swimmer.gender === "female"
           ? swimmer.gender
           : undefined,
+      classYear: swimmer.classYear,
+      meetSwimmerId: swimmer.meetId,
+      preferredName: swimmer.nickName,
       relayOnly: !individualMeetIds.has(swimmer.meetId),
     });
   }
@@ -648,6 +698,25 @@ function flatten(state: ParseState): ParsedMeet {
     sanctionNumber: state.sanctionNumber,
     notes: state.notes,
     importKind: state.meet.importKind,
+    ageUpDate: state.ageUpDate,
+    teamCode: state.meet.teamCode,
+    lscCode: state.meet.lscCode,
+    teamName: state.meet.teamName,
+    teamShortName: state.meet.teamShortName,
+    teamKind: state.meet.teamKind,
+    teamAddressLine1: state.meet.teamAddressLine1,
+    teamAddressLine2: state.meet.teamAddressLine2,
+    teamCity: state.meet.teamCity,
+    teamRegion: state.meet.teamRegion,
+    teamPostalCode: state.meet.teamPostalCode,
+    teamCountry: state.meet.teamCountry,
+    teamContactName: state.meet.teamContactName,
+    teamContactName2: state.meet.teamContactName2,
+    teamContactEmail: state.meet.teamContactEmail,
+    teamPhone: state.meet.teamPhone,
+    teamPhone2: state.meet.teamPhone2,
+    teamFax: state.meet.teamFax,
+    teamExtra: state.meet.teamExtra,
     events,
     entries,
     results,
@@ -664,6 +733,7 @@ const LINE_PARSERS: Record<string, (line: string, state: ParseState) => void> =
     C1: parseC1,
     C2: parseC2,
     C3: parseC3,
+    C4: parseC4,
     D1: parseD1,
     E1: parseE1,
     E2: parseE2,

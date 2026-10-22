@@ -13,6 +13,7 @@ import {
   exportHyv,
   exportMeetZip,
   exportSdif,
+  hytekByte,
   meetEntryPackBaseName,
   meetZipDownloadFilename,
 } from "../../src/export/meet";
@@ -1082,11 +1083,168 @@ describe("exportCl2", () => {
     expect(d0s[0]!.slice(73, 75).trim()).toBe("12");
     expect(d0s[0]!.slice(76, 80)).toBe("UNOV");
     expect(d3s[0]!.endsWith("N50")).toBe(true);
+    expect(d0s[0]!.slice(3, 5)).toBe("AZ");
+    expect(d0s[0]!.slice(7, 9)).toBe("JR");
     const z0 = rows.find((row) => row.startsWith("Z0"))!;
     expect(z0).toMatch(/Successful Build on \d{2}-\d{2}-\d{4}/);
     expect(z0).toContain(
       `${String(2).padStart(6)}${String(1).padStart(6)}${String(0).padStart(5)}`,
     );
+  });
+
+  it("checksums CP-1252 bytes for 0x80-0x9F, not Unicode code points", () => {
+    const enDash = "\u2013";
+    expect(enDash.charCodeAt(0)).toBe(0x2013);
+    expect(hytekByte(enDash.charCodeAt(0))).toBe(0x96);
+    expect(hytekByte(0x96)).toBe(0x96);
+    expect(hytekByte(0x0100)).toBe(0x00);
+
+    const text = exportHy3({
+      ...baseMeet,
+      name: `Pool${enDash}Side`,
+      entries: [],
+      results: [],
+      relays: [],
+    });
+    const b1 = text.split(/\r?\n/).find((row) => row.startsWith("B1"))!;
+    const body = b1.slice(0, 128);
+    expect(body).toContain(enDash);
+
+    const byteSum = (useBytes: boolean) => {
+      let even = 0;
+      let odd = 0;
+      for (let i = 0; i < 128; i++) {
+        const code = body.charCodeAt(i);
+        const value = useBytes ? hytekByte(code) : code;
+        if (i % 2 === 0) even += value;
+        else odd += 2 * value;
+      }
+      const mod = (Math.floor((even + odd) / 21) + 205) % 100;
+      return `${mod % 10}${Math.floor(mod / 10)}`;
+    };
+    expect(b1.slice(128)).toBe(byteSum(true));
+    expect(b1.slice(128)).not.toBe(byteSum(false));
+
+    const cl2 = exportCl2({
+      ...baseMeet,
+      name: `Pool${enDash}Side`,
+      entries: [],
+      results: [],
+      relays: [],
+    });
+    const a0 = cl2.split(/\r?\n/)[0]!;
+    const cl2Body = a0.slice(0, 156);
+    let sumBytes = 0;
+    let sumCodes = 0;
+    for (let i = 0; i < 156; i++) {
+      sumBytes += hytekByte(cl2Body.charCodeAt(i));
+      sumCodes += cl2Body.charCodeAt(i);
+    }
+    const cl2Digits = (sum: number) => {
+      const mod = (Math.floor(sum / 19) + 211) % 100;
+      return `${mod % 10}${Math.floor(mod / 10)}`;
+    };
+    expect(a0.slice(158)).toBe(cl2Digits(sumBytes));
+    expect(cl2Digits(sumBytes)).not.toBe(cl2Digits(sumCodes));
+  });
+
+  it("preserves HY3 swimmer ids, age-up date, C4 notes, and a per-entry seed course", () => {
+    const text = exportHy3({
+      ...baseMeet,
+      startDate: "2026-10-24",
+      endDate: "2026-10-24",
+      ageUpDate: "2026-07-01",
+      teamExtra: "lane notes",
+      teamPhone: "480-555-0100",
+      course: "SCM",
+      entries: [
+        {
+          eventNumber: 1,
+          swimmerName: "Briar Alden",
+          meetSwimmerId: 32,
+          classYear: "SR",
+          gender: "female",
+          seedTime: "1:11.01",
+          seedCourse: "SCY",
+        },
+      ],
+      relays: [
+        {
+          eventNumber: 1,
+          swimmerNames: ["Briar Alden"],
+          relayLetter: "A",
+          seedTime: "1:52.33",
+          seedCourse: "SCY",
+        },
+      ],
+      results: [],
+    });
+    const rows = text.split(/\r?\n/);
+    const b1 = rows.find((row) => row.startsWith("B1"))!;
+    expect(b1.slice(108, 116)).toBe("07012026");
+    expect(b1.slice(92, 100)).toBe("10242026");
+    const d1 = rows.find((row) => row.startsWith("D1"))!;
+    expect(d1.slice(3, 8)).toBe("   32");
+    expect(d1.slice(99, 101)).toBe("SR");
+    const e1 = rows.find((row) => row.startsWith("E1"))!;
+    expect(e1.slice(50, 51)).toBe("Y");
+    const f1 = rows.find((row) => row.startsWith("F1"))!;
+    expect(f1.slice(50, 51)).toBe("Y");
+    const f3 = rows.find((row) => row.startsWith("F3"))!;
+    expect(f3.slice(3, 8)).toBe("   32");
+    expect(
+      rows.some((row) => row.startsWith("C4") && row.includes("lane notes")),
+    ).toBe(true);
+    expect(
+      rows.some((row) => row.startsWith("C3") && row.includes("480-555-0100")),
+    ).toBe(true);
+
+    const cl2 = exportCl2({
+      ...baseMeet,
+      teamCode: "MARI",
+      lscCode: "AZ",
+      course: "SCM",
+      entries: [
+        {
+          eventNumber: 12,
+          swimmerName: "Briar Alden",
+          gender: "female",
+          classYear: "SR",
+          seedTime: "1:11.01",
+          seedCourse: "SCY",
+          ethnicity: "X",
+          registrationFlags: "FFFFFFFFFFFFF",
+        },
+      ],
+      relays: [
+        {
+          eventNumber: 1,
+          swimmerNames: ["Briar Alden"],
+          seedTime: "1:52.33",
+          seedCourse: "SCY",
+        },
+      ],
+      results: [],
+    });
+    const cl2Rows = cl2.split(/\r?\n/);
+    const d0 = cl2Rows.find((row) => row.startsWith("D0"))!;
+    expect(d0.slice(96, 97)).toBe("Y");
+    const e0 = cl2Rows.find((row) => row.startsWith("E0"))!;
+    expect(e0.slice(53, 54)).toBe("Y");
+    expect(e0.slice(3, 5)).toBe("AZ");
+    expect(e0.slice(12, 18)).toBe("AZMARI");
+  });
+
+  it("applies an athlete's meet id when the entry did not carry one", () => {
+    const text = exportHy3({
+      ...baseMeet,
+      entries: [{ eventNumber: 1, swimmerName: "Late Id" }],
+      athletes: [{ name: "Late Id", meetSwimmerId: 18 }],
+      results: [],
+      relays: [],
+    });
+    const d1 = text.split(/\r?\n/).find((row) => row.startsWith("D1"))!;
+    expect(d1.slice(3, 8)).toBe("   18");
   });
 
   it("omits the seed-time and relay-seed suffixes when absent", () => {
