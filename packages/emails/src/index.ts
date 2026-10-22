@@ -67,6 +67,20 @@ export async function sendTeamWelcome({
   });
 }
 
+export async function sendBetaInvite({
+  to,
+  inviteUrl,
+}: {
+  to: string;
+  inviteUrl: string;
+}) {
+  await sendEmail({
+    type: "beta-invite",
+    to,
+    props: { inviteUrl },
+  });
+}
+
 export async function sendCoachInvitation(data: {
   email: string;
   organization: { name: string };

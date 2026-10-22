@@ -78,7 +78,8 @@ Neon isolates database and object-storage writes. External email, calendar, and 
 
 | Route | Purpose |
 | --- | --- |
-| `/sign-in`, `/sign-up` | Coach authentication |
+| `/sign-in`, `/sign-up` | Coach authentication. Sign-up requires a beta invite or a team invitation. |
+| `/beta` | Send private-beta invites (`BETA_OPERATOR_EMAILS`) |
 | `/forgot-password`, `/reset-password`, `/2fa` | Account recovery and two-factor authentication |
 | `/onboarding` | Create the first team |
 | `/team/[teamId]` | Team dashboard |

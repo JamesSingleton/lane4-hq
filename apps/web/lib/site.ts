@@ -22,7 +22,7 @@ export const SITE_TITLE = `${SITE_NAME} · seed times, entries, and results for 
 export const SITE_DESCRIPTION =
   "Stop retyping seed times the night entries are due. Lane4 fills them from best times and puts Sunday's results next to previous best, for club and high school.";
 
-export const PRIMARY_CTA = "Create your free team";
+export const PRIMARY_CTA = "Join the beta";
 
 export const productLinks = [
   {

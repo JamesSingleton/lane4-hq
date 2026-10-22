@@ -31,6 +31,7 @@
     "./queries/notifications": "./src/queries/notifications.ts",
     "./queries/preferences": "./src/queries/preferences.ts",
     "./queries/sessions": "./src/queries/sessions.ts",
+    "./queries/beta-invites": "./src/queries/beta-invites.ts",
     "./calendar-ics": "./src/calendar-ics.ts"
   },
   "scripts": {

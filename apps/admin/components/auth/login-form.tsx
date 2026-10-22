@@ -1,6 +1,7 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
+import { INVITE_REQUIRED_MESSAGE } from "@lane4hq/auth/beta-access";
 import { signIn } from "@lane4hq/auth/client";
 import { Button } from "@lane4hq/ui/components/button";
 import {
@@ -18,7 +19,7 @@ import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { SocialAuthButtons } from "@/components/auth/social-auth-buttons";
-import { getCallbackURL } from "@/lib/auth-callback";
+import { getCallbackURL, invitationIdFromCallback } from "@/lib/auth-callback";
 import type { SocialProvider } from "@/lib/auth-providers";
 
 const loginSchema = z.object({
@@ -27,6 +28,16 @@ const loginSchema = z.object({
 });
 
 type LoginFormValues = z.infer<typeof loginSchema>;
+
+function authErrorFromSearch(params: Pick<URLSearchParams, "get">): string {
+  const described = params.get("error_description");
+  if (described) return described;
+  const code = params.get("error");
+  if (code === "INVITE_REQUIRED" || code === "unable_to_create_user") {
+    return INVITE_REQUIRED_MESSAGE;
+  }
+  return "";
+}
 
 export function LoginForm({
   socialProviders = [],
@@ -38,7 +49,7 @@ export function LoginForm({
   const router = useRouter();
   const searchParams = useSearchParams();
   const callbackUrl = getCallbackURL(searchParams);
-  const [error, setError] = useState("");
+  const [error, setError] = useState(() => authErrorFromSearch(searchParams));
   const {
     register,
     handleSubmit,
@@ -149,14 +160,29 @@ export function LoginForm({
             </Button>
           </Field>
           <FieldDescription className="text-center">
-            Don&apos;t have an account?{" "}
-            <Link
-              href={signUpHref}
-              className="underline underline-offset-4"
-              prefetch={false}
-            >
-              Sign up
-            </Link>
+            {invitationIdFromCallback(searchParams.get("callbackUrl") ?? "") ? (
+              <>
+                Don&apos;t have an account?{" "}
+                <Link
+                  href={signUpHref}
+                  className="underline underline-offset-4"
+                  prefetch={false}
+                >
+                  Sign up
+                </Link>
+              </>
+            ) : (
+              <>
+                Lane4 is in private beta.{" "}
+                <Link
+                  href="/sign-up"
+                  className="underline underline-offset-4"
+                  prefetch={false}
+                >
+                  You need an invitation
+                </Link>
+              </>
+            )}
           </FieldDescription>
         </FieldGroup>
       </form>

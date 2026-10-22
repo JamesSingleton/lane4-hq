@@ -73,6 +73,7 @@ Do not use other model families (Claude, GPT, GLM, etc.) unless the human explic
 
 ## Auth & server actions
 
+- **Private beta:** new accounts are rejected unless that email has an open beta invite or a pending team invitation. The gate is `databaseHooks.user.create.before` in `packages/auth/src/server.ts` (email and social sign-up). Operators listed in `BETA_OPERATOR_EMAILS` send beta invites at `/beta`. Do not reopen public sign-up.
 - Treat every Server Action like a public endpoint: authenticate and authorize inside the action (`requireTeamRole` / plan features).
 - Meet import/export is gated to owner + head_coach and the `meet_import` plan feature.
 - Changes to shared data and reads of sensitive data record an audit event with `writeAuditLog` (`@lane4hq/db/audit`). Name actions `area.thing.verb` (e.g. `results.heat.publish`). Pass the transaction so the event commits with the change, and pass an `AuditContext` (source, IP, user agent, request id). Never log secrets such as session tokens. Account events (sign-ins, sessions) have no team.

@@ -4,7 +4,7 @@ import { PRIMARY_CTA, SIGN_IN_URL, SIGN_UP_URL } from "@/lib/site";
 
 export function MarketingCta({
   title = "Put the next meet's seeds and lineup in one place.",
-  body = "Create a team, import the event file, and export the entries. Free for one coach, club or high school. No card to start.",
+  body = "Lane4 is in private beta. An invitation lets you create a team, import the event file, and export the entries.",
 }: {
   title?: string;
   body?: string;

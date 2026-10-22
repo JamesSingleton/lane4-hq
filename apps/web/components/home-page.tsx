@@ -38,7 +38,7 @@ export function HomePage() {
           </div>
         </div>
         <p className="max-w-xs text-sm text-muted-foreground text-pretty lg:justify-self-end">
-          Free for one coach, on a club or a high school. No card to start.
+          Private beta for club and high school coaches. You need an invitation.
         </p>
       </Section>
 

@@ -2,6 +2,11 @@ import { drizzleAdapter } from "@better-auth/drizzle-adapter";
 import { writeAuditLog } from "@lane4hq/db/audit";
 import { db } from "@lane4hq/db/client";
 import {
+  acceptBetaInvitesForEmail,
+  findOpenBetaInviteByEmail,
+  findOpenTeamInviteByEmail,
+} from "@lane4hq/db/queries/beta-invites";
+import {
   createDefaultSubscription,
   getTeamPlan,
   updateSubscription,
@@ -47,6 +52,12 @@ import {
   authAuditEvent,
   isAuditedAuthPath,
 } from "./audit-events";
+import {
+  INVITE_REQUIRED_CODE,
+  INVITE_REQUIRED_MESSAGE,
+  normalizeSignupEmail,
+  signupAllowed,
+} from "./beta-access";
 import { isDeviceClient } from "./device-clients";
 import {
   bearerToken,
@@ -160,6 +171,9 @@ function createAuth(polarClient: Polar) {
     appName: "Lane4 HQ",
     secret: env.BETTER_AUTH_SECRET,
     baseURL: env.BETTER_AUTH_URL,
+    onAPIError: {
+      errorURL: `${env.BETTER_AUTH_URL.replace(/\/$/, "")}/sign-in`,
+    },
     ...(trustedOriginsFromEnv?.length
       ? { trustedOrigins: trustedOriginsFromEnv }
       : process.env.NODE_ENV === "development"
@@ -305,7 +319,28 @@ function createAuth(polarClient: Polar) {
       },
       user: {
         create: {
+          before: async (user) => {
+            const email = normalizeSignupEmail(
+              typeof user.email === "string" ? user.email : "",
+            );
+            const [beta, team] = email
+              ? await Promise.all([
+                  findOpenBetaInviteByEmail(email),
+                  findOpenTeamInviteByEmail(email),
+                ])
+              : [null, null];
+            if (!signupAllowed({ beta, team })) {
+              throw new APIError("BAD_REQUEST", {
+                message: INVITE_REQUIRED_MESSAGE,
+                code: INVITE_REQUIRED_CODE,
+              });
+            }
+          },
           after: async (user) => {
+            const email = normalizeSignupEmail(
+              typeof user.email === "string" ? user.email : "",
+            );
+            if (email) await acceptBetaInvitesForEmail(email);
             await sendCoachWelcome({
               to: user.email,
               props: {
