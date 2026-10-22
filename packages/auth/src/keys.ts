@@ -21,7 +21,7 @@ export const keys = () =>
       MICROSOFT_CLIENT_ID: z.string().optional(),
       MICROSOFT_CLIENT_SECRET: z.string().optional(),
       MICROSOFT_TENANT_ID: z.string().optional(),
-      /** Comma-separated emails allowed to send private-beta invites. */
+      /** Comma-separated emails allowed to send beta invites and impersonate users. */
       BETA_OPERATOR_EMAILS: z.string().optional(),
     },
     client: {

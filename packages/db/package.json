@@ -32,6 +32,7 @@
     "./queries/preferences": "./src/queries/preferences.ts",
     "./queries/sessions": "./src/queries/sessions.ts",
     "./queries/beta-invites": "./src/queries/beta-invites.ts",
+    "./queries/support-users": "./src/queries/support-users.ts",
     "./calendar-ics": "./src/calendar-ics.ts"
   },
   "scripts": {

@@ -66,6 +66,7 @@ import {
   refreshedDeviceExpiry,
   shouldRenewDeviceSession,
 } from "./device-session";
+import { impersonation } from "./impersonation-plugin";
 import { keys } from "./keys";
 import { orgAc, orgRoles } from "./organization-ac";
 
@@ -232,6 +233,8 @@ function createAuth(polarClient: Polar) {
         "/sign-up/email": { window: 60, max: 5 },
         "/sign-in/email": { window: 60, max: 10 },
         "/request-password-reset": { window: 60, max: 5 },
+        "/impersonate-user": { window: 60, max: 10 },
+        "/stop-impersonating": { window: 60, max: 30 },
       },
     },
     socialProviders: {
@@ -365,6 +368,7 @@ function createAuth(polarClient: Polar) {
         interval: "5s",
         validateClient: isDeviceClient,
       }),
+      impersonation(),
       twoFactor({
         issuer: "Lane4 HQ",
         otpOptions: {

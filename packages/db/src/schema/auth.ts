@@ -38,6 +38,10 @@ export const session = pgTable(
       .notNull()
       .references(() => user.id, { onDelete: "cascade" }),
     activeOrganizationId: text("active_organization_id"),
+    /** Set on support sessions to the operator's user id. */
+    impersonatedBy: text("impersonated_by").references(() => user.id, {
+      onDelete: "set null",
+    }),
   },
   (table) => [index("session_user_id_idx").on(table.userId)],
 );

@@ -6,6 +6,7 @@ import {
   twoFactorClient,
 } from "better-auth/client/plugins";
 import { createAuthClient } from "better-auth/react";
+import { impersonationClient } from "./impersonation-client";
 import { orgAc, orgRoles } from "./organization-ac";
 import type { auth } from "./server";
 
@@ -49,6 +50,7 @@ export const authClient = createAuthClient({
         window.location.href = "/2fa";
       },
     }),
+    impersonationClient(),
   ],
 });
 

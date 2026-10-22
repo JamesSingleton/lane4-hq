@@ -1,6 +1,7 @@
 "use server";
 
 import { isBetaOperator, parseOperatorEmails } from "@lane4hq/auth/beta-access";
+import { impersonatorId } from "@lane4hq/auth/impersonation";
 import { keys } from "@lane4hq/auth/keys";
 import { getSession } from "@lane4hq/auth/session";
 import type { AuditContext } from "@lane4hq/db/audit";
@@ -9,6 +10,7 @@ import {
   createBetaInvite,
   revokeBetaInvite,
 } from "@lane4hq/db/queries/beta-invites";
+import { searchUsersForSupport } from "@lane4hq/db/queries/support-users";
 import { getBaseUrl, sendBetaInvite } from "@lane4hq/emails";
 import { revalidatePath } from "next/cache";
 import { headers } from "next/headers";
@@ -16,17 +18,20 @@ import { z } from "zod";
 
 const emailSchema = z.string().trim().email("Enter a valid email address.");
 
-async function requireOperator(): Promise<
-  { userId: string; email: string } | { error: string }
-> {
+async function requireOperator(
+  denied: string,
+): Promise<{ userId: string; email: string } | { error: string }> {
   const session = await getSession();
   const email = session?.user?.email;
   if (!session?.user?.id || !email) {
     return { error: "You must be signed in" };
   }
+  if (impersonatorId(session.session)) {
+    return { error: "Stop viewing this account first" };
+  }
   const operators = parseOperatorEmails(keys().BETA_OPERATOR_EMAILS);
   if (!isBetaOperator(email, operators)) {
-    return { error: "You can't send beta invites" };
+    return { error: denied };
   }
   return { userId: session.user.id, email };
 }
@@ -53,7 +58,7 @@ export async function createBetaInviteAction(
   | { ok: true; inviteUrl: string; emailed: boolean }
   | { ok: false; error: string }
 > {
-  const operator = await requireOperator();
+  const operator = await requireOperator("You can't send beta invites");
   if ("error" in operator) return { ok: false, error: operator.error };
 
   const parsed = emailSchema.safeParse(email);
@@ -99,7 +104,7 @@ export async function createBetaInviteAction(
 export async function revokeBetaInviteAction(
   id: string,
 ): Promise<{ ok: true } | { ok: false; error: string }> {
-  const operator = await requireOperator();
+  const operator = await requireOperator("You can't send beta invites");
   if ("error" in operator) return { ok: false, error: operator.error };
   const trimmed = id.trim();
   if (!trimmed) return { ok: false, error: "Missing invite" };
@@ -124,5 +129,45 @@ export async function revokeBetaInviteAction(
       ok: false,
       error: error instanceof Error ? error.message : "Could not revoke invite",
     };
+  }
+}
+
+export async function searchUsersAction(query: string): Promise<
+  | {
+      ok: true;
+      users: Array<{
+        id: string;
+        name: string;
+        email: string;
+        createdAt: string;
+        canImpersonate: boolean;
+      }>;
+    }
+  | { ok: false; error: string }
+> {
+  const operator = await requireOperator("You can't look up users");
+  if ("error" in operator) return { ok: false, error: operator.error };
+  const trimmed = query.trim();
+  if (trimmed.length < 3 || trimmed.length > 200) {
+    return { ok: false, error: "Enter between 3 and 200 characters." };
+  }
+
+  try {
+    const operators = parseOperatorEmails(keys().BETA_OPERATOR_EMAILS);
+    const rows = await searchUsersForSupport(trimmed);
+    return {
+      ok: true,
+      users: rows.map((row) => ({
+        id: row.id,
+        name: row.name,
+        email: row.email,
+        createdAt: row.createdAt.toISOString(),
+        canImpersonate:
+          row.id !== operator.userId && !isBetaOperator(row.email, operators),
+      })),
+    };
+  } catch (error) {
+    console.error("Support user search failed", error);
+    return { ok: false, error: "Could not search users" };
   }
 }

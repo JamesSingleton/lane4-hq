@@ -53,14 +53,7 @@ export function BetaInvitesPanel({ invites }: { invites: BetaInviteRow[] }) {
   }
 
   return (
-    <div className="mx-auto flex w-full max-w-xl flex-col gap-6 p-6">
-      <div className="flex flex-col gap-1">
-        <h1 className="text-2xl font-bold">Beta invites</h1>
-        <p className="text-muted-foreground text-sm text-balance">
-          Send a link so a coach can create an account. Team invitations from
-          Settings still let that coach join an existing team.
-        </p>
-      </div>
+    <div className="flex flex-col gap-6">
       <Card>
         <CardHeader>
           <CardTitle>Invite a coach</CardTitle>

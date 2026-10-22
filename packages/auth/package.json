@@ -11,7 +11,8 @@
     "./roles": "./src/roles.ts",
     "./device-clients": "./src/device-clients.ts",
     "./keys": "./src/keys.ts",
-    "./beta-access": "./src/beta-access.ts"
+    "./beta-access": "./src/beta-access.ts",
+    "./impersonation": "./src/impersonation.ts"
   },
   "scripts": {
     "check:types": "tsc --noEmit",

@@ -1,3 +1,5 @@
+import { impersonatorId } from "@lane4hq/auth/impersonation";
+import { getSession } from "@lane4hq/auth/session";
 import { getAiQuotaStatus } from "@lane4hq/db/queries/ai-quota";
 import { getTeamPlan, getTeamSubscription } from "@lane4hq/db/queries/billing";
 import { PLAN_LIMITS } from "@lane4hq/swim-core/plans";
@@ -43,6 +45,8 @@ export default async function BillingSettingsPage({
     );
   }
 
+  const session = await getSession();
+  const viewingAsUser = impersonatorId(session?.session) !== null;
   const [plan, subscription, quota] = await Promise.all([
     getTeamPlan(teamId),
     getTeamSubscription(teamId),
@@ -111,7 +115,11 @@ export default async function BillingSettingsPage({
             </li>
             <li>Cut tracker: {limits.advancedAnalytics ? "Yes" : "No"}</li>
           </ul>
-          <BillingActions teamId={teamId} currentPlan={plan} />
+          <BillingActions
+            teamId={teamId}
+            currentPlan={plan}
+            locked={viewingAsUser}
+          />
         </div>
       </SettingsSection>
 
