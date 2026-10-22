@@ -3,6 +3,7 @@ packages:
   - "packages/*"
 
 allowBuilds:
+  "@posthog/cli": true
   "@scarf/scarf": false
   core-js: false
   esbuild: true
@@ -35,6 +36,12 @@ catalog:
   "@vitest/coverage-v8": ^5.0.5
   zod: ^4.6.7
   "@t3-oss/env-nextjs": "^0.13.11"
+
+# drizzle-orm optionally peers @opentelemetry/api. Web and admin depend on
+# that package for PostHog logs, which made pnpm install a second drizzle
+# copy and broke admin's SQL types. One override keeps a single copy.
+overrides:
+  "drizzle-orm>@opentelemetry/api": "-"
 
 minimumReleaseAgeExclude:
   - '@scalar/client-side-rendering@0.4.7'

@@ -6,6 +6,7 @@ import {
   createAnalytics,
 } from "./client";
 import { analyticsContext, posthogHosts } from "./context";
+import { redactException } from "./privacy";
 
 export type ServerPostHog = {
   capture(args: {
@@ -54,11 +55,7 @@ export function loadPosthogServer(
     identify: (args) => client.identify(args),
     groupIdentify: (args) => client.groupIdentify(args),
     captureException: (error, distinctId, properties) =>
-      client.captureException(
-        error instanceof Error ? error : new Error("Error"),
-        distinctId,
-        properties,
-      ),
+      client.captureException(redactException(error), distinctId, properties),
     isFeatureEnabled: (key, distinctId) =>
       client.isFeatureEnabled(key, distinctId),
     getFeatureFlag: (key, distinctId) =>
@@ -119,10 +116,12 @@ export async function initServerAnalytics(
     group(groupKey) {
       client.groupIdentify({ groupType: "team", groupKey });
     },
-    exception(name, properties) {
-      const error = new Error(name);
-      error.name = name;
-      client.captureException(error, distinctId, properties);
+    exception(error, properties, reportedDistinctId) {
+      client.captureException(
+        error,
+        reportedDistinctId ?? distinctId,
+        properties,
+      );
     },
     isFeatureEnabled(flag) {
       const cachedFlag = flagCache.get(flag);
