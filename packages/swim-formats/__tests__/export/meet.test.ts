@@ -42,10 +42,18 @@ function hy3ChecksumDigits(body: string): string {
 function expectHy3Lines(text: string): void {
   const lines = text.split(/\r?\n/).filter((line) => line.length > 0);
   expect(lines.length).toBeGreaterThan(0);
-  for (const line of lines) {
-    expect(line).toHaveLength(130);
-    expect(line.slice(128)).toBe(hy3ChecksumDigits(line.slice(0, 128)));
-  }
+  // One assertion for the whole file. Per-line expects on azsi-results.hy3
+  // (thousands of lines) blow the 5s Vitest budget under coverage on CI.
+  const badAt = lines.findIndex(
+    (line) =>
+      line.length !== 130 ||
+      line.slice(128) !== hy3ChecksumDigits(line.slice(0, 128)),
+  );
+  const bad = badAt === -1 ? undefined : lines[badAt];
+  expect(
+    badAt,
+    bad ? `line ${badAt + 1} is ${bad.length} chars: ${bad}` : "",
+  ).toBe(-1);
 }
 
 const baseMeet: ParsedMeet = {
@@ -437,6 +445,8 @@ describe("exportHy3", () => {
     expect(genders).toEqual(["FFF", "MMM"]);
   });
 
+  // azsi-results.hy3 re-export checksums about 6,800 lines. Under coverage
+  // that exceeds Vitest's 5s default on GitHub Actions.
   it("keeps every exported HY3 line at 130 characters with a valid checksum", () => {
     expectHy3Lines(exportHy3(baseMeet));
     expectHy3Lines(
@@ -459,7 +469,7 @@ describe("exportHy3", () => {
       const original = readFileSync(join(fixturesDir, name), "latin1");
       expectHy3Lines(exportHy3(parseHy3(original)));
     }
-  });
+  }, 20_000);
 
   it("writes C2/C3 from team address and head-coach email, and D1 DOB/age/class year", () => {
     const text = exportHy3({
