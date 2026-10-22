@@ -15,5 +15,8 @@ await build({
   banner: {
     js: "import { createRequire } from 'node:module'; const require = createRequire(import.meta.url);",
   },
+  // posthog-node optionally imports this for trace correlation. The API does
+  // not ship the OpenTelemetry SDK; the import is inside a try/catch.
+  external: ["@opentelemetry/api"],
   logLevel: "info",
 });

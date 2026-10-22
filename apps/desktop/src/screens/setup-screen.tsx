@@ -64,6 +64,7 @@ import {
   Users,
 } from "lucide-react";
 import { useMemo, useState, useTransition } from "react";
+import { trackImportFailed, trackResultsImported } from "@/lib/analytics";
 import { ChoiceSelect } from "../components/choice-select";
 import { DatePicker } from "../components/date-picker";
 import { EditEventDialog } from "../components/edit-event-dialog";
@@ -156,18 +157,21 @@ export function SetupScreen({ onSeeded }: { onSeeded: () => void }) {
   function importEntries() {
     setError(null);
     startTransition(async () => {
+      let filename: string | undefined;
       try {
         const files = await pickMeetFiles(
           "Choose a team's entry file (HY3, CL2, SD3, or ZIP)",
         );
         if (files.length === 0) return;
+        filename = files[0]?.filename;
         const parsed = parseMeetFilesFromBytes(files);
         setPendingImport({
           parsed,
-          team: detectTeam(parsed, files[0]!.filename),
+          team: detectTeam(parsed, filename ?? ""),
           files: files.map((f) => f.filename),
         });
       } catch (e) {
+        trackImportFailed(filename, e);
         setError(errorMessage(e));
       }
     });
@@ -181,8 +185,13 @@ export function SetupScreen({ onSeeded }: { onSeeded: () => void }) {
         setSummary(merged.summary);
         return merged.meet;
       });
+      trackResultsImported(
+        pendingImport.files[0],
+        pendingImport.parsed.results.length,
+      );
       setPendingImport(null);
     } catch (e) {
+      trackImportFailed(pendingImport.files[0], e);
       setError(errorMessage(e));
     }
   }

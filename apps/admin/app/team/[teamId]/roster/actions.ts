@@ -1,5 +1,6 @@
 "use server";
 
+import { errorCode, formatCode } from "@lane4hq/analytics";
 import { getSession } from "@lane4hq/auth/session";
 import {
   canAddSwimmer,
@@ -60,6 +61,7 @@ import {
 import { eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { headers } from "next/headers";
+import { trackAdmin } from "@/app/analytics";
 
 function parseContactsFromForm(formData: FormData) {
   const parentName = formData.get("parentName")?.toString();
@@ -804,15 +806,25 @@ async function importRosterRows(
 }
 
 export async function importRosterCsvAction(teamId: string, content: string) {
-  const result = await importRosterRows(
-    teamId,
-    parseRosterCsv(content),
-    "roster_csv",
-  );
-  return {
-    ...result,
-    added: result.imported + result.linkedExisting,
-  };
+  const session = await getSession();
+  try {
+    const result = await importRosterRows(
+      teamId,
+      parseRosterCsv(content),
+      "roster_csv",
+    );
+    trackAdmin("roster_imported", session?.user?.id, teamId, { format: "csv" });
+    return {
+      ...result,
+      added: result.imported + result.linkedExisting,
+    };
+  } catch (error) {
+    trackAdmin("import_failed", session?.user?.id, teamId, {
+      format: "csv",
+      error_code: errorCode(error),
+    });
+    throw error;
+  }
 }
 
 export type ImportRosterFileResult =
@@ -833,27 +845,43 @@ export async function importRosterFileAction(
   content: string,
   encoding: "utf8" | "base64" = "utf8",
 ): Promise<ImportRosterFileResult> {
-  if (filename.toLowerCase().endsWith(".zip")) {
-    if (encoding !== "base64") {
-      throw new Error("ZIP roster packs must be uploaded as binary files.");
+  const session = await getSession();
+  const format = formatCode(filename);
+  try {
+    if (filename.toLowerCase().endsWith(".zip")) {
+      if (encoding !== "base64") {
+        throw new Error("ZIP roster packs must be uploaded as binary files.");
+      }
+      const bytes = Uint8Array.from(Buffer.from(content, "base64"));
+      const rows = parseRosterFileFromBytes(bytes, filename);
+      const imported = await importRosterRows(teamId, rows, "roster_zip");
+      trackAdmin("roster_imported", session?.user?.id, teamId, { format });
+      return imported;
     }
-    const bytes = Uint8Array.from(Buffer.from(content, "base64"));
-    const rows = parseRosterFileFromBytes(bytes, filename);
-    return importRosterRows(teamId, rows, "roster_zip");
+
+    const text =
+      encoding === "base64"
+        ? Buffer.from(content, "base64").toString("utf8")
+        : content;
+
+    if (isRosterSharePack(text)) {
+      const imported = await importRosterSharePackRows(teamId, text);
+      trackAdmin("roster_imported", session?.user?.id, teamId, { format });
+      return imported;
+    }
+
+    const parsed = parseRosterFileRows(filename, text, encoding);
+    const detected = detectRosterFileFormat(filename, text) ?? "csv";
+    const result = await importRosterRows(teamId, parsed, `roster_${detected}`);
+    trackAdmin("roster_imported", session?.user?.id, teamId, { format });
+    return result;
+  } catch (error) {
+    trackAdmin("import_failed", session?.user?.id, teamId, {
+      format,
+      error_code: errorCode(error),
+    });
+    throw error;
   }
-
-  const text =
-    encoding === "base64"
-      ? Buffer.from(content, "base64").toString("utf8")
-      : content;
-
-  if (isRosterSharePack(text)) {
-    return importRosterSharePackRows(teamId, text);
-  }
-
-  const parsed = parseRosterFileRows(filename, text, encoding);
-  const format = detectRosterFileFormat(filename, text) ?? "csv";
-  return importRosterRows(teamId, parsed, `roster_${format}`);
 }
 
 export async function saveRosterViewPreferencesAction(

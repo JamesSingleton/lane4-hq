@@ -1,3 +1,4 @@
+mod analytics;
 mod deep_link;
 mod export_file;
 mod meet_file;
@@ -31,6 +32,7 @@ pub fn run() {
         .manage(publish::SignInState::default())
         .manage(update::UpdateState::new(updates))
         .setup(|app| {
+            analytics::install(app.handle().clone());
             // Installers register the scheme; dev builds on Windows register here.
             #[cfg(all(debug_assertions, windows))]
             app.deep_link().register_all()?;

@@ -8,6 +8,7 @@ import type { Metadata, Viewport } from "next";
 
 import "@lane4hq/ui/globals.css";
 import { cn } from "@lane4hq/ui/lib/utils";
+import { AnalyticsProvider } from "@/components/analytics-provider";
 import Providers from "@/components/providers";
 import { env } from "@/env";
 
@@ -67,9 +68,16 @@ export default async function RootLayout({
       suppressHydrationWarning
     >
       <body className="overscroll-none bg-background font-sans">
-        <Providers defaultTheme={defaultTheme} serverTheme={serverTheme}>
-          {children}
-        </Providers>
+        <AnalyticsProvider
+          bootstrap={{
+            userId: session?.user?.id,
+            groupFromTeamPath: true,
+          }}
+        >
+          <Providers defaultTheme={defaultTheme} serverTheme={serverTheme}>
+            {children}
+          </Providers>
+        </AnalyticsProvider>
       </body>
     </html>
   );

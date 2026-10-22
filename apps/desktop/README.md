@@ -108,5 +108,6 @@ To ship an update (`.github/workflows/desktop-release.yml`):
 1. One time: run `pnpm --filter @lane4hq/desktop tauri signer generate -w ~/.tauri/lane4.key`. Save the private key and its password as repo secrets `TAURI_SIGNING_PRIVATE_KEY` and `TAURI_SIGNING_PRIVATE_KEY_PASSWORD`, and the public key as the repo variable `LANE4_UPDATER_PUBKEY`. Keep a backup of the private key: losing it means existing installs can't update.
 2. Bump `version` in `src-tauri/tauri.conf.json`, merge, then push the tag `desktop-v<version>`.
 3. The workflow builds signed updater bundles into a draft release. Publish the draft to ship it; within 5 minutes `GET /v1/desktop/update` offers it.
+4. Optional: set GitHub Actions variables `VITE_POSTHOG_PROJECT_TOKEN` and `VITE_POSTHOG_HOST`. The release workflow inlines them. Empty values leave analytics off. The release tag is the analytics `release`.
 
 The app checks for an update on the meets list only, and installs only when the user chooses, so it never restarts in the middle of a meet. macOS signing and notarization start working once the `APPLE_*` secrets exist; Windows Authenticode is still to do.

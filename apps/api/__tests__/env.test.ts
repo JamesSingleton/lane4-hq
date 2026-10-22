@@ -8,6 +8,7 @@ describe("apiEnv", () => {
       allowedOrigins: [],
       redis: null,
       desktopReleases: { repo: "JamesSingleton/lane4-hq", token: undefined },
+      posthog: null,
     });
   });
 
@@ -44,5 +45,18 @@ describe("apiEnv", () => {
       }).desktopReleases,
     ).toEqual({ repo: "lane4/desktop", token: "ghp_x" });
     expect(() => apiEnv({ DESKTOP_RELEASES_REPO: "not a repo" })).toThrow();
+  });
+
+  it("reads an optional PostHog project key and ignores a blank one", () => {
+    expect(
+      apiEnv({
+        POSTHOG_API_KEY: " phc_test ",
+        POSTHOG_HOST: " https://eu.i.posthog.com ",
+      }).posthog,
+    ).toEqual({
+      apiKey: "phc_test",
+      host: "https://eu.i.posthog.com",
+    });
+    expect(apiEnv({ POSTHOG_API_KEY: "   " }).posthog).toBeNull();
   });
 });

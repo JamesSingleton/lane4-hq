@@ -15,6 +15,9 @@ const Env = z
       .default("JamesSingleton/lane4-hq"),
     /** Read access to releases; required while the repo is private. */
     GITHUB_RELEASE_TOKEN: z.string().min(1).optional(),
+    /** Project API key. Empty or missing leaves analytics off. */
+    POSTHOG_API_KEY: z.string().optional(),
+    POSTHOG_HOST: z.string().optional(),
   })
   .refine(
     (env) =>
@@ -46,5 +49,11 @@ export function apiEnv(env: NodeJS.ProcessEnv = process.env) {
       repo: parsed.DESKTOP_RELEASES_REPO,
       token: parsed.GITHUB_RELEASE_TOKEN,
     },
+    posthog: parsed.POSTHOG_API_KEY?.trim()
+      ? {
+          apiKey: parsed.POSTHOG_API_KEY.trim(),
+          host: parsed.POSTHOG_HOST?.trim() || undefined,
+        }
+      : null,
   };
 }

@@ -5,6 +5,7 @@ import { GeistMono } from "geist/font/mono";
 import { GeistSans } from "geist/font/sans";
 import type { Metadata, Viewport } from "next";
 import { Syne } from "next/font/google";
+import { AnalyticsProvider } from "@/components/analytics-provider";
 import { ThemeProvider } from "@/components/providers";
 import { SiteFooter } from "@/components/site-footer";
 import { SiteHeader } from "@/components/site-header";
@@ -55,26 +56,28 @@ export default function RootLayout({
       className={cn(GeistSans.variable, GeistMono.variable, syne.variable)}
     >
       <body className="bg-background text-foreground antialiased">
-        <ThemeProvider
-          attribute="class"
-          defaultTheme="system"
-          enableSystem
-          disableTransitionOnChange
-        >
-          <a
-            href="#content"
-            className="bg-primary text-primary-foreground sr-only z-50 focus-visible:not-sr-only focus-visible:absolute focus-visible:top-3 focus-visible:left-3 focus-visible:rounded-lg focus-visible:px-3 focus-visible:py-2"
+        <AnalyticsProvider>
+          <ThemeProvider
+            attribute="class"
+            defaultTheme="system"
+            enableSystem
+            disableTransitionOnChange
           >
-            Skip to content
-          </a>
-          <div
-            aria-hidden="true"
-            className="lane-grid pointer-events-none fixed inset-0 -z-10"
-          />
-          <SiteHeader />
-          <main id="content">{children}</main>
-          <SiteFooter />
-        </ThemeProvider>
+            <a
+              href="#content"
+              className="bg-primary text-primary-foreground sr-only z-50 focus-visible:not-sr-only focus-visible:absolute focus-visible:top-3 focus-visible:left-3 focus-visible:rounded-lg focus-visible:px-3 focus-visible:py-2"
+            >
+              Skip to content
+            </a>
+            <div
+              aria-hidden="true"
+              className="lane-grid pointer-events-none fixed inset-0 -z-10"
+            />
+            <SiteHeader />
+            <main id="content">{children}</main>
+            <SiteFooter />
+          </ThemeProvider>
+        </AnalyticsProvider>
       </body>
     </html>
   );

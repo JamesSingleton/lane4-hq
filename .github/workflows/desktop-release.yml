@@ -66,6 +66,10 @@ jobs:
           # Optional overrides; release builds default to lane4hq.com.
           LANE4_API_URL: ${{ vars.LANE4_API_URL }}
           LANE4_ADMIN_URL: ${{ vars.LANE4_ADMIN_URL }}
+          # Public project token. Empty leaves analytics off. Vite inlines these.
+          VITE_POSTHOG_PROJECT_TOKEN: ${{ vars.VITE_POSTHOG_PROJECT_TOKEN }}
+          VITE_POSTHOG_HOST: ${{ vars.VITE_POSTHOG_HOST }}
+          VITE_LANE4_RELEASE: ${{ github.ref_name }}
           # macOS code signing and notarization, once the Apple secrets exist.
           APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
           APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}

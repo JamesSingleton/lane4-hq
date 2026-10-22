@@ -32,6 +32,9 @@
         "DESKTOP_RELEASES_REPO",
         "GITHUB_RELEASE_TOKEN",
         "LANE4_*",
+        "POSTHOG_*",
+        "VITE_POSTHOG_*",
+        "VITE_LANE4_RELEASE",
         "SKIP_ENV_VALIDATION"
       ]
     },
@@ -62,6 +65,9 @@
         "DESKTOP_RELEASES_REPO",
         "GITHUB_RELEASE_TOKEN",
         "LANE4_*",
+        "POSTHOG_*",
+        "VITE_POSTHOG_*",
+        "VITE_LANE4_RELEASE",
         "SKIP_ENV_VALIDATION"
       ]
     },
