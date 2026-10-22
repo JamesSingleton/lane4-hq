@@ -772,6 +772,67 @@ describe("parseCl2Meet", () => {
     expect(meet.entries[0]?.swimmerName).toMatch(/Jane/);
   });
 
+  it("reads both CL2 publisher fields from an entry banner", () => {
+    const a0 =
+      "A01V3      20Meet Entries                  " +
+      "Hy-Tek, Ltd".padEnd(26, " ") +
+      "8.0G" +
+      "Hy-Tek, Ltd".padEnd(20, " ") +
+      "252-633-5177" +
+      "10212026";
+    const meet = parseCl2Meet([a0, "B11"].join("\n"));
+    expect(meet.cl2Publisher).toBe("Hy-Tek, Ltd");
+    expect(meet.cl2Publisher2).toBe("Hy-Tek, Ltd");
+    expect(meet.cl2Software).toBe("8.0G");
+    expect(meet.cl2VendorPhone).toBe("252-633-5177");
+    expect(meet.cl2CreatedOn).toBe("2026-10-21");
+  });
+
+  it("keeps the D0 name field and F0 registration text", () => {
+    const meet = parseCl2Meet(
+      [
+        "A01V3      20Meet Entries                  Hy-Tek",
+        "E01AZ      AAZMARI  F 2006 12 UNOV   10242026",
+        `${"F01AZ       12 AZMARIALovelace, Ada Q".padEnd(65, " ")}0101201016F000`.padEnd(
+          92,
+          " ",
+        ) + "REG123",
+        "D01AZ  JR  Lovelace, Ada Q",
+      ].join("\n"),
+    );
+    expect(meet.entries[0]?.cl2NameField?.startsWith("Lovelace, Ada Q")).toBe(
+      true,
+    );
+    expect(
+      meet.relays?.[0]?.cl2LegNameFields?.[0]?.startsWith("Lovelace, Ada Q"),
+    ).toBe(true);
+    expect(meet.relays?.[0]?.cl2LegExtras?.[0]?.startsWith("REG123")).toBe(
+      true,
+    );
+    expect(meet.relays?.[0]?.cl2LegIdentity?.[0]).toBe("0101201016F000");
+  });
+
+  it("reads a Team Manager B1 when the end date is blank", () => {
+    const line = `${"B11".padEnd(121, " ")}10242026${" ".repeat(30)}Y`;
+    const meet = parseCl2Meet(
+      [
+        "A01V3      20Meet Entries                  Spring Invitational",
+        line,
+      ].join("\n"),
+    );
+    expect(meet.name).toBe("Spring Invitational");
+    expect(meet.startDate).toBe("2026-10-24");
+    expect(meet.endDate).toBeUndefined();
+    expect(meet.course).toBe("SCY");
+    const legacyScm = parseCl2Meet(
+      [
+        "A01V3      02Meet Entries                  Hy-Tek",
+        `${"B1".padEnd(87, " ")}S`,
+      ].join("\n"),
+    );
+    expect(legacyScm.course).toBe("SCM");
+  });
+
   it("reads meet course from B1 column 150, not an S inside the facility name", () => {
     const sky = `${"B11        2026 Meet                         Copper Sky Aquatic Center".padEnd(149, " ")}Y`;
     const meet = parseCl2Meet(

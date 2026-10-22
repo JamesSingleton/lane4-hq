@@ -48,3 +48,5 @@ yarn-error.log*
 
 .cursor/mcp.json
 .mcp.json
+
+.context/

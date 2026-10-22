@@ -78,7 +78,7 @@ const D0_COURSE_COLS = [97, 106, 115, 124] as const;
 /** E0 seed / prelim / swim-off / finals course columns. */
 const E0_COURSE_COLS = [54, 63, 72, 81] as const;
 
-const CLASS_YEAR = /^(FR|SO|JR|SR)$/;
+const CLASS_YEAR = /^(FR|SO|JR|SR|\d{2})$/;
 
 function decodeEventCode(code: string): {
   eventNumber: number;
@@ -399,6 +399,25 @@ function ensureEvent(
   });
 }
 
+function rememberRelayLeg(
+  relay: ParsedRelayEntry,
+  swimmerName: string,
+  line: string,
+): void {
+  relay.swimmerNames.push(swimmerName);
+  const names = relay.cl2LegNameFields ?? [];
+  names.push(line.slice(22, 62));
+  relay.cl2LegNameFields = names;
+  const extras = relay.cl2LegExtras ?? [];
+  const extra = line.slice(92, 112);
+  extras.push(extra.trim() ? extra : "");
+  relay.cl2LegExtras = extras;
+  const identities = relay.cl2LegIdentity ?? [];
+  const identity = line.slice(65, 79);
+  identities.push(identity.trim() ? identity : "");
+  relay.cl2LegIdentity = identities;
+}
+
 function parseRelayTeamLine(line: string): ParsedRelayEntry | null {
   const letter = line.slice(11, 12).trim().toUpperCase();
   const teamCode = line.slice(12, 18).trim();
@@ -677,19 +696,46 @@ export function parseCl2Meet(content: string): ParsedMeet {
       if (fileType.includes("result")) meet.name = "Meet Results";
       else if (fileType.includes("entries")) meet.name = "Meet Entries";
       const title = line.substring(43, 73).trim();
-      if (title) meet.name = title;
+      if (title && !/^hy-tek\b/i.test(title)) meet.name = title;
+      const fileCode = line.slice(11, 13);
+      const publisher = (
+        fileCode === "02" ? line.slice(43, 63) : line.slice(43, 69)
+      ).trim();
+      if (publisher) meet.cl2Publisher = publisher;
+      const publisher2 = line.slice(73, 93).trim();
+      if (publisher2) meet.cl2Publisher2 = publisher2;
+      const software =
+        fileCode === "02" ? line.slice(63, 73) : line.slice(69, 73);
+      if (software.trim()) meet.cl2Software = software;
+      const phone = line.slice(93, 105).trim();
+      if (phone) meet.cl2VendorPhone = phone;
+      const created = line.slice(105, 113);
+      if (/^\d{8}$/.test(created)) meet.cl2CreatedOn = parseMmDdYyyy(created);
+      const tail = line.slice(149, 153).trim();
+      if (tail) meet.cl2Tail = tail;
     }
     if (type === "B1") {
-      const name = line.substring(11, 41).trim();
+      const tmStart = line.slice(121, 129);
+      const tmLayout = /^\d{8}$/.test(tmStart);
+      const name = (tmLayout ? line.slice(11, 85) : line.slice(11, 41)).trim();
+      const loc = (tmLayout ? line.slice(85, 121) : line.slice(41, 71)).trim();
       if (name) meet.name = name;
-      const loc = line.substring(41, 71).trim();
       if (loc) meet.location = loc;
-      const dateMatches = line.substring(40).match(/(\d{8})/g) ?? [];
-      if (dateMatches[0]) {
-        meet.startDate = parseMmDdYyyy(dateMatches[0]);
-      }
-      if (dateMatches[1]) {
-        meet.endDate = parseMmDdYyyy(dateMatches[1]);
+      if (tmLayout) {
+        meet.startDate = parseMmDdYyyy(tmStart);
+        const tmEnd = line.slice(129, 137);
+        if (/^\d{8}$/.test(tmEnd)) meet.endDate = parseMmDdYyyy(tmEnd);
+        const altitude = Number.parseInt(line.slice(137, 141).trim(), 10);
+        if (Number.isFinite(altitude) && altitude >= 0)
+          meet.altitude = altitude;
+      } else {
+        const dateMatches = line.substring(40).match(/(\d{8})/g) ?? [];
+        if (dateMatches[0]) {
+          meet.startDate = parseMmDdYyyy(dateMatches[0]);
+        }
+        if (dateMatches[1]) {
+          meet.endDate = parseMmDdYyyy(dateMatches[1]);
+        }
       }
       // Hy-Tek writes the meet course at col 150 (Y/S/L). Cols 88–100 are
       // the facility/city ("Copper Sky") and must not decide the course.
@@ -797,6 +843,7 @@ export function parseCl2Meet(content: string): ParsedMeet {
       }
       const added = meet.entries[meet.entries.length - 1];
       if (meet.entries.length > entriesBefore && added) {
+        added.cl2NameField = line.slice(11, 51);
         lastSwimmerKey = added.swimmerName.toLowerCase();
         applyD3(lastSwimmerKey);
       }
@@ -847,13 +894,13 @@ export function parseCl2Meet(content: string): ParsedMeet {
         const teamOk = !leg.teamCode || r.teamCode === leg.teamCode;
         const letterOk = !leg.relayLetter || r.relayLetter === leg.relayLetter;
         if (teamOk && letterOk) {
-          r.swimmerNames.push(leg.swimmerName);
+          rememberRelayLeg(r, leg.swimmerName, line);
           attached = true;
           break;
         }
       }
       if (!attached && relays.length > 0) {
-        relays[relays.length - 1]!.swimmerNames.push(leg.swimmerName);
+        rememberRelayLeg(relays[relays.length - 1]!, leg.swimmerName, line);
       }
     }
   }

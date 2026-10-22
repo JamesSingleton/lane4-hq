@@ -165,8 +165,6 @@ type OracleCase = {
 };
 
 const oracles: OracleCase[] = [
-  { file: "mari-sonoran-2026.hy3", parse: parseHy3, exportText: exportHy3 },
-  { file: "mari-charger-2024.hy3", parse: parseHy3, exportText: exportHy3 },
   { file: "mari-az-roster.hy3", parse: parseHy3, exportText: exportHy3 },
   { file: "mari-sonoran-2026.cl2", parse: parseCl2Meet, exportText: exportCl2 },
   { file: "mari-charger-2024.cl2", parse: parseCl2Meet, exportText: exportCl2 },
@@ -192,21 +190,29 @@ const oracles: OracleCase[] = [
   },
 ];
 
+describe("Hy-Tek entry HY3 files", () => {
+  for (const file of ["mari-sonoran-2026.hy3", "mari-charger-2024.hy3"]) {
+    it(`${file} re-exports byte-for-byte`, () => {
+      const original = readFixture(file);
+      expect(exportHy3(parseHy3(original))).toBe(original);
+    });
+  }
+});
+
 describe("Hy-Tek oracle round-trips", () => {
   for (const oracle of oracles) {
     it.fails(`${oracle.file} re-exports byte-for-byte`, () => {
       const original = readFixture(oracle.file);
       const exported = oracle.exportText(oracle.parse(original));
       const diff = roundTripDiff(original, exported);
-      // Remaining diffs (grouped by record type) are the assertion message
-      // when this expected failure is inspected. Summary as of this change:
-      // HY3 entries: A1 software banner, B2 cols 103–108 (0.00YO/YL), E1/F1
-      //   cols 35–38, 40–42, 50, 92. B1, C1–C3, D1, and F3 match.
+      // roundTripDiff lists every record type, including matches, so this
+      // message is never empty while any line differs. Summary as of the
+      // Team Manager layout change:
       // HY3 roster: export inserts B1/B2 and reorders D1, so only 3/20 D1
       //   lines match in file order. C1–C3 match.
-      // CL2 entries: C1, D0, D3, F0 match; Sonoran E0 matches; one Charger
-      //   E0 seed (no numeric time) differs at cols 47–48 and 51–52.
-      //   A0 banner, B1 layout (including col 150), and Z0 build date differ.
+      // CL2 entries: A0, B1, C1, D0, D3, and F0 match. Sonoran E0 matches.
+      //   One Charger E0 with no numeric seed differs at columns 47–48
+      //   and 51–52. Z0 still carries today's build date.
       // EV3/HYV: minimal exporter; header and event fields still differ,
       //   including the unknown trailing checksum token.
       expect(diff, diff).toBe("");

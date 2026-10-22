@@ -21,7 +21,7 @@ recomputed after scrubbing. Sum CP-1252 **bytes** of columns 1–128:
 - Write the units digit, then the tens digit, of `value % 100`.
 
 A Unicode en dash (`U+2013`) is byte `0x96`, not `0x2013`.
-Every line is 128 data bytes plus that checksum (130 characters).
+Every line is 128 data bytes plus that checksum (130 characters). The file ends with CRLF.
 
 ## `A1` file header
 
@@ -34,11 +34,11 @@ left.
 |---|---|---|
 | 3–4 | File type. Meet entries are `02`. Rosters use `03` and results use `07` in the same columns. | `02` confirmed by the tester |
 | 5–29 | Description, space-padded to 25. Entries: `Meet Entries`. | yes |
-| 30–44 | Software publisher, 15 characters. Lane4 writes `Lane4 HQ, Ltd`. | yes |
-| 45–58 | Software name and version, 14 characters. Lane4 writes `Lane4 1.0`. | yes |
-| 59–66 | Creation date `MMDDYYYY`. Lane4 writes the meet start date. | yes |
-
-A second Team Manager mismatch was reported with this one and is not fixed yet.
+| 30–44 | Software publisher, 15 characters. Team Manager files say `Hy-Tek, Ltd`. Meet Manager rejects other publisher strings. A file Lane4 creates says `Lane4 HQ, Ltd`. Re-export writes the publisher from the file. | yes |
+| 45–58 | Software name and version, 14 characters. Entry files use `Win-TM 8.0Gf` or `Win-TM 8.0De`. A file Lane4 creates says `Lane4 1.0`. Re-export writes the token from the file. | yes |
+| 59–66 | Creation date `MMDDYYYY`. Team Manager writes the file date. Lane4 keeps that date on re-export and uses the meet start date for a new file. | yes |
+| 67–75 | Creation time, such as `  4:27 PM`. | present. Not required for the import that succeeded. |
+| 76–128 | Licensee text. | present. Not required for the import that succeeded. |
 
 ## `B1` meet
 
@@ -56,7 +56,7 @@ A second Team Manager mismatch was reported with this one and is not fixed yet.
 | Cols | Field | Confirmed |
 |---|---|---|
 | 99 | Course letter `Y`/`S`/`L` | yes (`Y` on both entry files) |
-| 103–108 | Entry-time policy such as `0.00YO` | present, **meaning unconfirmed** beyond "not the pool course" |
+| 103–108 | Entry-time setup. Entry files use `0.00YO` (Klein, Sonoran) or `0.00YL` (Charger). Lane4 writes the file's value back, and `0.00YO` on a new entry file. | present. The last letter is **unconfirmed**. |
 
 ## `C1` team
 
@@ -80,7 +80,7 @@ A second Team Manager mismatch was reported with this one and is not fixed yet.
 | 93–94 | `C2` | State | yes |
 | 95–104 | `C2` | Postal code | yes |
 | 105–107 | `C2` | Country `USA` | yes |
-| 109–111 | `C2` | `USS` | yes |
+| 109–111 | `C2` | Organization code. `USS` on the Maricopa files, `OTH` on another Team Manager entry file. Lane4 keeps the code and writes `USS` for a new USA team. | yes |
 | 93–128 | `C3` | Email | yes |
 | 33–52, 53–72, 73–92 | `C3` | Phones and fax | blank in these files. SwimComm results files do populate phones; treated as the same columns. |
 
@@ -98,14 +98,21 @@ Lane4 keeps columns 3–122 as a team note so the line is not dropped.
 | 4–8 | In-file swimmer id, right-justified | yes. Export must keep this id. Columns 7–8 are the last two digits of that field. |
 | 9–28 | Last name | yes |
 | 29–48 | First name | yes |
-| 49–68 | Preferred name | blank here |
+| 49–68 | Preferred name | blank on Maricopa. Written when the file has one. The swimmer's display name uses it. |
+| 69 | Middle initial | blank on Maricopa. A single letter on some entry files. |
 | 70–83 | USA id | blank here |
 | 89–96 | Birth date | blank here |
 | 97–99 | Age | `0` when birth date is blank |
-| 100–101 | Class year `FR`/`SO`/`JR`/`SR` | yes |
+| 100–101 | Class year | `FR`/`SO`/`JR`/`SR` on Maricopa. Numeric grades `09`–`12` on a Texas entry file. |
+| 106–107 | Group text | present on that Texas file (`JV`). Meaning **unconfirmed**. |
+| 109–111 | Subgroup text | present for some athletes on that file. Meaning **unconfirmed**. |
+
+`C6` is an extra contact line. Lane4 keeps the 128-character body and
+recomputes the checksum. The column map inside `C6` is **unconfirmed**.
 
 `F3` relay legs repeat gender + the same 5-digit id + a 5-character last-name
-stub, every 13 columns starting at column 3. The stub is the `D1` last name.
+stub, every 13 columns starting at column 3. The stub is the first five
+characters of the `D1` last name, including a space (`De La`).
 
 ## `E1` / `F1`
 
@@ -113,8 +120,13 @@ stub, every 13 columns starting at column 3. The stub is the `D1` last name.
 |---|---|---|
 | 4–8 | Swimmer id (`E1`) | yes, same as `D1` |
 | 9–13 | Last-name stub (`E1` only) | yes |
+| 12 | `0` on Team Manager entry `F1` lines | yes on entry files. Not written on results files. |
 | 13–15 | Relay gender (`F1` only) | yes. `FFF` or `MMM`. Confirmed by a tester against Team Manager. A blank column 13 (`FF` / `MM`) does not import. |
+| 35–38 | `0.00` on Team Manager entry `E1` and `F1` lines | yes on entry files |
+| 39–41 | Event number, right-justified in 3 columns, on Team Manager entry lines. Column 42 stays blank. Results files keep a 4-column event number. | yes |
+| 50 | `0` on Team Manager entry `E1` and `F1` lines, immediately before the course letter | yes on entry files |
 | 51 | Seed course letter | yes (`Y`) |
+| 92 | One character on some entry `E1` lines (`C` on Sonoran, blank on another entry file). Lane4 writes it only when the source line had it. | present, meaning **unconfirmed** |
 | 52–59 | Seed, seconds | yes |
 | 60 | Converted course letter | yes (`Y` on these files) |
 

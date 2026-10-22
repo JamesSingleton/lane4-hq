@@ -77,6 +77,53 @@ export interface ParsedMeet {
    * or SwimComm fixtures; retained so a C4 line is not dropped.
    */
   teamExtra?: string;
+  /**
+   * HY3 A1 columns 30–44. Team Manager files say `Hy-Tek, Ltd`. A file
+   * Lane4 creates says `Lane4 HQ, Ltd`. Preserved on re-export.
+   */
+  hy3Publisher?: string;
+  /**
+   * HY3 A1 columns 45–58. Team Manager files say `Win-TM …`. A file Lane4
+   * creates says `Lane4 1.0`. Preserved on re-export.
+   */
+  hy3Software?: string;
+  /** HY3 A1 columns 59–66 when the file date is not the meet start. */
+  hy3CreatedOn?: string;
+  /** HY3 A1 columns 67–75, including the leading spaces Team Manager writes. */
+  hy3CreatedTime?: string;
+  /** HY3 A1 columns 76–128 licensee text. */
+  hy3Licensee?: string;
+  /**
+   * HY3 B2 columns 103–108. Entry files use `0.00YO` or `0.00YL`.
+   * The last letter is observed and its meaning is unconfirmed.
+   */
+  hy3EntrySetup?: string;
+  /** HY3 C2 columns 109–111 (`USS` or `OTH` on USA teams). */
+  teamOrgCode?: string;
+  /**
+   * Opaque HY3 C6 bodies (128 characters). Extra contact lines. Preserved
+   * so a re-export does not drop them. Not interpreted.
+   */
+  hy3ContactLines?: string[];
+  /**
+   * CL2 A0 first publisher. Team Manager writes `Hy-Tek, Ltd`. A file
+   * Lane4 creates says `Lane4 HQ, Ltd`. Preserved on re-export.
+   */
+  cl2Publisher?: string;
+  /** CL2 A0 second publisher (columns 74–93). Same rule as `cl2Publisher`. */
+  cl2Publisher2?: string;
+  /**
+   * CL2 A0 software token. Entry files have 4 characters (`8.0G` on a
+   * Team Manager file). Results files have 10 (`WMM 8.0Fd `). A file
+   * Lane4 creates uses `L4` or `Lane4 1.0`. Preserved on re-export.
+   */
+  cl2Software?: string;
+  /** CL2 A0 columns 94–105 vendor phone, preserved on re-export. */
+  cl2VendorPhone?: string;
+  /** CL2 A0 columns 106–113 file date. */
+  cl2CreatedOn?: string;
+  /** CL2 A0 columns 150–153 (`TM41` entries, `TM43` rosters, `MM40` results). */
+  cl2Tail?: string;
 }
 
 export interface ParsedEntry {
@@ -95,6 +142,22 @@ export interface ParsedEntry {
   seedCourse?: "SCY" | "SCM" | "LCM";
   /** CL2 D3 cols 17–31, when the legal first name is different. */
   preferredName?: string;
+  /**
+   * HY3 D1 columns 29–48. The display name uses the preferred name when
+   * Team Manager stored one, so the legal first name is kept separately.
+   */
+  legalFirstName?: string;
+  /** HY3 D1 column 69. */
+  middleInitial?: string;
+  /** HY3 D1 columns 106–107. Observed group text, meaning unconfirmed. */
+  practiceGroup?: string;
+  /** HY3 D1 columns 109–111. Observed subgroup text, meaning unconfirmed. */
+  practiceSubgroup?: string;
+  /**
+   * HY3 E1 column 92. One character on some Team Manager entry files.
+   * Meaning unconfirmed. Not written unless the source file had it.
+   */
+  hy3EntryMark?: string;
   /** CL2 D3 cols 32–33. */
   ethnicity?: string;
   /** CL2 D3 yes/no flags from col 34 (Hy-Tek writes `F`/`T` per flag). */
@@ -104,6 +167,11 @@ export interface ParsedEntry {
   meetDivision?: string;
   heat?: number;
   lane?: number;
+  /**
+   * CL2 D0 columns 12–51 as stored. Kept so a middle initial or other text
+   * in that field is not rebuilt from the display name.
+   */
+  cl2NameField?: string;
 }
 
 export interface ParsedEvent {
@@ -155,6 +223,15 @@ export interface ParsedRelayEntry {
   relayLetter?: string;
   /** Recorded team attempts from HY3 F2 relay-result records. */
   results?: ParsedRelayResult[];
+  /** CL2 F0 columns 23–62, one entry per leg, parallel to `swimmerNames`. */
+  cl2LegNameFields?: string[];
+  /** CL2 F0 columns 66–79 (birth date, age, sex, `000`), one entry per leg. */
+  cl2LegIdentity?: string[];
+  /**
+   * CL2 F0 columns 93–112, one entry per leg. Registration text on some
+   * entry files. Meaning unconfirmed.
+   */
+  cl2LegExtras?: string[];
 }
 
 export interface ParsedRelayResult {
@@ -179,6 +256,14 @@ export interface ParsedAthlete {
   meetSwimmerId?: number;
   /** CL2 D3 preferred first name. */
   preferredName?: string;
+  /** HY3 D1 columns 29–48 legal first name. See `ParsedEntry.legalFirstName`. */
+  legalFirstName?: string;
+  /** HY3 D1 column 69. */
+  middleInitial?: string;
+  /** HY3 D1 columns 106–107. Observed group text, meaning unconfirmed. */
+  practiceGroup?: string;
+  /** HY3 D1 columns 109–111. Observed subgroup text, meaning unconfirmed. */
+  practiceSubgroup?: string;
   /** CL2 D3 ethnicity code (cols 32–33). */
   ethnicity?: string;
   /** CL2 D3 registration flags from col 34. */
