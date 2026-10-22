@@ -36,7 +36,7 @@ function readViteEnv(): DesktopEnv {
   const env = (
     import.meta as {
       env?: {
-        VITE_POSTHOG_KEY?: string;
+        VITE_POSTHOG_PROJECT_TOKEN?: string;
         VITE_POSTHOG_HOST?: string;
         VITE_LANE4_RELEASE?: string;
         MODE?: string;
@@ -44,7 +44,7 @@ function readViteEnv(): DesktopEnv {
     }
   ).env;
   return {
-    key: env?.VITE_POSTHOG_KEY,
+    key: env?.VITE_POSTHOG_PROJECT_TOKEN,
     host: env?.VITE_POSTHOG_HOST,
     environment: env?.MODE,
     release: env?.VITE_LANE4_RELEASE,

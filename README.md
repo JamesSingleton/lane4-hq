@@ -169,7 +169,7 @@ Use [`.env.example`](.env.example) as the template.
 | `GOOGLE_*`, `MICROSOFT_*` | Social login and calendar integrations |
 | `OPENAI_API_KEY` | Optional AI features |
 | `USA_SWIMMING_*` | Optional SWIMS integration |
-| `NEXT_PUBLIC_POSTHOG_*`, `POSTHOG_*`, `VITE_POSTHOG_*` | Optional product analytics. Empty keys disable it |
+| `NEXT_PUBLIC_POSTHOG_PROJECT_TOKEN`, `NEXT_PUBLIC_POSTHOG_HOST`, `POSTHOG_*`, `VITE_POSTHOG_*` | Optional product analytics. Empty values disable it |
 
 Neon fills the database and `AWS_*` values. Configure application and integration values separately.
 

@@ -27,14 +27,14 @@ function context() {
 /** Starts once. `instrumentation-client.ts` calls this before hydration. */
 export function browserAnalytics(): Analytics {
   if (current) return current;
-  if (typeof window === "undefined" || !process.env.NEXT_PUBLIC_POSTHOG_KEY) {
+  if (typeof window === "undefined" || !process.env.NEXT_PUBLIC_POSTHOG_PROJECT_TOKEN) {
     current = createAnalytics(context(), null);
     if (typeof window !== "undefined") markReady();
     return current;
   }
   current = initBrowserAnalytics({
     app: "web",
-    key: process.env.NEXT_PUBLIC_POSTHOG_KEY,
+    key: process.env.NEXT_PUBLIC_POSTHOG_PROJECT_TOKEN,
     host: process.env.NEXT_PUBLIC_POSTHOG_HOST,
     apiHost: "/ingest",
     environment: process.env.NEXT_PUBLIC_LANE4_ENVIRONMENT,

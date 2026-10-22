@@ -61,10 +61,10 @@ Do not type a swimmer's name, email, or member id into docs search. The search t
 
 | App | Variables |
 | --- | --- |
-| Marketing site and admin (browser) | `NEXT_PUBLIC_POSTHOG_KEY`, `NEXT_PUBLIC_POSTHOG_HOST` |
+| Marketing site and admin (browser) | `NEXT_PUBLIC_POSTHOG_PROJECT_TOKEN`, `NEXT_PUBLIC_POSTHOG_HOST` |
 | Marketing site, admin, and API (server) | `POSTHOG_API_KEY`, `POSTHOG_HOST` |
-| Desktop | `VITE_POSTHOG_KEY`, `VITE_POSTHOG_HOST` |
+| Desktop | `VITE_POSTHOG_PROJECT_TOKEN`, `VITE_POSTHOG_HOST` |
 
-Use the PostHog project API key (`phc_...`). The browser key is public. The server key is not shown in the browser. The marketing site and admin start PostHog in `instrumentation-client.ts` before the page hydrates, and proxy collection through `/ingest`.
+`NEXT_PUBLIC_POSTHOG_PROJECT_TOKEN` and `VITE_POSTHOG_PROJECT_TOKEN` are the PostHog project token (`phc_...`). That token is public. `POSTHOG_API_KEY` is the same project token on the server, and it is not shown in the browser. The marketing site and admin start PostHog in `instrumentation-client.ts` before the page hydrates, and proxy collection through `/ingest`.
 
 This docs site does not read environment variables. To turn docs analytics on, paste the public project key into `POSTHOG_KEY` in `apps/docs/posthog.js`. Leave it as an empty string to record nothing. Do not commit a real key.
