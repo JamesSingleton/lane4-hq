@@ -19,6 +19,7 @@
   "dependencies": {
     "@ai-sdk/openai": "^4.0.95",
     "@hookform/resolvers": "^5.9.1",
+    "@lane4hq/analytics": "workspace:*",
     "@lane4hq/auth": "workspace:*",
     "@lane4hq/billing": "workspace:*",
     "@lane4hq/calendar-sync": "workspace:*",

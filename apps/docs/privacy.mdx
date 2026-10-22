@@ -1,0 +1,70 @@
+---
+title: What Lane4 records
+description: The product events Lane4 sends to PostHog, and the athlete data it never sends.
+---
+
+# What Lane4 records
+
+Lane4 uses [PostHog](https://posthog.com) to understand how coaches use the product and to see when an export or import fails. The apps handle roster data for minors, so the event catalog is an allowlist. If a value is not on that list, it is dropped before it is sent.
+
+Analytics stays off when the PostHog key for that app is empty. Local development, CI, and unit tests do not need a PostHog account.
+
+## What is sent
+
+Every event includes three tags:
+
+- `app`: `web`, `admin`, `api`, `desktop`, or `docs`
+- `environment`: for example `production` or `development`
+- `release`: the git commit when the host provides one, otherwise `dev`
+
+Admin events also include `internal: true`. Filter those out of product dashboards.
+
+| Event | When | Properties |
+| --- | --- | --- |
+| `signed_up` | A coach creates an account | none |
+| `team_created` | A coach creates a team | none |
+| `meet_created` | A meet is created | none |
+| `roster_imported` | A roster file imports | `format` |
+| `entries_exported` | An entry or meet file is saved | `format` |
+| `results_imported` | A file that contains results imports | `format` |
+| `export_failed` | An export throws | `format`, `error_code` |
+| `import_failed` | An import throws | `format`, `error_code` |
+| `docs_search` | A search on this docs site | `query` |
+
+`format` is one of `hy3`, `cl2`, `sd3`, `sdif`, `csv`, `zip`, `ev3`, `hyv`, `xls`, `xlsx`, `pdf`, or `unknown`. `error_code` is one of `unauthorized`, `forbidden`, `not_found`, `validation`, `unsupported`, or `internal`.
+
+Page views on the marketing site and in admin send the path only. The query string and the hash are removed. Docs page views do the same.
+
+The marketing site and admin can record a session replay. Every input is masked, and all text is masked. Autocapture is off, so a button labeled with a swimmer's name is not sent. The desktop app and this docs site do not record sessions.
+
+Feature flags are loaded and can be read by the apps. No flag currently changes product behavior.
+
+The API sends a structured log for each request except `/health` and `/health/ready`. The log has the request id, route, status, and duration. Server exceptions send the error's name, the route, and the status.
+
+The desktop app queues events while it is offline and sends them after the connection returns. A Rust panic sends the source file's base name and the line number.
+
+## What is not sent
+
+- Coach or swimmer names, email addresses, or phone numbers
+- Birthdates, ages, or USA Swimming member IDs
+- Seed times, result times, or places
+- Request or response bodies
+- File contents, file names, meet names, or team names
+- Error messages, which often quote a swimmer
+- The page title, or search parameters on a page view
+
+People are identified by their Lane4 user id only. Teams are grouped by team id only. The docs site does not identify anyone.
+
+Do not type a swimmer's name, email, or member id into docs search. The search text is the one place a free-form string is sent, and it is limited to 200 characters. Values that contain `@` are dropped.
+
+## Keys
+
+| App | Variables |
+| --- | --- |
+| Marketing site and admin (browser) | `NEXT_PUBLIC_POSTHOG_KEY`, `NEXT_PUBLIC_POSTHOG_HOST` |
+| Marketing site, admin, and API (server) | `POSTHOG_API_KEY`, `POSTHOG_HOST` |
+| Desktop | `VITE_POSTHOG_KEY`, `VITE_POSTHOG_HOST` |
+
+Use the PostHog project API key (`phc_...`). The browser key is public. The server key is not shown in the browser. The marketing site and admin start PostHog in `instrumentation-client.ts` before the page hydrates, and proxy collection through `/ingest`.
+
+This docs site does not read environment variables. To turn docs analytics on, paste the public project key into `POSTHOG_KEY` in `apps/docs/posthog.js`. Leave it as an empty string to record nothing. Do not commit a real key.

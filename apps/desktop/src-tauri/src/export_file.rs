@@ -4,6 +4,7 @@ use std::path::Path;
 use tauri::{AppHandle, Manager};
 use tauri_plugin_opener::OpenerExt;
 
+use crate::analytics::{self, export_write_failed};
 use crate::store::write_atomic;
 
 /// Extensions the webview may write. Keep in sync with `EXPORT_EXTENSIONS` in
@@ -24,10 +25,23 @@ fn validate(path: &Path) -> Result<(), String> {
 
 /// Write an export the user chose a destination for in the Save dialog.
 #[tauri::command]
-pub async fn write_export_file(path: String, bytes: Vec<u8>) -> Result<(), String> {
+pub async fn write_export_file(
+    app: AppHandle,
+    path: String,
+    bytes: Vec<u8>,
+) -> Result<(), String> {
     let path = Path::new(&path);
-    validate(path)?;
-    write_atomic(path, &bytes).map_err(|e| e.to_string())
+    if let Err(error) = validate(path) {
+        analytics::emit_exception(&app, export_write_failed());
+        return Err(error);
+    }
+    match write_atomic(path, &bytes) {
+        Ok(()) => Ok(()),
+        Err(error) => {
+            analytics::emit_exception(&app, export_write_failed());
+            Err(error.to_string())
+        }
+    }
 }
 
 /// File name for a report: letters, digits, spaces, `-` and `_` only.

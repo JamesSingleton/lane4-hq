@@ -17,6 +17,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
+import { useAnalytics } from "@/components/analytics-provider";
 import { SocialAuthButtons } from "@/components/auth/social-auth-buttons";
 import { getCallbackURL } from "@/lib/auth-callback";
 import type { SocialProvider } from "@/lib/auth-providers";
@@ -47,6 +48,7 @@ export function SignupForm({
   socialProviders?: SocialProvider[];
 }) {
   const router = useRouter();
+  const analytics = useAnalytics();
   const searchParams = useSearchParams();
   const callbackUrl = getCallbackURL(searchParams, "/onboarding");
   const [error, setError] = useState("");
@@ -88,6 +90,10 @@ export function SignupForm({
       setError(result.error.message ?? "Sign up failed");
       return;
     }
+
+    const userId = result.data?.user?.id;
+    if (userId) analytics.identify(userId);
+    analytics.capture("signed_up");
 
     const checkEmail = new URL("/check-email", window.location.origin);
     checkEmail.searchParams.set("email", values.email);

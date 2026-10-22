@@ -1,5 +1,6 @@
 "use server";
 
+import { errorCode } from "@lane4hq/analytics";
 import { getSession } from "@lane4hq/auth/session";
 import { assertFeature } from "@lane4hq/billing/features";
 import {
@@ -112,6 +113,7 @@ import {
 import { exportSdif } from "@lane4hq/swim-formats/sdif";
 import { revalidatePath } from "next/cache";
 import { cache } from "react";
+import { trackAdmin } from "@/app/analytics";
 import { resolvedAssociationCapsForMeet } from "./association-caps";
 import {
   loadMeetLineupSnapshot,
@@ -334,6 +336,7 @@ export async function createMeetAction(teamId: string, formData: FormData) {
 
   const id = await createMeet(teamId, parsed);
   revalidateMeetPaths(teamId, id);
+  trackAdmin("meet_created", session?.user?.id, teamId);
   return id;
 }
 
@@ -916,6 +919,10 @@ export async function importMeetFileAction(
 
   const target = options?.target ?? "auto";
   if (target === "existing" && !options?.meetId) {
+    trackAdmin("import_failed", session?.user?.id, teamId, {
+      format,
+      error_code: "validation",
+    });
     throw new Error("Select a meet to attach this file to.");
   }
 
@@ -1624,6 +1631,10 @@ export async function importMeetFileAction(
       }),
     });
 
+    if (looksLikeResults) {
+      trackAdmin("results_imported", session?.user?.id, teamId, { format });
+    }
+
     if (session?.user?.email) {
       await sendMeetImportComplete(session.user.email, {
         teamName: "Your team",
@@ -1647,6 +1658,10 @@ export async function importMeetFileAction(
       format: format as MeetFileFormat,
     };
   } catch (error) {
+    trackAdmin("import_failed", session?.user?.id, teamId, {
+      format,
+      error_code: errorCode(error),
+    });
     await updateImportJob(jobId, {
       status: "failed",
       errors: error instanceof Error ? error.message : "Import failed",
@@ -1699,19 +1714,34 @@ export async function exportMeetAction(
   await requireTeamRole(session?.user?.id, teamId, ["owner", "head_coach"]);
   await assertFeature(teamId, "meet_import");
 
-  const payload = await loadHostPackMeet(teamId, meetId);
-  if (format === "hy3") return exportHy3(payload);
-  if (format === "cl2") return exportCl2(payload);
-  if (format === "zip") {
-    const kind =
-      payload.results.length > 0
-        ? "results"
-        : payload.entries.length > 0
-          ? "entries"
-          : "results";
-    return Buffer.from(exportMeetZip(payload, kind)).toString("base64");
+  try {
+    const payload = await loadHostPackMeet(teamId, meetId);
+    const body =
+      format === "hy3"
+        ? exportHy3(payload)
+        : format === "cl2"
+          ? exportCl2(payload)
+          : format === "zip"
+            ? Buffer.from(
+                exportMeetZip(
+                  payload,
+                  payload.results.length > 0
+                    ? "results"
+                    : payload.entries.length > 0
+                      ? "entries"
+                      : "results",
+                ),
+              ).toString("base64")
+            : exportSdif(payload);
+    trackAdmin("entries_exported", session?.user?.id, teamId, { format });
+    return body;
+  } catch (error) {
+    trackAdmin("export_failed", session?.user?.id, teamId, {
+      format,
+      error_code: errorCode(error),
+    });
+    throw error;
   }
-  return exportSdif(payload);
 }
 
 /** Base64-encoded ZIP pack (HY3 + CL2) for download. */
@@ -1724,12 +1754,23 @@ export async function exportMeetZipAction(
   await requireTeamRole(session?.user?.id, teamId, ["owner", "head_coach"]);
   await assertFeature(teamId, "meet_import");
 
-  const payload = await loadHostPackMeet(teamId, meetId);
-  const bytes = exportMeetZip(payload, kind);
-  return {
-    base64: Buffer.from(bytes).toString("base64"),
-    filename: meetZipDownloadFilename(payload, kind),
-  };
+  try {
+    const payload = await loadHostPackMeet(teamId, meetId);
+    const bytes = exportMeetZip(payload, kind);
+    trackAdmin("entries_exported", session?.user?.id, teamId, {
+      format: "zip",
+    });
+    return {
+      base64: Buffer.from(bytes).toString("base64"),
+      filename: meetZipDownloadFilename(payload, kind),
+    };
+  } catch (error) {
+    trackAdmin("export_failed", session?.user?.id, teamId, {
+      format: "zip",
+      error_code: errorCode(error),
+    });
+    throw error;
+  }
 }
 
 export async function getMeetsAction(teamId: string) {

@@ -13,6 +13,7 @@
     "check:types": "tsc --noEmit"
   },
   "dependencies": {
+    "@lane4hq/analytics": "workspace:*",
     "@lane4hq/ui": "workspace:*",
     "geist": "^1.8.1",
     "lucide-react": "catalog:",

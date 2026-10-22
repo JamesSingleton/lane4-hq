@@ -180,6 +180,33 @@ describe("service routes", () => {
     );
   });
 
+  it("reports request metadata and exception names without bodies", async () => {
+    const requests: Array<Record<string, unknown>> = [];
+    const exceptions: Array<Record<string, unknown>> = [];
+    const observed = createApp({
+      allowedOrigins: [],
+      logger: testLogger(),
+      onRequest: (event) => requests.push(event),
+      onException: (event) => exceptions.push(event),
+    });
+    await observed.request("/health");
+    expect(requests).toEqual([]);
+    mocks.getUserTeams.mockResolvedValue([]);
+    await observed.request("/v1/me", { headers: signedIn });
+    expect(requests[0]).toMatchObject({ route: "/v1/me", status: 200 });
+    expect(requests[0]).not.toHaveProperty("body");
+    expect(requests[0]?.requestId).toEqual(expect.any(String));
+    expect(requests[0]?.durationMs).toEqual(expect.any(Number));
+    mocks.getUserTeams.mockRejectedValue(new Error("Ada swam 59.40"));
+    await observed.request("/v1/me", { headers: signedIn });
+    expect(exceptions[0]).toMatchObject({
+      route: "/v1/me",
+      status: 500,
+      errorName: "Error",
+    });
+    expect(JSON.stringify(exceptions)).not.toContain("59.40");
+  });
+
   it("logs one line per request, with the user once signed in", async () => {
     mocks.getUserTeams.mockResolvedValue([]);
     await app.request("/v1/me", { headers: signedIn });

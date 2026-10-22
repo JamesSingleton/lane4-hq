@@ -41,6 +41,11 @@ import {
   Waves,
 } from "lucide-react";
 import { useEffect, useState, useTransition } from "react";
+import {
+  trackImportFailed,
+  trackMeetCreated,
+  trackResultsImported,
+} from "@/lib/analytics";
 import { AccountButton } from "../components/account-panel";
 import { ChoiceSelect } from "../components/choice-select";
 import { DatePicker } from "../components/date-picker";
@@ -100,17 +105,26 @@ export function MeetsHome({
 
   function fromEventFile() {
     run(async () => {
-      const files = await pickMeetFiles(
-        "Choose the meet's event file (EV3, HYV, or ZIP)",
-      );
-      if (files.length === 0) return;
-      const parsed = parseMeetFilesFromBytes(files);
-      if (parsed.events.length === 0) {
-        throw new Error(
-          "That file has no events. Choose the host's EV3/HYV event file.",
+      let filename: string | undefined;
+      try {
+        const files = await pickMeetFiles(
+          "Choose the meet's event file (EV3, HYV, or ZIP)",
         );
+        if (files.length === 0) return;
+        filename = files[0]?.filename;
+        const parsed = parseMeetFilesFromBytes(files);
+        if (parsed.events.length === 0) {
+          throw new Error(
+            "That file has no events. Choose the host's EV3/HYV event file.",
+          );
+        }
+        await saveAndOpen(createMeetFromEventFile(parsed));
+        trackMeetCreated();
+        trackResultsImported(filename, parsed.results.length);
+      } catch (error) {
+        trackImportFailed(filename, error);
+        throw error;
       }
-      await saveAndOpen(createMeetFromEventFile(parsed));
     });
   }
 

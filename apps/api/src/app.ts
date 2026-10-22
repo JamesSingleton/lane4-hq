@@ -34,6 +34,21 @@ export const OPENAPI_INFO = {
   ],
 };
 
+export type ApiRequestObservation = {
+  requestId: string;
+  route: string;
+  status: number;
+  durationMs: number;
+};
+
+export type ApiExceptionObservation = {
+  requestId: string;
+  route: string;
+  status: number;
+  /** Error.name only. The message can quote a swimmer. */
+  errorName: string;
+};
+
 export type AppOptions = {
   /** Browser origins allowed to call the API (native apps send no Origin). */
   allowedOrigins: string[];
@@ -45,6 +60,10 @@ export type AppOptions = {
   desktopReleases?: DesktopReleases;
   /** Dependencies `/health/ready` probes, e.g. `{ database: pingDatabase }`. */
   readiness?: Record<string, ReadinessCheck>;
+  /** PostHog logs. Health checks are not reported. Bodies are not included. */
+  onRequest?: (event: ApiRequestObservation) => void;
+  /** 5xx only, with the error name rather than the message. */
+  onException?: (event: ApiExceptionObservation) => void;
 };
 
 /** Probes hit these constantly; logging them buries real traffic. */
@@ -62,13 +81,22 @@ export function createApp(options: AppOptions) {
     const started = performance.now();
     await next();
     if (QUIET_PATHS.has(c.req.path)) return;
+    const status = c.res.status;
+    const requestId = c.get("requestId");
+    const durationMs = Math.round(performance.now() - started);
     logger.info("request", {
       method: c.req.method,
       path: c.req.path,
-      status: c.res.status,
-      ms: Math.round(performance.now() - started),
-      requestId: c.get("requestId"),
+      status,
+      ms: durationMs,
+      requestId,
       userId: (c.get("user") as { id: string } | undefined)?.id,
+    });
+    options.onRequest?.({
+      requestId,
+      route: c.req.path,
+      status,
+      durationMs,
     });
   });
   app.use(secureHeaders({ crossOriginResourcePolicy: "cross-origin" }));
@@ -123,21 +151,37 @@ export function createApp(options: AppOptions) {
 
   app.notFound((c) => c.json(errorBody("not_found", "No such endpoint."), 404));
   app.onError((error, c) => {
+    let status = 500;
+    let response: Response;
     if (error instanceof ApiError) {
-      return c.json(errorBody(error.code, error.message), error.status);
+      status = error.status;
+      response = c.json(errorBody(error.code, error.message), error.status);
+    } else if (error instanceof AuthError) {
+      status = error.status === 403 ? 403 : 401;
+      response =
+        status === 403
+          ? c.json(errorBody("forbidden", error.message), 403)
+          : c.json(errorBody("unauthorized", error.message), 401);
+    } else {
+      logger.error("unhandled error", {
+        error,
+        method: c.req.method,
+        path: c.req.path,
+        requestId: c.get("requestId"),
+      });
+      response = c.json(errorBody("internal", "Something went wrong."), 500);
     }
-    if (error instanceof AuthError) {
-      return error.status === 403
-        ? c.json(errorBody("forbidden", error.message), 403)
-        : c.json(errorBody("unauthorized", error.message), 401);
+    if (status >= 500) {
+      const errorName =
+        error instanceof Error && error.name ? error.name : "Error";
+      options.onException?.({
+        requestId: c.get("requestId"),
+        route: c.req.path,
+        status,
+        errorName,
+      });
     }
-    logger.error("unhandled error", {
-      error,
-      method: c.req.method,
-      path: c.req.path,
-      requestId: c.get("requestId"),
-    });
-    return c.json(errorBody("internal", "Something went wrong."), 500);
+    return response;
   });
 
   return app;

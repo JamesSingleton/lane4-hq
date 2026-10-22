@@ -1,5 +1,6 @@
 "use server";
 
+import { errorCode } from "@lane4hq/analytics";
 import { getSession } from "@lane4hq/auth/session";
 import { assertFeature } from "@lane4hq/billing/features";
 import { requireTeamRole } from "@lane4hq/db/authz";
@@ -46,6 +47,7 @@ import {
   meetEventTemplateNameSchema,
 } from "@lane4hq/swim-core/validators";
 import { revalidatePath } from "next/cache";
+import { trackAdmin } from "@/app/analytics";
 import { loadMeetLineupSnapshot } from "./load-meet-lineup-snapshot";
 
 function isFileBackedMeet(importSource: string | null | undefined) {
@@ -400,10 +402,22 @@ export async function exportMeetEntriesCsvAction(
   meetId: string,
 ) {
   const session = await getSession();
-  await requireMeetImportAccess(teamId, session?.user?.id);
-  const loaded = await loadMeetLineupSnapshot(teamId, meetId);
-  if (!loaded) throw new Error("Meet not found");
-  return formatMeetLineupCsv(hostPackLineup(loaded.snapshot));
+  try {
+    await requireMeetImportAccess(teamId, session?.user?.id);
+    const loaded = await loadMeetLineupSnapshot(teamId, meetId);
+    if (!loaded) throw new Error("Meet not found");
+    const csv = formatMeetLineupCsv(hostPackLineup(loaded.snapshot));
+    trackAdmin("entries_exported", session?.user?.id, teamId, {
+      format: "csv",
+    });
+    return csv;
+  } catch (error) {
+    trackAdmin("export_failed", session?.user?.id, teamId, {
+      format: "csv",
+      error_code: errorCode(error),
+    });
+    throw error;
+  }
 }
 
 export async function importMeetResultsCsvAction(
@@ -412,112 +426,127 @@ export async function importMeetResultsCsvAction(
   csvContent: string,
 ) {
   const session = await getSession();
-  await requireMeetImportAccess(teamId, session?.user?.id);
-  const meet = await getMeetById(meetId, teamId);
-  if (!meet) throw new Error("Meet not found");
+  try {
+    await requireMeetImportAccess(teamId, session?.user?.id);
+    const meet = await getMeetById(meetId, teamId);
+    if (!meet) throw new Error("Meet not found");
 
-  const rows = parseMeetResultsCsv(csvContent);
-  if (rows.length === 0) {
-    throw new Error("No valid result rows found in CSV.");
-  }
-
-  const [events, roster] = await Promise.all([
-    getMeetEvents(meetId),
-    getRoster(teamId),
-  ]);
-
-  const eventByNumber = new Map(
-    events
-      .filter((event) => event.eventNumber != null)
-      .map((event) => [event.eventNumber!, event]),
-  );
-
-  const rosterByName = new Map(
-    roster.map((member) => [
-      `${member.firstName} ${member.lastName}`.trim().toLowerCase(),
-      member,
-    ]),
-  );
-
-  const resolved: Array<{
-    eventKey: string;
-    meetEventId: string;
-    swimmerId: string;
-    timeMs: number;
-    place: number | null;
-  }> = [];
-  const skipped: string[] = [];
-
-  for (const row of rows) {
-    const event = eventByNumber.get(row.eventNumber);
-    if (!event) {
-      skipped.push(`Line ${row.line}: unknown event #${row.eventNumber}`);
-      continue;
+    const rows = parseMeetResultsCsv(csvContent);
+    if (rows.length === 0) {
+      throw new Error("No valid result rows found in CSV.");
     }
 
-    const swimmer = rosterByName.get(row.swimmerName.toLowerCase());
-    if (!swimmer) {
-      skipped.push(`Line ${row.line}: swimmer "${row.swimmerName}" not found`);
-      continue;
+    const [events, roster] = await Promise.all([
+      getMeetEvents(meetId),
+      getRoster(teamId),
+    ]);
+
+    const eventByNumber = new Map(
+      events
+        .filter((event) => event.eventNumber != null)
+        .map((event) => [event.eventNumber!, event]),
+    );
+
+    const rosterByName = new Map(
+      roster.map((member) => [
+        `${member.firstName} ${member.lastName}`.trim().toLowerCase(),
+        member,
+      ]),
+    );
+
+    const resolved: Array<{
+      eventKey: string;
+      meetEventId: string;
+      swimmerId: string;
+      timeMs: number;
+      place: number | null;
+    }> = [];
+    const skipped: string[] = [];
+
+    for (const row of rows) {
+      const event = eventByNumber.get(row.eventNumber);
+      if (!event) {
+        skipped.push(`Line ${row.line}: unknown event #${row.eventNumber}`);
+        continue;
+      }
+
+      const swimmer = rosterByName.get(row.swimmerName.toLowerCase());
+      if (!swimmer) {
+        skipped.push(
+          `Line ${row.line}: swimmer "${row.swimmerName}" not found`,
+        );
+        continue;
+      }
+
+      if (isRelayStroke(event.stroke, event.eventKey)) {
+        skipped.push(
+          `Line ${row.line}: relay event #${row.eventNumber} skipped`,
+        );
+        continue;
+      }
+
+      resolved.push({
+        eventKey: event.eventKey,
+        meetEventId: event.id,
+        swimmerId: swimmer.swimmerId,
+        timeMs: row.timeMs,
+        place: row.place,
+      });
     }
 
-    if (isRelayStroke(event.stroke, event.eventKey)) {
-      skipped.push(`Line ${row.line}: relay event #${row.eventNumber} skipped`);
-      continue;
+    if (resolved.length === 0) {
+      throw new Error("No valid result rows found in CSV.");
     }
 
-    resolved.push({
-      eventKey: event.eventKey,
-      meetEventId: event.id,
-      swimmerId: swimmer.swimmerId,
-      timeMs: row.timeMs,
-      place: row.place,
-    });
-  }
-
-  if (resolved.length === 0) {
-    throw new Error("No valid result rows found in CSV.");
-  }
-
-  const bestTimeKeys = new Map<
-    string,
-    { swimmerId: string; eventKey: string }
-  >();
-  for (const row of resolved) {
-    bestTimeKeys.set(`${row.swimmerId}:${row.eventKey}`, row);
-  }
-  const currentBestTimes = new Map<string, number | null>(
-    await Promise.all(
-      [...bestTimeKeys].map(
-        async ([key, row]): Promise<[string, number | null]> => [
-          key,
-          await getBestTimeMs(row.swimmerId, row.eventKey),
-        ],
+    const bestTimeKeys = new Map<
+      string,
+      { swimmerId: string; eventKey: string }
+    >();
+    for (const row of resolved) {
+      bestTimeKeys.set(`${row.swimmerId}:${row.eventKey}`, row);
+    }
+    const currentBestTimes = new Map<string, number | null>(
+      await Promise.all(
+        [...bestTimeKeys].map(
+          async ([key, row]): Promise<[string, number | null]> => [
+            key,
+            await getBestTimeMs(row.swimmerId, row.eventKey),
+          ],
+        ),
       ),
-    ),
-  );
-  const rowsToInsert = resolved.map((row) => {
-    const key = `${row.swimmerId}:${row.eventKey}`;
-    const previousBestTimeMs = currentBestTimes.get(key) ?? null;
-    if (previousBestTimeMs == null || row.timeMs < previousBestTimeMs) {
-      currentBestTimes.set(key, row.timeMs);
-    }
+    );
+    const rowsToInsert = resolved.map((row) => {
+      const key = `${row.swimmerId}:${row.eventKey}`;
+      const previousBestTimeMs = currentBestTimes.get(key) ?? null;
+      if (previousBestTimeMs == null || row.timeMs < previousBestTimeMs) {
+        currentBestTimes.set(key, row.timeMs);
+      }
+      return {
+        meetEventId: row.meetEventId,
+        swimmerId: row.swimmerId,
+        timeMs: row.timeMs,
+        place: row.place,
+        previousBestTimeMs,
+      };
+    });
+
+    await addResolvedMeetResults(meetId, rowsToInsert, [
+      ...new Set(resolved.map((row) => row.swimmerId)),
+    ]);
+    revalidateMeetPaths(teamId, meetId);
+
+    trackAdmin("results_imported", session?.user?.id, teamId, {
+      format: "csv",
+    });
     return {
-      meetEventId: row.meetEventId,
-      swimmerId: row.swimmerId,
-      timeMs: row.timeMs,
-      place: row.place,
-      previousBestTimeMs,
+      imported: rowsToInsert.length,
+      skipped,
     };
-  });
-
-  await addResolvedMeetResults(meetId, rowsToInsert, [
-    ...new Set(resolved.map((row) => row.swimmerId)),
-  ]);
-  revalidateMeetPaths(teamId, meetId);
-
-  return {
-    imported: rowsToInsert.length,
-    skipped,
-  };
+  } catch (error) {
+    trackAdmin("import_failed", session?.user?.id, teamId, {
+      format: "csv",
+      error_code: errorCode(error),
+    });
+    throw error;
+  }
 }

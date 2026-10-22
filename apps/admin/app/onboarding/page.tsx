@@ -40,6 +40,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { Controller, useForm } from "react-hook-form";
 import { uploadTeamLogoAction } from "@/app/team/[teamId]/settings/actions";
+import { useAnalytics } from "@/components/analytics-provider";
 import {
   BILLING_STEP_FIELDS,
   COACH_STEP_FIELDS,
@@ -186,6 +187,7 @@ function Stepper({
 
 export default function OnboardingPage() {
   const router = useRouter();
+  const analytics = useAnalytics();
   const { data: session } = useSession();
   const [stepId, setStepId] = useState<StepId>("team");
   const [logoFile, setLogoFile] = useState<File | null>(null);
@@ -304,6 +306,10 @@ export default function OnboardingPage() {
       setSubmitError("Failed to create team");
       return;
     }
+
+    if (session?.user?.id) analytics.identify(session.user.id);
+    analytics.group(teamId);
+    analytics.capture("team_created");
 
     await organization.setActive({ organizationId: teamId });
 

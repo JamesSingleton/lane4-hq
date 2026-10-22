@@ -1,6 +1,7 @@
 "use server";
 
 import { Resend } from "resend";
+import { reportServerException } from "@/lib/analytics";
 
 export type SupportState = {
   error?: string;
@@ -49,7 +50,8 @@ export async function sendSupportMessage(
       return { error: "The message could not be sent. Try GitHub issues." };
     }
     return { success: true };
-  } catch {
+  } catch (error) {
+    await reportServerException("web", error, "/support");
     return { error: "The message could not be sent. Try GitHub issues." };
   }
 }

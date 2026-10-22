@@ -3,6 +3,7 @@ import { invoke, isTauri } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import { getCurrentWebview } from "@tauri-apps/api/webview";
 import { open, save } from "@tauri-apps/plugin-dialog";
+import { trackExport } from "./analytics";
 import { basename, MEET_FILE_EXTENSIONS, type SourceFile } from "./meet-file";
 
 export { isTauri };
@@ -57,22 +58,29 @@ export type ExportFile = { filename: string; bytes: Uint8Array };
 /** Save dialog, then write. Resolves false when the user cancels. */
 export async function saveExportFile(file: ExportFile): Promise<boolean> {
   const ext = file.filename.split(".").pop()?.toLowerCase() ?? "";
-  if (!isTauri()) {
-    const url = URL.createObjectURL(new Blob([file.bytes.slice().buffer]));
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = file.filename;
-    a.click();
-    URL.revokeObjectURL(url);
+  try {
+    if (!isTauri()) {
+      const url = URL.createObjectURL(new Blob([file.bytes.slice().buffer]));
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = file.filename;
+      a.click();
+      URL.revokeObjectURL(url);
+      trackExport(file.filename, true);
+      return true;
+    }
+    const path = await save({
+      defaultPath: file.filename,
+      filters: [{ name: ext.toUpperCase(), extensions: [ext] }],
+    });
+    if (!path) return false;
+    await invoke("write_export_file", { path, bytes: Array.from(file.bytes) });
+    trackExport(file.filename, true);
     return true;
+  } catch (error) {
+    trackExport(file.filename, false, error);
+    throw error;
   }
-  const path = await save({
-    defaultPath: file.filename,
-    filters: [{ name: ext.toUpperCase(), extensions: [ext] }],
-  });
-  if (!path) return false;
-  await invoke("write_export_file", { path, bytes: Array.from(file.bytes) });
-  return true;
 }
 
 /**
