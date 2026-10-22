@@ -14,7 +14,12 @@ import {
   parseSdifBirthDate,
   parseUsaMemberIdFromLine,
 } from "../roster/utils";
-import type { ParsedMeet, ParsedRelayEntry, ParsedResult } from "../types";
+import type {
+  ParsedEntry,
+  ParsedMeet,
+  ParsedRelayEntry,
+  ParsedResult,
+} from "../types";
 
 import { parseCl2D3Fields } from "./d3";
 import { type Cl2FileKind, detectCl2FileKind } from "./kind";
@@ -319,12 +324,9 @@ function fixedRoundResults(
   return out;
 }
 
-function sameRoundResult(a: ParsedResult, b: ParsedResult): boolean {
-  return (
-    a.swimmerName.trim().toLowerCase() === b.swimmerName.trim().toLowerCase() &&
-    a.time.trim().toUpperCase() === b.time.trim().toUpperCase() &&
-    a.resultType === b.resultType
-  );
+/** Identity used to skip a D0 round time that a G0 line already recorded. */
+function roundResultKey(result: ParsedResult): string {
+  return `${result.swimmerName.trim().toLowerCase()}\0${result.time.trim().toUpperCase()}\0${String(result.resultType)}`;
 }
 
 function looksLikeHytekStrokeCode(code: string): boolean {
@@ -713,15 +715,27 @@ export function parseCl2Meet(content: string): ParsedMeet {
   const relays: ParsedRelayEntry[] = [];
   const identityByName = new Map<string, AthleteIdentityCache>();
   const d3ByName = new Map<string, ReturnType<typeof parseCl2D3Fields>>();
+  const entriesByName = new Map<string, ParsedEntry[]>();
+  const resultsByName = new Map<string, ParsedResult[]>();
   const pendingRoundResults: ParsedResult[] = [];
   let lastTeamCode: string | undefined;
   let lastSwimmerKey: string | undefined;
 
+  function rememberRow<T extends { swimmerName: string }>(
+    index: Map<string, T[]>,
+    row: T,
+  ): void {
+    const key = row.swimmerName.toLowerCase();
+    const bucket = index.get(key);
+    if (bucket) bucket.push(row);
+    else index.set(key, [row]);
+  }
+
   function applyD3(nameKey: string): void {
     const extra = d3ByName.get(nameKey);
     if (!extra) return;
-    for (const entry of meet.entries) {
-      if (entry.swimmerName.toLowerCase() !== nameKey) continue;
+    // applyD3 runs only after the new D0 row is stored under nameKey.
+    for (const entry of entriesByName.get(nameKey) as ParsedEntry[]) {
       if (!entry.usaMemberId && extra.usaMemberId) {
         entry.usaMemberId = extra.usaMemberId;
       }
@@ -735,8 +749,7 @@ export function parseCl2Meet(content: string): ParsedMeet {
     if (cached && !cached.usaMemberId && extra.usaMemberId) {
       cached.usaMemberId = extra.usaMemberId;
     }
-    for (const result of meet.results) {
-      if (result.swimmerName.toLowerCase() !== nameKey) continue;
+    for (const result of resultsByName.get(nameKey) ?? []) {
       if (!result.usaMemberId && extra.usaMemberId) {
         result.usaMemberId = extra.usaMemberId;
       }
@@ -765,7 +778,8 @@ export function parseCl2Meet(content: string): ParsedMeet {
         applyD3(lastSwimmerKey);
       }
     } else if (type === "D0" || type === "D1") {
-      const before = meet.entries.length;
+      const entriesBefore = meet.entries.length;
+      const resultsBefore = meet.results.length;
       parseD0Athlete(
         line,
         kind,
@@ -775,8 +789,14 @@ export function parseCl2Meet(content: string): ParsedMeet {
         identityByName,
         pendingRoundResults,
       );
+      for (let i = entriesBefore; i < meet.entries.length; i++) {
+        rememberRow(entriesByName, meet.entries[i]!);
+      }
+      for (let i = resultsBefore; i < meet.results.length; i++) {
+        rememberRow(resultsByName, meet.results[i]!);
+      }
       const added = meet.entries[meet.entries.length - 1];
-      if (meet.entries.length > before && added) {
+      if (meet.entries.length > entriesBefore && added) {
         lastSwimmerKey = added.swimmerName.toLowerCase();
         applyD3(lastSwimmerKey);
       }
@@ -793,6 +813,7 @@ export function parseCl2Meet(content: string): ParsedMeet {
           result.teamCode = lastTeamCode;
         }
         meet.results.push(result);
+        rememberRow(resultsByName, result);
       }
     } else if (type === "E0") {
       const relay = parseRelayTeamLine(line);
@@ -837,11 +858,14 @@ export function parseCl2Meet(content: string): ParsedMeet {
     }
   }
 
+  const seenRoundResults = new Set<string>();
+  for (const result of meet.results) {
+    seenRoundResults.add(roundResultKey(result));
+  }
   for (const candidate of pendingRoundResults) {
-    const already = meet.results.some((result) =>
-      sameRoundResult(result, candidate),
-    );
-    if (already) continue;
+    const key = roundResultKey(candidate);
+    if (seenRoundResults.has(key)) continue;
+    seenRoundResults.add(key);
     meet.results.push(candidate);
   }
 
