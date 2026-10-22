@@ -8,7 +8,6 @@ export const EVENT_FIELDS = {
   results_imported: ["format"],
   export_failed: ["format", "error_code"],
   import_failed: ["format", "error_code"],
-  docs_search: ["query"],
 } as const;
 
 export type EventName = keyof typeof EVENT_FIELDS;
@@ -22,16 +21,9 @@ export type EventProperties = {
   results_imported: { format?: string };
   export_failed: { format?: string; error_code?: string };
   import_failed: { format?: string; error_code?: string };
-  docs_search: { query?: string };
 };
 
-export const ANALYTICS_APPS = [
-  "web",
-  "admin",
-  "api",
-  "desktop",
-  "docs",
-] as const;
+export const ANALYTICS_APPS = ["web", "admin", "api", "desktop"] as const;
 
 export type AnalyticsApp = (typeof ANALYTICS_APPS)[number];
 

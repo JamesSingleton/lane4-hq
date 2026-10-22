@@ -1,4 +1,3 @@
-import { readFileSync } from "node:fs";
 import { describe, expect, it, vi } from "vitest";
 import {
   browserInitOptions,
@@ -177,25 +176,14 @@ describe("privacy", () => {
       }),
     ).toEqual({ format: 1, error_code: true });
     expect(
-      sanitizeProperties("docs_search", {
-        query: "  starts  ",
-      }).query,
-    ).toBe("starts");
-    expect(sanitizeProperties("docs_search", { query: "a@b.com" })).toEqual({});
-    expect(sanitizeProperties("docs_search", { query: "   " })).toEqual({});
-    expect(sanitizeProperties("docs_search", { query: true })).toEqual({
-      query: true,
-    });
+      sanitizeProperties("entries_exported", { format: "ada@club.hy3" }),
+    ).toEqual({});
     expect(
       sanitizeProperties("roster_imported", { format: undefined }),
     ).toEqual({});
-    expect(sanitizeProperties("docs_search", { query: { raw: true } })).toEqual(
-      {},
-    );
-    const long = "q".repeat(250);
     expect(
-      String(sanitizeProperties("docs_search", { query: long }).query),
-    ).toHaveLength(200);
+      sanitizeProperties("roster_imported", { format: { raw: true } }),
+    ).toEqual({});
     expect(
       sanitizeProperties("import_failed", {
         format: "sd3",
@@ -336,7 +324,6 @@ describe("client", () => {
     analytics.identify("user_1");
     analytics.group("team_1");
     analytics.pageview("/pricing");
-    analytics.search("starts");
     analytics.exception(new Error("secret"));
     expect(analytics.isFeatureEnabled("flag")).toBeUndefined();
     expect(analytics.getFeatureFlag("flag")).toBeUndefined();
@@ -362,8 +349,6 @@ describe("client", () => {
     analytics.group("team_1");
     analytics.group(" ");
     analytics.pageview("/meets?q=Ada#heat");
-    analytics.search("  free  ");
-    analytics.search("");
     const named = new Error("Ada swam 59.3");
     named.name = "ImportError";
     analytics.exception(named, {
@@ -483,7 +468,6 @@ describe("browser", () => {
     analytics.identify("user_1");
     analytics.group("team_1");
     analytics.pageview("/");
-    analytics.search("starts");
     analytics.exception(new Error("x"));
     expect(analytics.isFeatureEnabled("f")).toBeUndefined();
     expect(analytics.getFeatureFlag("f")).toBeUndefined();
@@ -757,13 +741,18 @@ describe("server", () => {
       release: "rel",
       load: async () => client,
     });
-    const cached = getServerAnalytics({ app: "docs", apiKey: "phc_docs" });
-    expect(getServerAnalytics({ app: "docs", apiKey: "ignored" })).toBe(cached);
+    const cached = getServerAnalytics({
+      app: "desktop",
+      apiKey: "phc_desktop",
+    });
+    expect(getServerAnalytics({ app: "desktop", apiKey: "ignored" })).toBe(
+      cached,
+    );
     await cached;
     const injected = fakeServer();
     await getServerAnalytics({
-      app: "docs",
-      apiKey: "phc_docs",
+      app: "desktop",
+      apiKey: "phc_desktop",
       load: async () => injected,
     });
     injected.capture.mockClear();
@@ -955,22 +944,6 @@ describe("logs", () => {
         fetchImpl: failing,
       }),
     ).resolves.toBeUndefined();
-  });
-});
-
-describe("docs snippet", () => {
-  it("records pageviews and search without identifying anyone", () => {
-    const source = readFileSync(
-      new URL("../../../apps/docs/posthog.js", import.meta.url),
-      "utf8",
-    );
-    expect(source).toContain('POSTHOG_KEY = ""');
-    expect(source).toContain("disable_session_recording: true");
-    expect(source).toContain("docs_search");
-    expect(source).toContain('app: "docs"');
-    expect(source).not.toContain("identify(");
-    expect(source).toContain("disable_session_recording: true");
-    expect(source).not.toContain("disable_session_recording: false");
   });
 });
 

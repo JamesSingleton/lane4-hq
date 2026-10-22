@@ -30,7 +30,7 @@
       },
       {
         "group": "Manage your account",
-        "pages": ["settings-and-billing", "support", "privacy"]
+        "pages": ["settings-and-billing", "support"]
       }
     ]
   },

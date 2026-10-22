@@ -26,7 +26,6 @@ export type Analytics = {
   /** Group the current user by team id. The team name is not sent. */
   group(teamId: string): void;
   pageview(url: string): void;
-  search(query: string): void;
   exception(error: unknown, properties?: Record<string, unknown>): void;
   isFeatureEnabled(flag: string): boolean | undefined;
   getFeatureFlag(flag: string): string | boolean | undefined;
@@ -50,7 +49,6 @@ export function createAnalytics(
       identify() {},
       group() {},
       pageview() {},
-      search() {},
       exception() {},
       isFeatureEnabled() {
         return undefined;
@@ -91,9 +89,6 @@ export function createAnalytics(
     },
     pageview(url) {
       send("$pageview", { $current_url: pagePath(url) });
-    },
-    search(query) {
-      send("docs_search", sanitizeProperties("docs_search", { query }));
     },
     exception(error, properties) {
       const name = exceptionName(error);

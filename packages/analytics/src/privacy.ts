@@ -121,11 +121,7 @@ export function sanitizeProperties(
     if (typeof value !== "string") continue;
     if (looksLikeEmail(value)) continue;
     if (key === "format") out[key] = formatCode(value);
-    else if (key === "error_code") out[key] = errorCode(value);
-    else {
-      const query = value.trim().slice(0, 200);
-      if (query) out[key] = query;
-    }
+    if (key === "error_code") out[key] = errorCode(value);
   }
   return out;
 }
