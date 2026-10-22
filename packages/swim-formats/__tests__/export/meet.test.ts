@@ -437,12 +437,136 @@ describe("exportHy3", () => {
     expect(a1?.slice(4, 29)).toBe("Meet Entries".padEnd(25, " "));
     expect(a1?.slice(29, 44)).toBe("Lane4 HQ, Ltd".padEnd(15, " "));
     expect(a1?.slice(44, 58)).toBe("Lane4 1.0".padEnd(14, " "));
+    expect(a1).not.toContain("Hy-Tek");
+    expect(a1).not.toContain("Win-TM");
     expect(a1?.slice(58, 66)).toBe("10242026");
-    const genders = text
-      .split(/\r?\n/)
+    const rows = text.split(/\r?\n/);
+    const genders = rows
       .filter((line) => line.startsWith("F1"))
       .map((line) => line.slice(12, 15));
     expect(genders).toEqual(["FFF", "MMM"]);
+    expect(
+      rows
+        .filter((line) => line.startsWith("F1"))
+        .every((line) => line.slice(11, 12) === "0"),
+    ).toBe(true);
+    const e1 = rows.find((line) => line.startsWith("E1"))!;
+    expect(e1.slice(34, 38)).toBe("0.00");
+    expect(e1.slice(41, 42)).toBe(" ");
+    expect(e1.slice(49, 51)).toBe("0Y");
+    const b2 = rows.find((line) => line.startsWith("B2"))!;
+    expect(b2.slice(102, 108)).toBe("0.00YO");
+
+    const resultsText = exportHy3({
+      ...meet,
+      importKind: "results",
+      results: baseMeet.results,
+    });
+    const resultsRows = resultsText.split(/\r?\n/);
+    const resultsF1 = resultsRows.find((line) => line.startsWith("F1"))!;
+    expect(resultsF1.slice(11, 12)).toBe(" ");
+    expect(resultsF1.slice(12, 15)).toBe("FFF");
+    const resultsB2 = resultsRows.find((line) => line.startsWith("B2"))!;
+    expect(resultsB2.slice(102, 108)).toBe("      ");
+  });
+
+  it("round-trips Team Manager athlete columns and a preserved C6 line", () => {
+    const contact = `${"C6".padEnd(47, " ")}555-010-2000`.padEnd(128, " ");
+    const meet: ParsedMeet = {
+      name: "Columns",
+      course: "SCY",
+      startDate: "2026-10-24",
+      importKind: "entries",
+      hy3Publisher: "Hy-Tek, Ltd",
+      hy3Software: "Win-TM 8.0De",
+      hy3CreatedOn: "2026-10-21",
+      hy3CreatedTime: "  4:27 PM",
+      hy3Licensee: "Example High School",
+      hy3EntrySetup: "0.00YL",
+      hy3ContactLines: [contact],
+      teamCity: "Town",
+      teamCountry: "USA",
+      teamCode: "LANE",
+      entries: [
+        {
+          eventNumber: 8,
+          swimmerName: "Addy Baker",
+          legalFirstName: "Ada",
+          preferredName: "Addy",
+          middleInitial: "Q",
+          practiceGroup: "JV",
+          practiceSubgroup: "Red",
+          classYear: "11",
+          gender: "female",
+          hy3EntryMark: "C",
+          seedTime: "28.50",
+        },
+      ],
+      results: [],
+      events: [
+        {
+          eventNumber: 8,
+          distance: 50,
+          stroke: "free",
+          gender: "female",
+          eventKey: "50_free",
+        },
+      ],
+      relays: [
+        {
+          eventNumber: 8,
+          relayLetter: "A",
+          swimmerNames: ["Ann De La Cruz"],
+          seedTime: "1:40.00",
+        },
+      ],
+    };
+    const text = exportHy3(meet);
+    const rows = text.split(/\r?\n/);
+    const a1 = rows.find((row) => row.startsWith("A1"))!;
+    expect(a1.slice(29, 44)).toBe("Hy-Tek, Ltd".padEnd(15, " "));
+    expect(a1.slice(44, 58)).toBe("Win-TM 8.0De".padEnd(14, " "));
+    expect(a1.slice(58, 66)).toBe("10212026");
+    expect(a1.slice(66, 75)).toBe("  4:27 PM");
+    expect(a1.slice(75, 94)).toBe("Example High School");
+    const d1 = rows.find((row) => row.startsWith("D1"))!;
+    expect(d1.slice(28, 31)).toBe("Ada");
+    expect(d1.slice(48, 52)).toBe("Addy");
+    expect(d1.slice(68, 69)).toBe("Q");
+    expect(d1.slice(99, 101)).toBe("11");
+    expect(d1.slice(105, 107)).toBe("JV");
+    expect(d1.slice(108, 111)).toBe("Red");
+    const e1 = rows.find((row) => row.startsWith("E1"))!;
+    expect(e1.slice(38, 42)).toBe("  8 ");
+    expect(e1.slice(91, 92)).toBe("C");
+    expect(e1.slice(8, 13)).toBe("Baker");
+    const f3 = rows.find((row) => row.startsWith("F3"))!;
+    expect(f3.slice(8, 13)).toBe("De La");
+    const c6 = rows.find((row) => row.startsWith("C6"))!;
+    expect(c6.slice(0, 128)).toBe(contact);
+    expect(rows.find((row) => row.startsWith("B2"))!.slice(102, 108)).toBe(
+      "0.00YL",
+    );
+
+    const parsed = parseHy3(text);
+    expect(parsed.hy3Publisher).toBe("Hy-Tek, Ltd");
+    expect(parsed.hy3Software).toBe("Win-TM 8.0De");
+    expect(parsed.hy3EntrySetup).toBe("0.00YL");
+    expect(parsed.hy3ContactLines?.[0]).toBe(contact);
+    expect(parsed.entries[0]?.legalFirstName).toBe("Ada");
+    expect(parsed.entries[0]?.preferredName).toBe("Addy");
+    expect(parsed.entries[0]?.middleInitial).toBe("Q");
+    expect(parsed.entries[0]?.practiceGroup).toBe("JV");
+    expect(parsed.entries[0]?.practiceSubgroup).toBe("Red");
+    expect(parsed.entries[0]?.swimmerName).toBe("Addy Baker");
+    expect(parsed.entries[0]?.hy3EntryMark).toBe("C");
+    const again = exportHy3(parsed);
+    expect(
+      again
+        .split(/\r?\n/)
+        .find((row) => row.startsWith("D1"))!
+        .slice(28, 31),
+    ).toBe("Ada");
   });
 
   // azsi-results.hy3 re-export checksums about 6,800 lines. Under coverage
@@ -583,6 +707,15 @@ describe("exportHy3", () => {
     const canRow = c2Can.split(/\r?\n/).find((row) => row.startsWith("C2"))!;
     expect(canRow.slice(104, 107)).toBe("CAN");
     expect(canRow.slice(108, 111)).not.toBe("USS");
+
+    const orgText = exportHy3({
+      ...baseMeet,
+      teamCity: "Klein",
+      teamCountry: "USA",
+      teamOrgCode: "OTH",
+    });
+    const orgRow = orgText.split(/\r?\n/).find((row) => row.startsWith("C2"))!;
+    expect(orgRow.slice(108, 111)).toBe("OTH");
   });
 
   it("round-trips all individual strokes and relay strokes for SCM/LCM courses", () => {
@@ -1095,6 +1228,8 @@ describe("exportCl2", () => {
       entries: [
         { eventNumber: 6, swimmerName: "Odd Stroke Swimmer" },
         { swimmerName: "No Event Number Entry" },
+        { swimmerName: "Solo" },
+        { swimmerName: "" },
       ],
       results: [],
       relays: [],
@@ -1169,6 +1304,7 @@ describe("exportCl2", () => {
           gender: "female",
           classYear: "JR",
           seedTime: "1:11.01",
+          dateOfBirth: "2010-01-01",
         },
         {
           eventNumber: 17,
@@ -1193,6 +1329,8 @@ describe("exportCl2", () => {
     expect(d3s[0]!.endsWith("N50")).toBe(true);
     expect(d0s[0]!.slice(3, 5)).toBe("AZ");
     expect(d0s[0]!.slice(7, 9)).toBe("JR");
+    expect(d0s[0]!.slice(55, 63)).toBe("01012010");
+    expect(d0s[0]!.slice(63, 65)).toBe("16");
     const z0 = rows.find((row) => row.startsWith("Z0"))!;
     expect(z0).toMatch(/Successful Build on \d{2}-\d{2}-\d{4}/);
     expect(z0).toContain(
@@ -1240,8 +1378,8 @@ describe("exportCl2", () => {
       results: [],
       relays: [],
     });
-    const a0 = cl2.split(/\r?\n/)[0]!;
-    const cl2Body = a0.slice(0, 156);
+    const b1Cl2 = cl2.split(/\r?\n/).find((row) => row.startsWith("B1"))!;
+    const cl2Body = b1Cl2.slice(0, 156);
     let sumBytes = 0;
     let sumCodes = 0;
     for (let i = 0; i < 156; i++) {
@@ -1252,8 +1390,9 @@ describe("exportCl2", () => {
       const mod = (Math.floor(sum / 19) + 211) % 100;
       return `${mod % 10}${Math.floor(mod / 10)}`;
     };
-    expect(a0.slice(158)).toBe(cl2Digits(sumBytes));
+    expect(b1Cl2.slice(158)).toBe(cl2Digits(sumBytes));
     expect(cl2Digits(sumBytes)).not.toBe(cl2Digits(sumCodes));
+    expect(cl2Body).toContain(enDash);
   });
 
   it("preserves HY3 swimmer ids, age-up date, C4 notes, and a per-entry seed course", () => {
@@ -1445,9 +1584,145 @@ describe("exportCl2", () => {
     );
   });
 
-  it("uses SCM/LCM course tokens", () => {
-    expect(exportCl2({ ...baseMeet, course: "SCM" })).toContain("SCM");
-    expect(exportCl2({ ...baseMeet, course: "LCM" })).toContain("LCM");
+  it("writes the Team Manager CL2 banner and right-aligns a short team id", () => {
+    const text = exportCl2({
+      ...baseMeet,
+      importKind: "entries",
+      results: [],
+      relays: [],
+      teamCode: "LANE",
+      startDate: "2026-10-24",
+      endDate: "2026-10-24",
+      altitude: 1100,
+      location: "Example Pool",
+      cl2Publisher: "Hy-Tek, Ltd",
+      cl2Publisher2: "Hy-Tek, Ltd",
+      cl2Software: "8.0D",
+      cl2VendorPhone: "252-633-5177",
+      cl2CreatedOn: "2026-10-21",
+      cl2Tail: "TM41",
+      entries: [
+        {
+          eventNumber: 12,
+          swimmerName: "Ada Lovelace",
+          classYear: "11",
+          gender: "female",
+          seedTime: "28.50",
+        },
+      ],
+    });
+    const rows = text.split(/\r?\n/);
+    const a0 = rows[0]!;
+    expect(a0.slice(11, 13)).toBe("20");
+    expect(a0.slice(13, 43)).toBe("Meet Entries".padEnd(30, " "));
+    expect(a0.slice(43, 69)).toBe("Hy-Tek, Ltd".padEnd(26, " "));
+    expect(a0.slice(69, 73)).toBe("8.0D");
+    expect(a0.slice(73, 93)).toBe("Hy-Tek, Ltd".padEnd(20, " "));
+    expect(a0.slice(93, 105)).toBe("252-633-5177");
+    expect(a0.slice(105, 113)).toBe("10212026");
+    expect(a0.slice(149, 153)).toBe("TM41");
+    expect(detectCl2FileKind(text)).toBe("meet_entries");
+    const b1 = rows.find((row) => row.startsWith("B1"))!;
+    expect(b1.slice(11, 20)).toBe("Test Meet");
+    expect(b1.slice(85, 97)).toBe("Example Pool");
+    expect(b1.slice(121, 137)).toBe("1024202610242026");
+    expect(b1.slice(137, 141)).toBe("1100");
+    expect(b1.slice(149, 150)).toBe("Y");
+    const c1 = rows.find((row) => row.startsWith("C1"))!;
+    expect(c1.slice(11, 17)).toBe("  LANE");
+    const parsed = parseCl2Meet(text);
+    expect(parsed.entries[0]?.classYear).toBe("11");
+    expect(parsed.teamCode).toBe("LANE");
+    expect(parsed.altitude).toBe(1100);
+    expect(parsed.location).toBe("Example Pool");
+    expect(parsed.cl2Publisher).toBe("Hy-Tek, Ltd");
+    expect(parsed.cl2Publisher2).toBe("Hy-Tek, Ltd");
+    expect(parsed.cl2Software).toBe("8.0D");
+    expect(parsed.cl2VendorPhone).toBe("252-633-5177");
+    const roster = exportCl2({
+      ...baseMeet,
+      importKind: "roster",
+      entries: [],
+      results: [],
+      relays: [],
+    });
+    expect(roster.split(/\r?\n/)[0]!.slice(149, 153)).toBe("TM43");
+  });
+
+  it("identifies a new CL2 file as Lane4", () => {
+    const entries = exportCl2({
+      ...baseMeet,
+      importKind: "entries",
+      results: [],
+      relays: [],
+      startDate: "2026-10-24",
+    });
+    const a0 = entries.split(/\r?\n/)[0]!;
+    expect(a0.slice(43, 69)).toBe("Lane4 HQ, Ltd".padEnd(26, " "));
+    expect(a0.slice(69, 73)).toBe("L4".padEnd(4, " "));
+    expect(a0.slice(73, 93)).toBe("Lane4 HQ, Ltd".padEnd(20, " "));
+    expect(a0.slice(93, 105)).toBe(" ".repeat(12));
+    expect(a0).not.toContain("Hy-Tek");
+    expect(a0).not.toContain("252-633-5177");
+
+    const results = exportCl2({ ...baseMeet, importKind: "results" });
+    const resultsA0 = results.split(/\r?\n/)[0]!;
+    expect(resultsA0.slice(43, 63)).toBe("Lane4 HQ, Ltd".padEnd(20, " "));
+    expect(resultsA0.slice(63, 73)).toBe("Lane4 1.0".padEnd(10, " "));
+    expect(resultsA0.slice(73, 93)).toBe("Lane4 HQ, Ltd".padEnd(20, " "));
+  });
+
+  it("writes a stored CL2 name field and F0 registration text", () => {
+    const text = exportCl2({
+      ...baseMeet,
+      importKind: "entries",
+      results: [],
+      teamCode: "MARI",
+      lscCode: "AZ",
+      startDate: "2026-10-24",
+      events: [
+        {
+          eventNumber: 12,
+          distance: 50,
+          stroke: "free",
+          gender: "female",
+          eventKey: "50_free",
+        },
+      ],
+      entries: [
+        {
+          eventNumber: 12,
+          swimmerName: "Ada Lovelace",
+          gender: "female",
+          cl2NameField: "Lovelace, Ada Q".padEnd(40, " "),
+        },
+      ],
+      relays: [
+        {
+          eventNumber: 12,
+          relayLetter: "A",
+          swimmerNames: ["Ada Lovelace"],
+          cl2LegNameFields: ["Lovelace, Ada Q".padEnd(40, " ")],
+          cl2LegExtras: ["REG123".padEnd(20, " ")],
+          cl2LegIdentity: ["0101201016F000"],
+        },
+      ],
+    });
+    const d0 = text.split(/\r?\n/).find((row) => row.startsWith("D0"))!;
+    const f0 = text.split(/\r?\n/).find((row) => row.startsWith("F0"))!;
+    expect(d0.slice(11, 26)).toBe("Lovelace, Ada Q");
+    expect(f0.slice(22, 37)).toBe("Lovelace, Ada Q");
+    expect(f0.slice(92, 98)).toBe("REG123");
+    expect(f0.slice(65, 79)).toBe("0101201016F000");
+  });
+
+  it("writes the meet course letter at B1 column 150", () => {
+    const b1 = (course: "SCM" | "LCM") =>
+      exportCl2({ ...baseMeet, course })
+        .split(/\r?\n/)
+        .find((row) => row.startsWith("B1"))!;
+    expect(b1("SCM").slice(149, 150)).toBe("S");
+    expect(b1("LCM").slice(149, 150)).toBe("L");
   });
 });
 

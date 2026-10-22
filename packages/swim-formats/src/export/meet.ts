@@ -327,11 +327,23 @@ function hy3Checksum(body: string): string {
 }
 
 function hy3Line(line: FixedLine): string {
-  const body = line
-    .toString()
-    .padEnd(HY3_LINE_WIDTH, " ")
-    .slice(0, HY3_LINE_WIDTH);
-  return `${body}${hy3Checksum(body)}`;
+  return hy3RawLine(line.toString());
+}
+
+function hy3RawLine(body: string): string {
+  const padded = body.padEnd(HY3_LINE_WIDTH, " ").slice(0, HY3_LINE_WIDTH);
+  return `${padded}${hy3Checksum(padded)}`;
+}
+
+/**
+ * Team Manager entry files use a different E1/F1 width than Meet Manager
+ * results. A meet that already has results keeps the results layout unless
+ * the file was explicitly an entry or roster export.
+ */
+function usesTmEntryColumns(meet: ParsedMeet): boolean {
+  if (meet.importKind === "results") return false;
+  if (meet.importKind == null && meet.results.length > 0) return false;
+  return true;
 }
 
 function resolveTeamCode(meet: ParsedMeet): string {
@@ -361,10 +373,8 @@ function ageYearsOnDate(
 }
 
 function lastNameStub(lastName: string): string {
-  return lastName
-    .replace(/[^A-Za-z]/g, "")
-    .slice(0, 5)
-    .padEnd(5, " ");
+  // Team Manager keeps a space inside the first five characters ("De La").
+  return lastName.slice(0, 5).padEnd(5, " ");
 }
 
 function toDdMmmYyyy(date: string | undefined): string {
@@ -398,6 +408,11 @@ type Hy3SwimmerRec = {
   gender?: "male" | "female";
   classYear?: string;
   explicitId?: boolean;
+  legalFirstName?: string;
+  preferredName?: string;
+  middleInitial?: string;
+  practiceGroup?: string;
+  practiceSubgroup?: string;
 };
 
 /**
@@ -450,9 +465,11 @@ export function exportHy3(meet: ParsedMeet): string {
         .set(1, 2, "A1")
         .set(3, 2, fileType)
         .set(5, 25, title)
-        .set(30, 15, "Lane4 HQ, Ltd")
-        .set(45, 14, "Lane4 1.0")
-        .set(59, 8, startDigits),
+        .set(30, 15, meet.hy3Publisher?.trim() || LANE4_PUBLISHER)
+        .set(45, 14, meet.hy3Software?.trim() || LANE4_HY3_SOFTWARE)
+        .set(59, 8, toMmDdYyyy(meet.hy3CreatedOn) || startDigits)
+        .set(67, 9, meet.hy3CreatedTime)
+        .set(76, 53, meet.hy3Licensee),
     ),
   );
 
@@ -470,15 +487,14 @@ export function exportHy3(meet: ParsedMeet): string {
     ),
   );
 
-  lines.push(
-    hy3Line(
-      new FixedLine()
-        .set(1, 2, "B2")
-        .set(3, 45, meet.notes)
-        .set(99, 1, courseLetter)
-        .set(109, 20, meet.sanctionNumber),
-    ),
-  );
+  const b2 = new FixedLine()
+    .set(1, 2, "B2")
+    .set(3, 45, meet.notes)
+    .set(99, 1, courseLetter)
+    .set(109, 20, meet.sanctionNumber);
+  if (meet.hy3EntrySetup?.trim()) b2.set(103, 6, meet.hy3EntrySetup);
+  else if (usesTmEntryColumns(meet)) b2.set(103, 6, "0.00YO");
+  lines.push(hy3Line(b2));
 
   const c1 = new FixedLine()
     .set(1, 2, "C1")
@@ -508,7 +524,9 @@ export function exportHy3(meet: ParsedMeet): string {
       .set(93, 2, region)
       .set(95, 10, postal)
       .set(105, 3, country.slice(0, 3).toUpperCase());
-    if (country.toUpperCase() === "USA") c2.set(109, 3, "USS");
+    const org = meet.teamOrgCode?.trim().toUpperCase().slice(0, 3);
+    if (org) c2.set(109, 3, org);
+    else if (country.toUpperCase() === "USA") c2.set(109, 3, "USS");
     lines.push(hy3Line(c2));
   }
   if (
@@ -527,6 +545,9 @@ export function exportHy3(meet: ParsedMeet): string {
           .set(93, 36, meet.teamContactEmail),
       ),
     );
+  }
+  for (const contactLine of meet.hy3ContactLines ?? []) {
+    lines.push(hy3RawLine(contactLine));
   }
   if (meet.teamExtra) {
     lines.push(
@@ -551,6 +572,11 @@ export function exportHy3(meet: ParsedMeet): string {
       gender?: "male" | "female";
       classYear?: string;
       meetSwimmerId?: number;
+      legalFirstName?: string;
+      preferredName?: string;
+      middleInitial?: string;
+      practiceGroup?: string;
+      practiceSubgroup?: string;
     },
   ): Hy3SwimmerRec {
     const key = swimmerRegistryKey(name);
@@ -560,6 +586,11 @@ export function exportHy3(meet: ParsedMeet): string {
       existing.dateOfBirth ??= opts.dateOfBirth;
       existing.gender ??= opts.gender;
       existing.classYear ??= opts.classYear;
+      existing.legalFirstName ??= opts.legalFirstName;
+      existing.preferredName ??= opts.preferredName;
+      existing.middleInitial ??= opts.middleInitial;
+      existing.practiceGroup ??= opts.practiceGroup;
+      existing.practiceSubgroup ??= opts.practiceSubgroup;
       if (opts.meetSwimmerId != null && !existing.explicitId) {
         existing.meetId = claimMeetId(opts.meetSwimmerId);
         existing.explicitId = true;
@@ -575,6 +606,11 @@ export function exportHy3(meet: ParsedMeet): string {
       gender: opts.gender,
       classYear: opts.classYear,
       explicitId: explicit,
+      legalFirstName: opts.legalFirstName,
+      preferredName: opts.preferredName,
+      middleInitial: opts.middleInitial,
+      practiceGroup: opts.practiceGroup,
+      practiceSubgroup: opts.practiceSubgroup,
     };
     registry.set(key, rec);
     return rec;
@@ -593,6 +629,12 @@ export function exportHy3(meet: ParsedMeet): string {
     classYear?: string;
     meetSwimmerId?: number;
     seedCourse?: ParsedMeet["course"];
+    legalFirstName?: string;
+    preferredName?: string;
+    middleInitial?: string;
+    practiceGroup?: string;
+    practiceSubgroup?: string;
+    hy3EntryMark?: string;
   };
   const entryUnits: EntryUnit[] = [];
   const seenUnitKeys = new Set<string>();
@@ -621,6 +663,11 @@ export function exportHy3(meet: ParsedMeet): string {
       gender: unit.gender,
       classYear: unit.classYear,
       meetSwimmerId: unit.meetSwimmerId,
+      legalFirstName: unit.legalFirstName,
+      preferredName: unit.preferredName,
+      middleInitial: unit.middleInitial,
+      practiceGroup: unit.practiceGroup,
+      practiceSubgroup: unit.practiceSubgroup,
     });
   }
   for (const relay of meet.relays ?? []) {
@@ -633,6 +680,11 @@ export function exportHy3(meet: ParsedMeet): string {
       gender: athlete.gender,
       classYear: athlete.classYear,
       meetSwimmerId: athlete.meetSwimmerId,
+      legalFirstName: athlete.legalFirstName,
+      preferredName: athlete.preferredName,
+      middleInitial: athlete.middleInitial,
+      practiceGroup: athlete.practiceGroup,
+      practiceSubgroup: athlete.practiceSubgroup,
     });
   }
 
@@ -667,7 +719,9 @@ export function exportHy3(meet: ParsedMeet): string {
       .set(3, 1, genderCode)
       .setRight(4, 5, rec.meetId)
       .set(9, 20, lastName)
-      .set(29, 20, firstName)
+      .set(29, 20, rec.legalFirstName || firstName)
+      .set(49, 20, rec.preferredName)
+      .set(69, 1, rec.middleInitial)
       .set(70, 14, rec.usaMemberId)
       .set(89, 8, toMmDdYyyy(rec.dateOfBirth))
       .setRight(
@@ -676,6 +730,10 @@ export function exportHy3(meet: ParsedMeet): string {
         ageYearsOnDate(rec.dateOfBirth, meet.ageUpDate ?? meet.startDate),
       );
     if (rec.classYear) d1.set(100, 2, rec.classYear.slice(0, 2).toUpperCase());
+    if (rec.practiceGroup) d1.set(106, 2, rec.practiceGroup.slice(0, 2));
+    if (rec.practiceSubgroup) {
+      d1.set(109, 3, rec.practiceSubgroup.slice(0, 3));
+    }
     lines.push(hy3Line(d1));
 
     for (const unit of unitsBySwimmer.get(swimmerRegistryKey(rec.name)) ?? []) {
@@ -689,30 +747,31 @@ export function exportHy3(meet: ParsedMeet): string {
       );
       const seed = toHy3Seconds(unit.seedTime) || "0.00";
       const unitCourse = COURSE_LETTER[unit.seedCourse ?? meet.course];
-      lines.push(
-        hy3Line(
-          new FixedLine()
-            .set(1, 2, "E1")
-            .set(3, 1, genderCode)
-            .setRight(4, 5, rec.meetId)
-            .set(9, 5, lastNameStub(lastName))
-            .set(14, 1, eventGender)
-            .set(15, 1, eventGender)
-            .setRight(16, 6, event?.distance ?? 0)
-            .set(22, 1, hy3StrokeLetter(event?.stroke))
-            .setRight(23, 3, ageFields.min)
-            .setRight(26, 3, ageFields.max)
-            .setRight(
-              39,
-              4,
-              unit.eventNumber != null ? String(unit.eventNumber) : "",
-            )
-            .set(51, 1, unitCourse)
-            .setRight(52, 8, seed)
-            .set(60, 1, unitCourse)
-            .set(84, 1, unit.exhibition ? "X" : ""),
-        ),
-      );
+      const eventNumber =
+        unit.eventNumber != null ? String(unit.eventNumber) : "";
+      const tmColumns = usesTmEntryColumns(meet);
+      const e1 = new FixedLine()
+        .set(1, 2, "E1")
+        .set(3, 1, genderCode)
+        .setRight(4, 5, rec.meetId)
+        .set(9, 5, lastNameStub(lastName))
+        .set(14, 1, eventGender)
+        .set(15, 1, eventGender)
+        .setRight(16, 6, event?.distance ?? 0)
+        .set(22, 1, hy3StrokeLetter(event?.stroke))
+        .setRight(23, 3, ageFields.min)
+        .setRight(26, 3, ageFields.max)
+        .setRight(39, tmColumns ? 3 : 4, eventNumber)
+        .set(51, 1, unitCourse)
+        .setRight(52, 8, seed)
+        .set(60, 1, unitCourse)
+        .set(84, 1, unit.exhibition ? "X" : "")
+        .set(92, 1, unit.hy3EntryMark);
+      if (tmColumns) {
+        e1.set(35, 4, "0.00");
+        e1.set(50, 1, "0");
+      }
+      lines.push(hy3Line(e1));
 
       const results =
         resultsByKey.get(resultGroupKey(unit.eventNumber, unit.swimmerName)) ??
@@ -754,29 +813,30 @@ export function exportHy3(meet: ParsedMeet): string {
     const eventGender = exportGenderCode(event?.gender ?? "mixed");
     const seed = toHy3Seconds(relay.seedTime) || "0.00";
     const relayCourse = COURSE_LETTER[relay.seedCourse ?? meet.course];
-    lines.push(
-      hy3Line(
-        new FixedLine()
-          .set(1, 2, "F1")
-          .set(3, 5, relay.teamCode ?? teamCode)
-          .set(8, 1, relay.relayLetter ?? "A")
-          .set(13, 1, eventGender)
-          .set(14, 1, eventGender)
-          .set(15, 1, eventGender)
-          .setRight(16, 6, event?.distance ?? 200)
-          .set(22, 1, hy3RelayStrokeLetter(event?.stroke))
-          .setRight(23, 3, ageFields.min)
-          .setRight(26, 3, ageFields.max)
-          .setRight(
-            39,
-            4,
-            relay.eventNumber != null ? String(relay.eventNumber) : "",
-          )
-          .set(51, 1, relayCourse)
-          .setRight(52, 8, seed)
-          .set(60, 1, relayCourse),
-      ),
-    );
+    const tmColumns = usesTmEntryColumns(meet);
+    const relayEventNumber =
+      relay.eventNumber != null ? String(relay.eventNumber) : "";
+    const f1 = new FixedLine()
+      .set(1, 2, "F1")
+      .set(3, 5, relay.teamCode ?? teamCode)
+      .set(8, 1, relay.relayLetter ?? "A")
+      .set(13, 1, eventGender)
+      .set(14, 1, eventGender)
+      .set(15, 1, eventGender)
+      .setRight(16, 6, event?.distance ?? 200)
+      .set(22, 1, hy3RelayStrokeLetter(event?.stroke))
+      .setRight(23, 3, ageFields.min)
+      .setRight(26, 3, ageFields.max)
+      .setRight(39, tmColumns ? 3 : 4, relayEventNumber)
+      .set(51, 1, relayCourse)
+      .setRight(52, 8, seed)
+      .set(60, 1, relayCourse);
+    if (tmColumns) {
+      f1.set(12, 1, "0");
+      f1.set(35, 4, "0.00");
+      f1.set(50, 1, "0");
+    }
+    lines.push(hy3Line(f1));
 
     for (const result of relay.results ?? []) {
       const kindCode =
@@ -815,7 +875,7 @@ export function exportHy3(meet: ParsedMeet): string {
     lines.push(hy3Line(legLine));
   }
 
-  return lines.join("\r\n");
+  return `${lines.join("\r\n")}\r\n`;
 }
 
 function cl2Field(value: string | undefined, len: number): string {
@@ -893,8 +953,33 @@ function cl2NameLine(
   swimmerName: string,
   extra: string,
 ): string {
-  const { firstName, lastName } = splitName(swimmerName);
+  const { firstName, lastName } = cl2NameParts(swimmerName);
   return `${type}${" ".repeat(9)}${cl2Field(lastName, 20)}${cl2Field(firstName, 20)}${extra}`;
+}
+
+/** "First Middle Last" → last token is the family name. */
+function cl2NameParts(swimmerName: string): {
+  firstName: string;
+  lastName: string;
+} {
+  const parts = swimmerName.trim().split(/\s+/).filter(Boolean);
+  if (parts.length === 0) return { firstName: "", lastName: "" };
+  if (parts.length === 1) return { firstName: parts[0]!, lastName: parts[0]! };
+  return {
+    firstName: parts.slice(0, -1).join(" "),
+    lastName: parts[parts.length - 1]!,
+  };
+}
+
+const LANE4_PUBLISHER = "Lane4 HQ, Ltd";
+const LANE4_HY3_SOFTWARE = "Lane4 1.0";
+/** CL2 entry software is 4 characters. Results software is 10. */
+const LANE4_CL2_ENTRY_SOFTWARE = "L4";
+const LANE4_CL2_RESULTS_SOFTWARE = "Lane4 1.0";
+
+function cl2IsResults(meet: ParsedMeet): boolean {
+  if (meet.importKind === "results") return true;
+  return meet.importKind == null && meet.results.length > 0;
 }
 
 /**
@@ -904,26 +989,59 @@ function cl2NameLine(
  */
 export function exportCl2(meet: ParsedMeet): string {
   const lines: string[] = [];
-
-  const label =
-    meet.results.length > 0
-      ? "Meet Results"
-      : meet.importKind === "roster"
-        ? "Swimmers Only"
-        : "Meet Entries";
-  lines.push(
-    cl2ChecksumLine(`A0${" ".repeat(9)}${pad(label, 32)}${pad(meet.name, 30)}`),
-  );
+  const resultsFile = cl2IsResults(meet);
+  const rosterFile = meet.importKind === "roster";
+  const description = resultsFile
+    ? "Meet Results"
+    : rosterFile
+      ? "Swimmers Only"
+      : "Meet Entries";
+  const created = toMmDdYyyy(meet.cl2CreatedOn) || toMmDdYyyy(meet.startDate);
+  const a0 = new FixedLine()
+    .set(1, 2, "A0")
+    .set(3, 1, "1")
+    .set(4, 2, "V3")
+    .set(12, 2, resultsFile ? "02" : "20")
+    .set(14, 30, description)
+    .set(
+      44,
+      resultsFile ? 20 : 26,
+      meet.cl2Publisher?.trim() || LANE4_PUBLISHER,
+    )
+    .set(
+      resultsFile ? 64 : 70,
+      resultsFile ? 10 : 4,
+      meet.cl2Software?.trim()
+        ? meet.cl2Software
+        : resultsFile
+          ? LANE4_CL2_RESULTS_SOFTWARE
+          : LANE4_CL2_ENTRY_SOFTWARE,
+    )
+    .set(74, 20, meet.cl2Publisher2?.trim() || LANE4_PUBLISHER)
+    .set(94, 12, meet.cl2VendorPhone?.trim() || "")
+    .set(106, 8, created)
+    .set(
+      150,
+      4,
+      meet.cl2Tail?.trim() ||
+        (resultsFile ? "MM40" : rosterFile ? "TM43" : "TM41"),
+    );
+  lines.push(cl2ChecksumLine(a0.toString()));
 
   const startDigits = toMmDdYyyy(meet.startDate).padEnd(8, "0");
-  const endDigits = toMmDdYyyy(meet.endDate).padEnd(8, "0");
-  const courseToken =
-    meet.course === "LCM" ? "LCM" : meet.course === "SCM" ? "SCM" : "SCY";
-  lines.push(
-    cl2ChecksumLine(
-      `B1${" ".repeat(9)}${pad(meet.name, 30)}${pad(meet.location ?? "", 30)}${startDigits}${endDigits}${pad(courseToken, 13)}`,
-    ),
-  );
+  const endDigits = (toMmDdYyyy(meet.endDate) || startDigits).padEnd(8, "0");
+  const b1 = new FixedLine()
+    .set(1, 2, "B1")
+    .set(3, 1, "1")
+    .set(12, 74, meet.name)
+    .set(86, 36, meet.location)
+    .set(122, 8, startDigits)
+    .set(130, 8, endDigits)
+    .set(150, 1, COURSE_LETTER[meet.course]);
+  if (meet.altitude != null) {
+    b1.setRight(138, 4, String(meet.altitude));
+  }
+  lines.push(cl2ChecksumLine(b1.toString()));
 
   const teamCode = resolveTeamCode(meet);
   const lsc = (meet.lscCode ?? "").trim().toUpperCase().slice(0, 2);
@@ -934,7 +1052,7 @@ export function exportCl2(meet: ParsedMeet): string {
     .set(1, 2, "C1")
     .set(3, 1, "1")
     .set(4, 2, lsc)
-    .set(12, 6, cl2Id)
+    .setRight(12, 6, cl2Id)
     .set(18, 30, teamName)
     .set(48, 16, teamShort)
     .set(64, 22, meet.teamAddressLine1)
@@ -984,6 +1102,7 @@ export function exportCl2(meet: ParsedMeet): string {
     classYear: string | undefined,
     gender: "male" | "female" | undefined,
     seedCourse: ParsedMeet["course"] | undefined,
+    cl2NameField: string | undefined,
   ): void {
     const event =
       eventNumber != null ? eventByNumber.get(eventNumber) : undefined;
@@ -992,7 +1111,7 @@ export function exportCl2(meet: ParsedMeet): string {
       event?.gender === "female" || event?.gender === "male"
         ? event.gender
         : (gender ?? identity?.gender);
-    const { firstName, lastName } = splitName(swimmerName);
+    const { firstName, lastName } = cl2NameParts(swimmerName);
     const d0 = new FixedLine()
       .set(1, 2, "D0")
       .set(3, 1, "1")
@@ -1002,7 +1121,7 @@ export function exportCl2(meet: ParsedMeet): string {
         2,
         (classYear ?? identity?.classYear ?? "").slice(0, 2).toUpperCase(),
       )
-      .set(12, 40, `${lastName}, ${firstName}`.trim())
+      .set(12, 40, cl2NameField ?? `${lastName}, ${firstName}`.trim())
       .set(66, 2, cl2GenderMarker(sex))
       .setRight(69, 4, cl2IndividualEventCode(event) ?? "")
       .setRight(74, 2, eventNumber != null ? String(eventNumber) : "")
@@ -1012,6 +1131,15 @@ export function exportCl2(meet: ParsedMeet): string {
         8,
         cl2SeedDisplay(seedTime, COURSE_LETTER[seedCourse ?? meet.course]),
       );
+    const dob = toMmDdYyyy(identity?.dateOfBirth);
+    if (dob) {
+      d0.set(56, 8, dob);
+      d0.setRight(
+        64,
+        2,
+        ageYearsOnDate(identity?.dateOfBirth, meet.ageUpDate ?? meet.startDate),
+      );
+    }
     lines.push(cl2ChecksumLine(d0.toString()));
   }
 
@@ -1060,6 +1188,7 @@ export function exportCl2(meet: ParsedMeet): string {
       first.classYear,
       first.gender,
       first.seedCourse,
+      first.cl2NameField,
     );
     lines.push(cl2ChecksumLine(cl2D3Line(first)));
     for (const entry of group.entries.slice(1)) {
@@ -1070,6 +1199,7 @@ export function exportCl2(meet: ParsedMeet): string {
         entry.classYear,
         entry.gender,
         entry.seedCourse,
+        entry.cl2NameField,
       );
     }
   }
@@ -1158,7 +1288,7 @@ export function exportCl2(meet: ParsedMeet): string {
       .set(3, 1, "1")
       .set(4, 2, lsc)
       .set(12, 1, letter)
-      .set(13, 6, cl2Id)
+      .setRight(13, 6, cl2Id)
       .set(21, 1, genderLetter)
       .setRight(23, 4, eventCode)
       .setRight(
@@ -1171,8 +1301,9 @@ export function exportCl2(meet: ParsedMeet): string {
       .set(47, 8, seed);
     lines.push(cl2ChecksumLine(e0.toString()));
     relayTeamCount += 1;
-    for (const name of relay.swimmerNames) {
-      const { firstName, lastName } = splitName(name);
+    for (let legIndex = 0; legIndex < relay.swimmerNames.length; legIndex++) {
+      const name = relay.swimmerNames[legIndex]!;
+      const { firstName, lastName } = cl2NameParts(name);
       const identity = identityByName.get(name.trim().toLowerCase());
       const f0Gender = identity?.gender === "female" ? "F" : "M";
       const f0 = new FixedLine()
@@ -1184,11 +1315,32 @@ export function exportCl2(meet: ParsedMeet): string {
           3,
           relay.eventNumber != null ? String(relay.eventNumber) : "",
         )
-        .set(16, 6, cl2Id)
+        .setRight(16, 6, cl2Id)
         .set(22, 1, letter)
-        .set(23, 40, `${lastName}, ${firstName}`.trim())
+        .set(
+          23,
+          40,
+          relay.cl2LegNameFields?.[legIndex] ??
+            `${lastName}, ${firstName}`.trim(),
+        )
         .set(76, 1, f0Gender)
+        .set(93, 20, relay.cl2LegExtras?.[legIndex])
         .set(77, 3, "000");
+      const storedLeg = relay.cl2LegIdentity?.[legIndex];
+      const legDob = toMmDdYyyy(identity?.dateOfBirth);
+      if (storedLeg?.trim()) {
+        f0.set(66, 14, storedLeg);
+      } else if (legDob) {
+        f0.set(66, 8, legDob);
+        f0.setRight(
+          74,
+          2,
+          ageYearsOnDate(
+            identity?.dateOfBirth,
+            meet.ageUpDate ?? meet.startDate,
+          ),
+        );
+      }
       lines.push(cl2ChecksumLine(f0.toString()));
       relayLegCount += 1;
     }
@@ -1208,7 +1360,7 @@ export function exportCl2(meet: ParsedMeet): string {
     );
   lines.push(cl2ChecksumLine(z0.toString()));
 
-  return lines.join("\r\n");
+  return `${lines.join("\r\n")}\r\n`;
 }
 
 /**

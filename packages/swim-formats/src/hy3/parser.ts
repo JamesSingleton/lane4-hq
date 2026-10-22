@@ -77,6 +77,9 @@ type Hy3Swimmer = {
   firstName: string;
   lastName: string;
   nickName?: string;
+  middleInitial?: string;
+  practiceGroup?: string;
+  practiceSubgroup?: string;
   usaMemberId?: string;
   /** YYYY-MM-DD from D1 cols 89–96 when present. */
   dateOfBirth?: string;
@@ -94,6 +97,7 @@ type Hy3Entry = {
   seedCourse?: Course;
   exhibition: boolean;
   meetDivision?: string;
+  entryMark?: string;
   teamCode?: string;
   relayLetter?: string;
   legSwimmers: Map<number, number>;
@@ -273,6 +277,16 @@ function parseA1(line: string, state: ParseState): void {
   else if (title.includes("entries") || title.includes("entry")) {
     state.meet.importKind = "entries";
   } else if (title.includes("roster")) state.meet.importKind = "roster";
+  const publisher = extract(line, 30, 15);
+  if (publisher) state.meet.hy3Publisher = publisher;
+  const software = extract(line, 45, 14);
+  if (software) state.meet.hy3Software = software;
+  const created = parseMmDdYyyy(extract(line, 59, 8));
+  if (created) state.meet.hy3CreatedOn = created;
+  const createdTime = line.slice(66, 75);
+  if (createdTime.trim()) state.meet.hy3CreatedTime = createdTime;
+  const licensee = line.slice(75, 128).trimEnd();
+  if (licensee.trim()) state.meet.hy3Licensee = licensee;
 }
 
 function parseB1(line: string, state: ParseState): void {
@@ -295,9 +309,11 @@ function parseB2(line: string, state: ParseState): void {
   const notes = extract(line, 3, 45);
   const course = mapCourse(extract(line, 99, 1), state.meet.course);
   const sanction = extract(line, 109, 20);
+  const entrySetup = line.slice(102, 108);
   state.meet.course = course;
   if (notes) state.notes = notes;
   if (sanction) state.sanctionNumber = sanction;
+  if (entrySetup.trim()) state.meet.hy3EntrySetup = entrySetup;
 }
 
 function parseC1(line: string, state: ParseState): void {
@@ -333,6 +349,8 @@ function parseC2(line: string, state: ParseState): void {
   if (region) state.meet.teamRegion = region;
   if (postal) state.meet.teamPostalCode = postal;
   if (country) state.meet.teamCountry = country;
+  const org = extract(line, 109, 3);
+  if (org) state.meet.teamOrgCode = org;
 }
 
 function parseC3(line: string, state: ParseState): void {
@@ -344,6 +362,14 @@ function parseC3(line: string, state: ParseState): void {
   if (phone2) state.meet.teamPhone2 = phone2;
   if (fax) state.meet.teamFax = fax;
   if (email) state.meet.teamContactEmail = email;
+}
+
+/** C6 is an extra contact line. The body is kept whole and re-checksummed. */
+function parseC6(line: string, state: ParseState): void {
+  const body = line.slice(0, 128).padEnd(128, " ");
+  const lines = state.meet.hy3ContactLines ?? [];
+  lines.push(body);
+  state.meet.hy3ContactLines = lines;
 }
 
 /** C4 is not in the SwimComm or Maricopa corpora. Keep the text so it is not dropped. */
@@ -368,6 +394,9 @@ function parseD1(line: string, state: ParseState): void {
   const lastName = extract(line, 9, 20);
   const firstName = extract(line, 29, 20);
   const nickName = extract(line, 49, 20) || undefined;
+  const middleInitial = extract(line, 69, 1) || undefined;
+  const practiceGroup = extract(line, 106, 2) || undefined;
+  const practiceSubgroup = extract(line, 109, 3) || undefined;
   const usaMemberId = extract(line, 70, 14) || undefined;
   // Match hytek-parser d1_parser: DOB at cols 89–96 (MMDDYYYY).
   const dateOfBirth = resolveSwimmerDob(
@@ -382,6 +411,9 @@ function parseD1(line: string, state: ParseState): void {
     firstName,
     lastName,
     nickName,
+    middleInitial,
+    practiceGroup,
+    practiceSubgroup,
     usaMemberId,
     dateOfBirth,
     gender,
@@ -427,6 +459,7 @@ function parseE1(line: string, state: ParseState): void {
   const seedCourse = mapCourse(extract(line, 60, 1), eventCourse);
   const meetDivision =
     extract(line, 77, 3) || extract(line, 92, 2) || undefined;
+  const entryMark = extract(line, 92, 1) || undefined;
   const exhibition = extract(line, 84, 1).toUpperCase() === "X";
   const stroke = mapStroke(strokeCode, false);
   const eventNumber = parseNumericEventNumber(eventNumberRaw);
@@ -452,6 +485,7 @@ function parseE1(line: string, state: ParseState): void {
     seedCourse,
     exhibition,
     meetDivision,
+    entryMark,
     legSwimmers: new Map(),
   };
   state.entries.push(entry);
@@ -657,9 +691,14 @@ function flatten(state: ParseState): ParsedMeet {
       classYear: swimmer.classYear,
       meetSwimmerId: swimmer.meetId,
       preferredName: swimmer.nickName,
+      legalFirstName: swimmer.firstName,
+      middleInitial: swimmer.middleInitial,
+      practiceGroup: swimmer.practiceGroup,
+      practiceSubgroup: swimmer.practiceSubgroup,
       seedCourse: entry.seedCourse,
       exhibition: entry.exhibition,
       meetDivision: entry.meetDivision,
+      hy3EntryMark: entry.entryMark,
     });
 
     const rounds = allRoundResults(entry);
@@ -684,6 +723,10 @@ function flatten(state: ParseState): ParsedMeet {
       classYear: swimmer.classYear,
       meetSwimmerId: swimmer.meetId,
       preferredName: swimmer.nickName,
+      legalFirstName: swimmer.firstName,
+      middleInitial: swimmer.middleInitial,
+      practiceGroup: swimmer.practiceGroup,
+      practiceSubgroup: swimmer.practiceSubgroup,
       relayOnly: !individualMeetIds.has(swimmer.meetId),
     });
   }
@@ -717,6 +760,14 @@ function flatten(state: ParseState): ParsedMeet {
     teamPhone2: state.meet.teamPhone2,
     teamFax: state.meet.teamFax,
     teamExtra: state.meet.teamExtra,
+    teamOrgCode: state.meet.teamOrgCode,
+    hy3Publisher: state.meet.hy3Publisher,
+    hy3Software: state.meet.hy3Software,
+    hy3CreatedOn: state.meet.hy3CreatedOn,
+    hy3CreatedTime: state.meet.hy3CreatedTime,
+    hy3Licensee: state.meet.hy3Licensee,
+    hy3EntrySetup: state.meet.hy3EntrySetup,
+    hy3ContactLines: state.meet.hy3ContactLines,
     events,
     entries,
     results,
@@ -734,6 +785,7 @@ const LINE_PARSERS: Record<string, (line: string, state: ParseState) => void> =
     C2: parseC2,
     C3: parseC3,
     C4: parseC4,
+    C6: parseC6,
     D1: parseD1,
     E1: parseE1,
     E2: parseE2,

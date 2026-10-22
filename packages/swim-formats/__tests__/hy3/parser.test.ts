@@ -61,6 +61,8 @@ describe("parseHy3", () => {
     ].join("\n");
 
     const meet = parseHy3(content);
+    expect(meet.hy3Publisher).toBe("Hy-Tek, Ltd");
+    expect(meet.hy3Software).toBe("Win-TM 8.0De");
     expect(meet.entries.length).toBe(1);
     expect(meet.entries[0]?.exhibition).toBe(true);
     expect(meet.entries[0]?.eventNumber).toBe(6);
