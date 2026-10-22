@@ -1,4 +1,4 @@
-import { readFileSync } from "node:fs";
+import { readdirSync, readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { unzipSync } from "fflate";
@@ -26,6 +26,27 @@ const fixturesDir = join(
   dirname(fileURLToPath(import.meta.url)),
   "../../fixtures",
 );
+
+function hy3ChecksumDigits(body: string): string {
+  let even = 0;
+  let odd = 0;
+  for (let i = 0; i < 128; i++) {
+    const value = hytekByte(body.charCodeAt(i));
+    if (i % 2 === 0) even += value;
+    else odd += 2 * value;
+  }
+  const mod = (Math.floor((even + odd) / 21) + 205) % 100;
+  return `${mod % 10}${Math.floor(mod / 10)}`;
+}
+
+function expectHy3Lines(text: string): void {
+  const lines = text.split(/\r?\n/).filter((line) => line.length > 0);
+  expect(lines.length).toBeGreaterThan(0);
+  for (const line of lines) {
+    expect(line).toHaveLength(130);
+    expect(line.slice(128)).toBe(hy3ChecksumDigits(line.slice(0, 128)));
+  }
+}
 
 const baseMeet: ParsedMeet = {
   name: "Test Meet",
@@ -361,6 +382,83 @@ describe("exportHy3", () => {
     const d1Index = rows.findIndex((row) => row.startsWith("D1"));
     expect(rows[d1Index + 1]?.startsWith("E1")).toBe(true);
     expect(exportHy3({ ...baseMeet, teamCode: "   " })).toContain("C1TEAM");
+  });
+
+  it("writes the Team Manager A1 columns and F1 relay gender", () => {
+    const meet: ParsedMeet = {
+      ...baseMeet,
+      importKind: "entries",
+      startDate: "2026-10-24",
+      results: [],
+      events: [
+        ...baseMeet.events,
+        {
+          eventNumber: 15,
+          distance: 200,
+          stroke: "free_relay",
+          gender: "female",
+          eventKey: "200_free_relay_f",
+        },
+        {
+          eventNumber: 16,
+          distance: 200,
+          stroke: "medley_relay",
+          gender: "male",
+          eventKey: "200_medley_relay_m",
+        },
+      ],
+      relays: [
+        {
+          eventNumber: 15,
+          relayLetter: "A",
+          swimmerNames: ["A One", "B Two", "C Three", "D Four"],
+          seedTime: "1:52.33",
+        },
+        {
+          eventNumber: 16,
+          relayLetter: "A",
+          swimmerNames: ["Bob Baker", "E Five", "F Six", "G Seven"],
+          seedTime: "1:50.96",
+        },
+      ],
+    };
+    const text = exportHy3(meet);
+    expectHy3Lines(text);
+    const a1 = text.split(/\r?\n/).find((line) => line.startsWith("A1"));
+    expect(a1?.slice(2, 4)).toBe("02");
+    expect(a1?.slice(4, 29)).toBe("Meet Entries".padEnd(25, " "));
+    expect(a1?.slice(29, 44)).toBe("Lane4 HQ, Ltd".padEnd(15, " "));
+    expect(a1?.slice(44, 58)).toBe("Lane4 1.0".padEnd(14, " "));
+    expect(a1?.slice(58, 66)).toBe("10242026");
+    const genders = text
+      .split(/\r?\n/)
+      .filter((line) => line.startsWith("F1"))
+      .map((line) => line.slice(12, 15));
+    expect(genders).toEqual(["FFF", "MMM"]);
+  });
+
+  it("keeps every exported HY3 line at 130 characters with a valid checksum", () => {
+    expectHy3Lines(exportHy3(baseMeet));
+    expectHy3Lines(
+      exportHy3({ ...baseMeet, importKind: "results", entries: [] }),
+    );
+    expectHy3Lines(
+      exportHy3({
+        ...baseMeet,
+        importKind: "roster",
+        entries: [],
+        results: [],
+        relays: [],
+      }),
+    );
+    const names = readdirSync(fixturesDir).filter((name) =>
+      name.endsWith(".hy3"),
+    );
+    expect(names.length).toBeGreaterThan(0);
+    for (const name of names) {
+      const original = readFileSync(join(fixturesDir, name), "latin1");
+      expectHy3Lines(exportHy3(parseHy3(original)));
+    }
   });
 
   it("writes C2/C3 from team address and head-coach email, and D1 DOB/age/class year", () => {
