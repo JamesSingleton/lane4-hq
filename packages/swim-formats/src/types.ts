@@ -74,7 +74,7 @@ export interface ParsedMeet {
   ageUpDate?: string;
   /**
    * Unconfirmed HY3 C4 free text (cols 3–122). Not present in the Maricopa
-   * or SwimComm fixtures; retained so a C4 line is not dropped.
+   * fixtures; retained so a C4 line is not dropped.
    */
   teamExtra?: string;
 }

@@ -2,13 +2,13 @@
 
 Confirmed against the scrubbed Maricopa fixtures
 `mari-sonoran-2026.hy3`, `mari-charger-2024.hy3`, and `mari-az-roster.hy3`
-(Team Manager Lite 8.0D, CRLF, 130-byte lines) and against the MIT
-SwimComm parse corpus in `packages/swim-formats/fixtures/hytek-parser/`
-(parse only; those checksums are stale).
+(Team Manager Lite 8.0D, CRLF, 130-byte lines). Results lines are
+confirmed against `azsi-results.hy3`.
 
 Column numbers are 1-based. The age-up date and the checksum steps match
 [tunas' HY3 notes](https://github.com/ajoe2/tunas/blob/main/docs/formats/hy3_format.md).
-SwimComm's `hytek-parser` is the column parity reference for `D1`/`E1`.
+`D1` and `E1` offsets are also checked in
+`packages/swim-formats/__tests__/hy3/parity.test.ts`.
 
 ## Line checksum
 
@@ -64,13 +64,13 @@ A Unicode en dash (`U+2013`) is byte `0x96`, not `0x2013`.
 | 105–107 | `C2` | Country `USA` | yes |
 | 109–111 | `C2` | `USS` | yes |
 | 93–128 | `C3` | Email | yes |
-| 33–52, 53–72, 73–92 | `C3` | Phones and fax | blank in these files. SwimComm results files do populate phones; treated as the same columns. |
+| 33–52, 53–72, 73–92 | `C3` | Phones and fax | blank in the Maricopa files. Parsed when present. |
 
 ## `C4`
 
-**Unconfirmed.** None of the Maricopa files or the SwimComm corpus
-contain a `C4`. tunas lists `C1`–`C3` and a rare `C8`, not `C4`.
-Lane4 keeps columns 3–122 as a team note so the line is not dropped.
+**Unconfirmed.** None of the Maricopa files contain a `C4`. tunas lists
+`C1`–`C3` and a rare `C8`, not `C4`. Lane4 keeps columns 3–122 as a team
+note so the line is not dropped.
 
 ## `D1` athlete
 
@@ -99,8 +99,8 @@ stub, every 13 columns starting at column 3. The stub is the `D1` last name.
 | 52–59 | Seed, seconds | yes |
 | 60 | Converted course letter | yes (`Y` on these files) |
 
-Event number, distance, stroke, and age group follow the SwimComm offsets
-already covered by `packages/swim-formats/__tests__/hy3/parity.test.ts`.
+Event number, distance, stroke, and age group follow the offsets covered
+by `packages/swim-formats/__tests__/hy3/parity.test.ts`.
 `E2`/`F2`/`G1` results and splits are **not** in the Maricopa entry files.
-The SwimComm corpus parses them; their full layouts stay **unconfirmed**
+`azsi-results.hy3` parses them. Their full layouts stay **unconfirmed**
 until a round-trip fixture covers them.

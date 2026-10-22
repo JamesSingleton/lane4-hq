@@ -346,7 +346,7 @@ function parseC3(line: string, state: ParseState): void {
   if (email) state.meet.teamContactEmail = email;
 }
 
-/** C4 is not in the SwimComm or Maricopa corpora. Keep the text so it is not dropped. */
+/** C4 is not in the Maricopa fixtures. Keep the text so it is not dropped. */
 function parseC4(line: string, state: ParseState): void {
   const extra = extract(line, 3, 120);
   if (extra) state.meet.teamExtra = extra;

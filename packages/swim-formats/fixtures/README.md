@@ -33,11 +33,6 @@ Golden corpus for parser/integration testing. Families map to Hy-Tek export kind
 | `desert-sunrise-events.*` | Swim-only EV3+HYV |
 | `azsi-events.ev3` / `.hyv` | Championship events with QTs |
 
-## Third-party
-
-`third-party/hytek-parser/` — eight MIT SwimComm HY3 results files.
-Parse tests only. Upstream redaction left the line checksums stale.
-
 ## SDIF
 
 | File | Purpose |
