@@ -66,6 +66,9 @@ export function browserInitOptions(input: {
     person_profiles: "identified_only",
     persistence: "localStorage",
     advanced_disable_decide: false,
+    // React error boundaries and our window listeners call captureException.
+    // Leaving this on would also send the original error message.
+    capture_exceptions: false,
     before_send(
       event: { properties?: Record<string, unknown> } | null,
     ): { properties?: Record<string, unknown> } | null {
@@ -207,13 +210,10 @@ export function initBrowserAnalytics(
     group(groupKey) {
       if (sdk) sdk.group("team", groupKey);
     },
-    exception(name, properties) {
+    exception(error, properties) {
       if (!sdk) return;
-      if (sdk.captureException) {
-        const error = new Error(name);
-        error.name = name;
-        sdk.captureException(error, properties);
-      } else sdk.capture("$exception", properties);
+      if (sdk.captureException) sdk.captureException(error, properties);
+      else sdk.capture("$exception", properties);
     },
     isFeatureEnabled(flag) {
       if (!sdk) return undefined;

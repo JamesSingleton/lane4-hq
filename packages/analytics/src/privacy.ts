@@ -171,6 +171,43 @@ export function sanitizeException(
   return out;
 }
 
+function exceptionType(error: unknown): string {
+  if (error instanceof Error && error.name) return error.name.slice(0, 80);
+  return "Error";
+}
+
+/**
+ * PostHog Error Tracking needs the stack. The message is replaced with the
+ * error name because import failures quote swimmer names.
+ */
+export function redactException(error: unknown): Error {
+  const name = exceptionType(error);
+  const reported = new Error(name);
+  reported.name = name;
+  if (error instanceof Error && error.stack) {
+    const lines = error.stack.split("\n");
+    lines[0] = `${name}: ${name}`;
+    reported.stack = lines.join("\n");
+  }
+  return reported;
+}
+
+function redactExceptionList(value: unknown): unknown {
+  if (!Array.isArray(value)) return value;
+  const items: unknown[] = [];
+  for (let i = 0; i < value.length; i++) {
+    const item = value[i];
+    if (!item || typeof item !== "object") {
+      items.push(item);
+      continue;
+    }
+    const record = item as Record<string, unknown>;
+    const type = typeof record.type === "string" ? record.type : "Error";
+    items.push({ ...record, value: type });
+  }
+  return items;
+}
+
 /** Drop autocapture text so a button labeled with a swimmer name is not sent. */
 export function prepareCapture(event: {
   properties?: Record<string, unknown>;
@@ -187,6 +224,10 @@ export function prepareCapture(event: {
       continue;
     }
     const value = event.properties[key];
+    if (key === "$exception_list") {
+      properties[key] = redactExceptionList(value);
+      continue;
+    }
     if (typeof value === "string" && looksLikeEmail(value)) continue;
     properties[key] = value;
   }

@@ -1,4 +1,5 @@
 import { ingestRewrites } from "@lane4hq/analytics";
+import { withPostHogConfig } from "@posthog/nextjs-config";
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
@@ -20,4 +21,24 @@ const nextConfig: NextConfig = {
   },
 };
 
-export default nextConfig;
+function withSourceMaps(config: NextConfig): NextConfig {
+  const personalApiKey = process.env.POSTHOG_PERSONAL_API_KEY;
+  const projectId = process.env.POSTHOG_PROJECT_ID;
+  if (!personalApiKey || !projectId) return config;
+  return withPostHogConfig(config, {
+    personalApiKey,
+    projectId,
+    host: process.env.NEXT_PUBLIC_POSTHOG_HOST,
+    sourcemaps: {
+      enabled: true,
+      releaseName: "lane4-web",
+      releaseVersion:
+        process.env.VERCEL_GIT_COMMIT_SHA ||
+        process.env.NEXT_PUBLIC_LANE4_RELEASE ||
+        "dev",
+      deleteAfterUpload: true,
+    },
+  });
+}
+
+export default withSourceMaps(nextConfig);

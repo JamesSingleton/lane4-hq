@@ -4,6 +4,7 @@ import { contextProperties } from "./context";
 import {
   pagePath,
   prepareCapture,
+  redactException,
   safeDistinctId,
   sanitizeException,
   sanitizeProperties,
@@ -13,7 +14,11 @@ export type AnalyticsTransport = {
   capture(event: string, properties: Record<string, unknown>): void;
   identify(distinctId: string): void;
   group(groupKey: string): void;
-  exception?(name: string, properties: Record<string, unknown>): void;
+  exception?(
+    error: Error,
+    properties: Record<string, unknown>,
+    distinctId?: string,
+  ): void;
   isFeatureEnabled(flag: string): boolean | undefined;
   getFeatureFlag(flag: string): string | boolean | undefined;
   shutdown(): Promise<void>;
@@ -31,11 +36,6 @@ export type Analytics = {
   getFeatureFlag(flag: string): string | boolean | undefined;
   shutdown(): Promise<void>;
 };
-
-function exceptionName(error: unknown): string {
-  if (error instanceof Error && error.name) return error.name.slice(0, 80);
-  return "Error";
-}
 
 export function createAnalytics(
   context: AnalyticsContext,
@@ -91,14 +91,20 @@ export function createAnalytics(
       send("$pageview", { $current_url: pagePath(url) });
     },
     exception(error, properties) {
-      const name = exceptionName(error);
+      const reported = redactException(error);
+      const distinctId = safeDistinctId(
+        typeof properties?.distinct_id === "string"
+          ? properties.distinct_id
+          : undefined,
+      );
       const payload = {
         ...base,
-        $exception_type: name,
+        $exception_type: reported.name,
         ...sanitizeException(properties),
       };
-      if (client.exception) client.exception(name, payload);
-      else send("$exception", payload);
+      if (client.exception) {
+        client.exception(reported, payload, distinctId ?? undefined);
+      } else send("$exception", payload);
     },
     isFeatureEnabled(flag) {
       return client.isFeatureEnabled(flag);

@@ -77,10 +77,11 @@ export default function PrivacyPage() {
         <p>
           The API sends a log for each request except health checks. The log has
           the request id, route, status, and duration. It does not include the
-          request body. Server exceptions send the error&apos;s name, the route,
-          and the status. The desktop app holds events while it is offline and
-          sends them when the connection returns. A crash report sends the
-          source file&apos;s base name and the line number.
+          request body. Exceptions send the stack and the error name, not the
+          error message, plus the route and status for server failures. The
+          desktop app holds events while it is offline and sends them when the
+          connection returns. A crash report sends the source file&apos;s base
+          name and the line number.
         </p>
         <p>Lane4 does not send:</p>
         <ul className="list-disc pl-5">

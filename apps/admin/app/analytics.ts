@@ -40,13 +40,36 @@ export function trackAdmin<E extends EventName>(
     .catch(() => undefined);
 }
 
+/** PostHog's browser distinct id, so a server exception joins the session. */
+export function posthogDistinctId(
+  cookie: string | string[] | undefined,
+): string | undefined {
+  const cookieString = Array.isArray(cookie) ? cookie.join("; ") : cookie;
+  if (!cookieString) return undefined;
+  const match = /ph_phc_[^=]*_posthog=([^;]+)/.exec(cookieString);
+  if (!match?.[1]) return undefined;
+  try {
+    const data = JSON.parse(decodeURIComponent(match[1])) as {
+      distinct_id?: unknown;
+    };
+    return typeof data.distinct_id === "string" ? data.distinct_id : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
 export async function reportServerException(
   error: unknown,
   route: string,
+  distinctId?: string,
 ): Promise<void> {
   try {
     const analytics = await client();
-    analytics.exception(error, { source: "server", route });
+    analytics.exception(error, {
+      source: "server",
+      route,
+      distinct_id: distinctId,
+    });
   } catch {
     // A reporting failure must not replace the original error.
   }

@@ -105,8 +105,8 @@ function transport(): AnalyticsTransport & {
     group(id) {
       groups.push(id);
     },
-    exception(name, properties) {
-      exceptions.push({ name, properties });
+    exception(error, properties) {
+      exceptions.push({ name: error.name, properties });
     },
     isFeatureEnabled: () => true,
     getFeatureFlag: () => "blue",
@@ -248,9 +248,25 @@ describe("privacy", () => {
           email: "a@b.com",
           note: "coach@example.com",
           keep: 1,
+          $exception_list: [
+            { type: "TypeError", value: "Ada swam 59.40" },
+            "skip",
+            { value: "no type" },
+          ],
         },
       }).properties,
-    ).toEqual({ app: "web", keep: 1 });
+    ).toEqual({
+      app: "web",
+      keep: 1,
+      $exception_list: [
+        { type: "TypeError", value: "TypeError" },
+        "skip",
+        { value: "Error" },
+      ],
+    });
+    expect(
+      prepareCapture({ properties: { $exception_list: "nope" } }).properties,
+    ).toEqual({ $exception_list: "nope" });
   });
 
   it("rejects ids that are emails, blank, or names", () => {
@@ -386,6 +402,10 @@ describe("client", () => {
     expect(JSON.stringify(sink.exceptions)).not.toContain("59.3");
     expect(sink.exceptions[1]?.name).toBe("Error");
     expect(sink.exceptions[2]?.name).toBe("Error");
+    const bare = new Error("bare");
+    bare.stack = undefined;
+    analytics.exception(bare);
+    expect(sink.exceptions[3]?.name).toBe("Error");
   });
 
   it("falls back to a capture when the transport has no exception method", () => {
@@ -550,6 +570,8 @@ describe("browser", () => {
     const captured = browserSdk.captureException.mock.calls[0]?.[0] as Error;
     expect(captured.name).toBe("TypeError");
     expect(captured.message).toBe("TypeError");
+    expect(captured.stack).toContain("analytics.test.ts");
+    expect(captured.stack).not.toContain("hidden");
     expect(analytics.isFeatureEnabled("flag")).toBe(true);
     expect(analytics.getFeatureFlag("flag")).toBe("on");
 
@@ -701,7 +723,10 @@ describe("server", () => {
     });
     const first = instance?.captureException.mock.calls[0]?.[0] as Error;
     expect(first.message).toBe("Error");
-    expect(instance?.captureException.mock.calls[1]?.[0]).toBeInstanceOf(Error);
+    const second = instance?.captureException.mock.calls[1]?.[0] as Error;
+    expect(second).toBeInstanceOf(Error);
+    expect(second.message).toBe("Error");
+    expect(second.stack).not.toContain("boom");
     expect(instance?._shutdown).toHaveBeenCalled();
   });
 
@@ -786,7 +811,13 @@ describe("server", () => {
     });
     const reported = client.captureException.mock.calls[0]?.[0] as Error;
     expect(reported.message).toBe("Error");
+    expect(reported.stack).toContain("analytics.test.ts");
+    expect(reported.stack).not.toContain("db down");
     expect(client.captureException.mock.calls[0]?.[1]).toBe("user_1");
+    analytics.exception(new Error("again"), { distinct_id: "user_2" });
+    expect(client.captureException.mock.calls[1]?.[1]).toBe("user_2");
+    analytics.exception(new Error("again"), { distinct_id: "not an id" });
+    expect(client.captureException.mock.calls[2]?.[1]).toBe("user_1");
 
     expect(analytics.isFeatureEnabled("beta")).toBeUndefined();
     flag(true);

@@ -15,6 +15,11 @@
   "dependencies": {
     "@lane4hq/analytics": "workspace:*",
     "@lane4hq/ui": "workspace:*",
+    "@opentelemetry/api-logs": "^0.223.0",
+    "@opentelemetry/exporter-logs-otlp-http": "^0.300.0",
+    "@opentelemetry/resources": "^3.0.0",
+    "@opentelemetry/sdk-logs": "^3.0.0",
+    "@posthog/nextjs-config": "^1.11.5",
     "geist": "^1.8.1",
     "lucide-react": "catalog:",
     "next": "catalog:",
