@@ -436,16 +436,26 @@ export function exportHy3(meet: ParsedMeet): string {
           : meet.results.length > 0 && meet.entries.length === 0
             ? "Results From MM to TM"
             : "Meet Entries";
+  // Team Manager reads these columns. Writing the description at column 3
+  // puts "Me" in the file-type field and shifts the rest of the header.
+  const fileType = title.startsWith("Rosters")
+    ? "03"
+    : title.startsWith("Results")
+      ? "07"
+      : "02";
+  const startDigits = toMmDdYyyy(meet.startDate);
   lines.push(
     hy3Line(
       new FixedLine()
         .set(1, 2, "A1")
-        .set(3, 30, title)
-        .set(33, 30, "Lane4 HQ, Ltd    Win-TM 1.0"),
+        .set(3, 2, fileType)
+        .set(5, 25, title)
+        .set(30, 15, "Lane4 HQ, Ltd")
+        .set(45, 14, "Lane4 1.0")
+        .set(59, 8, startDigits),
     ),
   );
 
-  const startDigits = toMmDdYyyy(meet.startDate);
   const endDigits = toMmDdYyyy(meet.endDate) || startDigits;
   lines.push(
     hy3Line(
@@ -750,6 +760,7 @@ export function exportHy3(meet: ParsedMeet): string {
           .set(1, 2, "F1")
           .set(3, 5, relay.teamCode ?? teamCode)
           .set(8, 1, relay.relayLetter ?? "A")
+          .set(13, 1, eventGender)
           .set(14, 1, eventGender)
           .set(15, 1, eventGender)
           .setRight(16, 6, event?.distance ?? 200)

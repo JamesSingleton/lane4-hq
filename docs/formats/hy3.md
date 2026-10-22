@@ -21,6 +21,24 @@ recomputed after scrubbing. Sum CP-1252 **bytes** of columns 1–128:
 - Write the units digit, then the tens digit, of `value % 100`.
 
 A Unicode en dash (`U+2013`) is byte `0x96`, not `0x2013`.
+Every line is 128 data bytes plus that checksum (130 characters).
+
+## `A1` file header
+
+Confirmed by a tester against a working Team Manager export. The
+description starts at column 5. Starting it at column 3 puts `Me` in the
+file-type field and shifts the publisher, version, and date two columns
+left.
+
+| Cols | Field | Confirmed |
+|---|---|---|
+| 3–4 | File type. Meet entries are `02`. Rosters use `03` and results use `07` in the same columns. | `02` confirmed by the tester |
+| 5–29 | Description, space-padded to 25. Entries: `Meet Entries`. | yes |
+| 30–44 | Software publisher, 15 characters. Lane4 writes `Lane4 HQ, Ltd`. | yes |
+| 45–58 | Software name and version, 14 characters. Lane4 writes `Lane4 1.0`. | yes |
+| 59–66 | Creation date `MMDDYYYY`. Lane4 writes the meet start date. | yes |
+
+A second Team Manager mismatch was reported with this one and is not fixed yet.
 
 ## `B1` meet
 
@@ -94,7 +112,8 @@ stub, every 13 columns starting at column 3. The stub is the `D1` last name.
 | Cols | Field | Confirmed |
 |---|---|---|
 | 4–8 | Swimmer id (`E1`) | yes, same as `D1` |
-| 9–13 | Last-name stub | yes |
+| 9–13 | Last-name stub (`E1` only) | yes |
+| 13–15 | Relay gender (`F1` only) | yes. `FFF` or `MMM`. Confirmed by a tester against Team Manager. A blank column 13 (`FF` / `MM`) does not import. |
 | 51 | Seed course letter | yes (`Y`) |
 | 52–59 | Seed, seconds | yes |
 | 60 | Converted course letter | yes (`Y` on these files) |
