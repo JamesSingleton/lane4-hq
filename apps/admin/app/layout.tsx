@@ -7,7 +7,9 @@ import { GeistSans } from "geist/font/sans";
 import type { Metadata, Viewport } from "next";
 
 import "@lane4hq/ui/globals.css";
+import { supportViewer } from "@lane4hq/auth/impersonation";
 import { cn } from "@lane4hq/ui/lib/utils";
+import { ImpersonationBanner } from "@/components/impersonation-banner";
 import Providers from "@/components/providers";
 import { env } from "@/env";
 
@@ -68,6 +70,16 @@ export default async function RootLayout({
     >
       <body className="overscroll-none bg-background font-sans">
         <Providers defaultTheme={defaultTheme} serverTheme={serverTheme}>
+          {session?.user && supportViewer(session.session) ? (
+            <ImpersonationBanner
+              name={session.user.name}
+              email={session.user.email}
+              returnTo={
+                process.env.OPS_URL?.replace(/\/$/, "") ??
+                "http://localhost:3005"
+              }
+            />
+          ) : null}
           {children}
         </Providers>
       </body>

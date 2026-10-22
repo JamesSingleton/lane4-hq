@@ -1,0 +1,42 @@
+{
+  "name": "@lane4hq/ops",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "NODE_ENV=production next build",
+    "clean": "git clean -xdf .next .turbo node_modules",
+    "dev": "BETTER_AUTH_URL=http://localhost:3005 NEXT_PUBLIC_BETTER_AUTH_URL=http://localhost:3005 ADMIN_URL=http://localhost:3001 next dev -p 3005",
+    "lint": "biome check .",
+    "lint:fix": "biome check --write .",
+    "start": "next start -p 3005",
+    "check:types": "tsc --noEmit",
+    "staff:create": "tsx scripts/create-staff.ts",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@lane4hq/auth": "workspace:*",
+    "@lane4hq/db": "workspace:*",
+    "@lane4hq/emails": "workspace:*",
+    "@lane4hq/ui": "workspace:*",
+    "@t3-oss/env-nextjs": "catalog:",
+    "better-auth": "catalog:",
+    "geist": "^1.8.1",
+    "lucide-react": "catalog:",
+    "next": "catalog:",
+    "next-themes": "catalog:",
+    "react": "catalog:",
+    "react-dom": "catalog:",
+    "zod": "catalog:"
+  },
+  "devDependencies": {
+    "@lane4hq/typescript-config": "workspace:*",
+    "@types/node": "catalog:",
+    "@types/react": "catalog:",
+    "@types/react-dom": "catalog:",
+    "tsx": "^4.23.15",
+    "typescript": "catalog:",
+    "vite": "catalog:",
+    "vitest": "catalog:"
+  }
+}

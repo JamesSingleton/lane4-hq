@@ -11,6 +11,8 @@ export type EmailType =
   | "coach-welcome"
   | "team-welcome"
   | "coach-invitation"
+  | "beta-invite"
+  | "beta-access-request"
   | "invitation-accepted"
   | "role-changed"
   | "removed-from-team"
@@ -44,6 +46,14 @@ export interface EmailProps {
     teamName: string;
     inviteUrl: string;
     role: string;
+  };
+  "beta-invite": { inviteUrl: string };
+  "beta-access-request": {
+    name: string;
+    email: string;
+    team: string;
+    reason: string;
+    reviewUrl: string;
   };
   "invitation-accepted": { inviteeName: string; teamName: string };
   "role-changed": { name: string; teamName: string; newRole: string };
@@ -103,6 +113,8 @@ const SUBJECTS: Record<EmailType, string> = {
   "coach-welcome": "Welcome to Lane4 HQ!",
   "team-welcome": "Your team is ready — Lane4 HQ",
   "coach-invitation": "You've been invited to join a team",
+  "beta-invite": "You're invited to the Lane4 HQ beta",
+  "beta-access-request": "Beta access request — Lane4 HQ",
   "invitation-accepted": "Invitation accepted",
   "role-changed": "Your role was updated",
   "removed-from-team": "Team access removed",
@@ -134,6 +146,8 @@ const TEMPLATE_LOADERS = {
   "coach-welcome": () => import("./templates/onboarding/coach-welcome"),
   "team-welcome": () => import("./templates/onboarding/team-welcome"),
   "coach-invitation": () => import("./templates/team/coach-invitation"),
+  "beta-invite": () => import("./templates/auth/beta-invite"),
+  "beta-access-request": () => import("./templates/auth/beta-access-request"),
   "invitation-accepted": () => import("./templates/team/invitation-accepted"),
   "role-changed": () => import("./templates/team/role-changed"),
   "removed-from-team": () => import("./templates/team/removed-from-team"),

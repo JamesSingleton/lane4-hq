@@ -1,5 +1,6 @@
 export * from "./attendance";
 export * from "./auth";
+export * from "./beta";
 export * from "./billing";
 export * from "./calendar";
 export * from "./events";
@@ -10,6 +11,8 @@ export * from "./notifications";
 export * from "./preferences";
 export * from "./safesport";
 export * from "./seasons";
+export * from "./staff";
+export * from "./support-handoff";
 export * from "./swimmers";
 export * from "./usa-swimming";
 export * from "./workouts";

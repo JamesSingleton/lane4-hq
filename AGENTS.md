@@ -52,6 +52,7 @@ Do not use other model families (Claude, GPT, GLM, etc.) unless the human explic
 | Area | Package / app |
 |------|----------------|
 | Coach SaaS | `apps/admin` |
+| Operator dashboard (beta requests, invites, view-as-coach, GitHub issues) | `apps/ops` |
 | API for native apps and live results (Hono, Railway) | `apps/api` |
 | Desktop (Tauri, macOS + Windows) | `apps/desktop` |
 | Marketing site | `apps/web` |
@@ -73,6 +74,8 @@ Do not use other model families (Claude, GPT, GLM, etc.) unless the human explic
 
 ## Auth & server actions
 
+- **Private beta:** new coach accounts are rejected unless that email has an open beta invite or a pending team invitation. The gate is `databaseHooks.user.create.before` in `packages/auth/src/server.ts` (email and social sign-up). Coaches request access on admin at `/request-access` (name, email, team, why). Lane4 staff approve, deny, and send direct invites in `apps/ops` (`ops.lane4hq.com`, local port 3005). Staff are rows in `staff`, not coach `user`. Admin `/beta` only redirects to ops. Approve sends the beta invite. Do not reopen public sign-up. Audit actions are `beta.request.approve` and `beta.request.deny`.
+- **Impersonation:** A signed-in staff account starts a one-hour coach session from ops People. Ops writes a single-use `support_handoff` (hashed token, about 60 seconds). The browser opens admin `/support/handoff`, which sets the coach cookie. The banner ends it and returns to `OPS_URL`. The staff session stays on ops. Password, two-factor, session revoke, device approval, and billing stay blocked during the view. Audit actions are `auth.impersonation.start` and `auth.impersonation.stop`, with `actorStaffId`. Do not share the session cookie on `.lane4hq.com`.
 - Treat every Server Action like a public endpoint: authenticate and authorize inside the action (`requireTeamRole` / plan features).
 - Meet import/export is gated to owner + head_coach and the `meet_import` plan feature.
 - Changes to shared data and reads of sensitive data record an audit event with `writeAuditLog` (`@lane4hq/db/audit`). Name actions `area.thing.verb` (e.g. `results.heat.publish`). Pass the transaction so the event commits with the change, and pass an `AuditContext` (source, IP, user agent, request id). Never log secrets such as session tokens. Account events (sign-ins, sessions) have no team.

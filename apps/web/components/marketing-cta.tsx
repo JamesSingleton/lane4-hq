@@ -1,10 +1,10 @@
 import { CtaLink } from "@/components/cta-link";
 import { Section } from "@/components/section";
-import { PRIMARY_CTA, SIGN_IN_URL, SIGN_UP_URL } from "@/lib/site";
+import { PRIMARY_CTA, REQUEST_ACCESS_URL, SIGN_IN_URL } from "@/lib/site";
 
 export function MarketingCta({
   title = "Put the next meet's seeds and lineup in one place.",
-  body = "Create a team, import the event file, and export the entries. Free for one coach, club or high school. No card to start.",
+  body = "Lane4 is in a private beta. Request access, tell us why you want it, and we'll email an invite if it's a fit.",
 }: {
   title?: string;
   body?: string;
@@ -19,7 +19,7 @@ export function MarketingCta({
           <p className="max-w-xl text-pretty text-[#071016]/90">{body}</p>
           <div className="flex flex-wrap items-center gap-3">
             <CtaLink
-              href={SIGN_UP_URL}
+              href={REQUEST_ACCESS_URL}
               icon
               className="bg-[#071016] text-white hover:bg-[#071016]/90"
             >

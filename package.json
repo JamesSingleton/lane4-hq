@@ -21,6 +21,8 @@
     "bundle:desktop": "pnpm --filter @lane4hq/desktop bundle",
     "dev:docs": "turbo run dev --filter=@lane4hq/docs",
     "dev:web": "dotenv -e .env.local -- turbo dev --filter=@lane4hq/web",
+    "dev:ops": "dotenv -e .env.local -- turbo dev --filter=@lane4hq/ops",
+    "staff:create": "dotenv -e .env.local -- pnpm --filter @lane4hq/ops staff:create",
     "start:admin": "dotenv -e .env.local -- turbo start --filter=@lane4hq/admin",
     "start:web": "dotenv -e .env.local -- turbo start --filter=@lane4hq/web",
     "clean:admin": "rm -rf apps/admin/.next",

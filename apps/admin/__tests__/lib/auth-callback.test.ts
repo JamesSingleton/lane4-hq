@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { getCallbackURL } from "@/lib/auth-callback";
+import { getCallbackURL, invitationIdFromCallback } from "@/lib/auth-callback";
 
 describe("getCallbackURL", () => {
   it("returns fallback when callbackUrl is missing", () => {
@@ -20,6 +20,14 @@ describe("getCallbackURL", () => {
       callbackUrl: "/device?user_code=ABCD1234",
     });
     expect(getCallbackURL(params)).toBe("/device?user_code=ABCD1234");
+  });
+
+  it("reads a team invitation id from the accept-invite callback", () => {
+    expect(invitationIdFromCallback("/accept-invite?id=abc")).toBe("abc");
+    expect(invitationIdFromCallback("/accept-invite?id=%20abc%20")).toBe("abc");
+    expect(invitationIdFromCallback("/accept-invite")).toBeNull();
+    expect(invitationIdFromCallback("/accept-invite?id=")).toBeNull();
+    expect(invitationIdFromCallback("/onboarding")).toBeNull();
   });
 
   it("rejects open redirects", () => {

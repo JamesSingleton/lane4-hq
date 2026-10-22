@@ -31,6 +31,11 @@
     "./queries/notifications": "./src/queries/notifications.ts",
     "./queries/preferences": "./src/queries/preferences.ts",
     "./queries/sessions": "./src/queries/sessions.ts",
+    "./queries/beta-invites": "./src/queries/beta-invites.ts",
+    "./queries/beta-requests": "./src/queries/beta-requests.ts",
+    "./queries/support-users": "./src/queries/support-users.ts",
+    "./queries/support-handoffs": "./src/queries/support-handoffs.ts",
+    "./queries/staff": "./src/queries/staff.ts",
     "./calendar-ics": "./src/calendar-ics.ts"
   },
   "scripts": {

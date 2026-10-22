@@ -78,7 +78,10 @@ Neon isolates database and object-storage writes. External email, calendar, and 
 
 | Route | Purpose |
 | --- | --- |
-| `/sign-in`, `/sign-up` | Coach authentication |
+| `/sign-in`, `/sign-up` | Coach authentication. Sign-up requires a beta invite or a team invitation. |
+| `/request-access` | Public form for a coach to request a private-beta account |
+| `/beta` | Redirects to the operator app (`OPS_URL`, local `http://localhost:3005`) |
+| `/support/handoff` | One-time link from ops that starts a view-as-coach session |
 | `/forgot-password`, `/reset-password`, `/2fa` | Account recovery and two-factor authentication |
 | `/onboarding` | Create the first team |
 | `/team/[teamId]` | Team dashboard |

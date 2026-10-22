@@ -13,10 +13,9 @@ export type AuditContext = {
   requestId?: string | null;
 };
 
-export type AuditEvent = {
+type AuditEventBase = {
   /** Null for account events (sign-ins, sessions) that belong to no team. */
   organizationId: string | null;
-  actorUserId: string;
   /** `area.thing.verb`, e.g. `results.heat.publish`. */
   action: string;
   resourceType: string;
@@ -25,6 +24,13 @@ export type AuditEvent = {
   ipAddress?: string | null;
   context?: AuditContext;
 };
+
+/** A coach account or a Lane4 staff account. Exactly one actor is set. */
+export type AuditEvent = AuditEventBase &
+  (
+    | { actorUserId: string; actorStaffId?: never }
+    | { actorStaffId: string; actorUserId?: never }
+  );
 
 type Executor = Pick<typeof db, "insert">;
 
@@ -38,10 +44,15 @@ export async function writeAuditLog(
   executor: Executor = db,
 ): Promise<void> {
   const context = event.context;
+  const actorUserId =
+    "actorUserId" in event && event.actorUserId ? event.actorUserId : null;
+  const actorStaffId =
+    "actorStaffId" in event && event.actorStaffId ? event.actorStaffId : null;
   await executor.insert(auditLog).values({
     id: randomUUID(),
     organizationId: event.organizationId,
-    actorUserId: event.actorUserId,
+    actorUserId,
+    actorStaffId,
     action: event.action,
     resourceType: event.resourceType,
     resourceId: event.resourceId,

@@ -12,6 +12,8 @@ export default defineConfig({
         "src/roles.ts",
         "src/device-clients.ts",
         "src/device-session.ts",
+        "src/beta-access.ts",
+        "src/impersonation.ts",
       ],
       exclude: [
         "src/index.ts",

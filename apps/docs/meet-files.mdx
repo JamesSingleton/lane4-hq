@@ -29,6 +29,19 @@ Lane4 HQ uses the files meet software already exchanges. Choose the file that ma
 
 The import review shows the host’s meet course and entry deadline. Confirm both before completing the import.
 
+On a CL2 file the meet course is the single letter at the end of the meet
+line (`Y` yards, `S` short-course meters, `L` long course). Words in the
+facility name are not a course. Each swimmer’s entry time keeps its own
+course letter, so a yards seed stays yards even when you are checking a
+different meet line.
+
+On an HY3 file the age-up date is separate from the meet start. Lane4
+keeps that date and uses it when it writes the file back out. A CL2
+“individual info” line after a swimmer’s first entry carries a USA
+Swimming id and a preferred first name when Team Manager exported them.
+On a CL2 results file, prelim, swim-off, and finals times stay on the
+swimmer line when a later split line repeats one of them.
+
 Hy-Tek course codes can describe an **entry-time policy**, rather than the
 physical pool. For example, `Y`, `YO`, `YSL`, and `YLS` tell Team Manager how
 to choose or convert a swimmer’s entry time. They do not, by themselves,

@@ -9,7 +9,7 @@ import {
   GITHUB_URL,
   PRIMARY_CTA,
   productLinks,
-  SIGN_UP_URL,
+  REQUEST_ACCESS_URL,
   SITE_TAGLINE,
 } from "@/lib/site";
 
@@ -92,7 +92,7 @@ export async function SiteFooter() {
 
         <div className="flex flex-col items-start justify-between gap-4 md:flex-row md:items-center">
           <GithubStars />
-          <CtaLink href={SIGN_UP_URL} size="sm">
+          <CtaLink href={REQUEST_ACCESS_URL} size="sm">
             {PRIMARY_CTA}
           </CtaLink>
         </div>

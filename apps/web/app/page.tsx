@@ -1,5 +1,5 @@
 import { HomePage } from "@/components/home-page";
-import { SIGN_UP_URL, SITE_DESCRIPTION, SITE_NAME } from "@/lib/site";
+import { REQUEST_ACCESS_URL, SITE_DESCRIPTION, SITE_NAME } from "@/lib/site";
 
 const jsonLd = {
   "@context": "https://schema.org",
@@ -12,7 +12,7 @@ const jsonLd = {
     "@type": "Offer",
     price: "0",
     priceCurrency: "USD",
-    url: SIGN_UP_URL,
+    url: REQUEST_ACCESS_URL,
   },
 };
 

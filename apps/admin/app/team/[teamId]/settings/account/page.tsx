@@ -1,3 +1,4 @@
+import { impersonatorId } from "@lane4hq/auth/impersonation";
 import { getSession } from "@lane4hq/auth/session";
 import { getMember, requireTeamMember } from "@lane4hq/db/authz";
 import { db } from "@lane4hq/db/client";
@@ -42,6 +43,7 @@ export default async function AccountSettingsPage({
     throw new Error("Unauthorized");
   }
   await requireTeamMember(session.user.id, teamId);
+  const viewingAsUser = impersonatorId(session.session) !== null;
 
   const [profile, membership, prefs, userPrefs, activeSessions] =
     await Promise.all([
@@ -100,24 +102,44 @@ export default async function AccountSettingsPage({
 
       <SettingsSection
         title="Security"
-        description="Password and two-factor authentication."
+        description={
+          viewingAsUser
+            ? "Password and two-factor changes stay on the real sign-in. Stop from the banner first."
+            : "Password and two-factor authentication."
+        }
         showSeparator
       >
-        <AccountSecurityForm
-          twoFactorEnabled={profile?.twoFactorEnabled ?? false}
-        />
+        <div
+          className={
+            viewingAsUser ? "pointer-events-none opacity-60" : undefined
+          }
+        >
+          <AccountSecurityForm
+            twoFactorEnabled={profile?.twoFactorEnabled ?? false}
+          />
+        </div>
       </SettingsSection>
 
       <SettingsSection
         title="Sessions"
-        description="Manage where you're signed in."
+        description={
+          viewingAsUser
+            ? "Ending sessions stays on the real sign-in. Stop from the banner first."
+            : "Manage where you're signed in."
+        }
         showSeparator
       >
-        <AccountSessionsForm
-          sessions={serializedSessions}
-          currentSessionId={session.session.id}
-          currentSessionToken={session.session.token}
-        />
+        <div
+          className={
+            viewingAsUser ? "pointer-events-none opacity-60" : undefined
+          }
+        >
+          <AccountSessionsForm
+            sessions={serializedSessions}
+            currentSessionId={session.session.id}
+            currentSessionToken={session.session.token}
+          />
+        </div>
       </SettingsSection>
 
       <SettingsSection

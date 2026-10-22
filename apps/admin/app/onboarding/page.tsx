@@ -329,15 +329,11 @@ export default function OnboardingPage() {
     }
 
     if (values.plan === "pro" || values.plan === "enterprise") {
-      try {
-        await authClient.checkout({
-          slug: values.plan,
-          referenceId: teamId,
-        });
-        return;
-      } catch {
-        // Billing can be completed later in settings
-      }
+      const checkoutResult = await authClient.checkout({
+        slug: values.plan,
+        referenceId: teamId,
+      });
+      if (!checkoutResult.error) return;
     }
 
     const dest = logoWarning

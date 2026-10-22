@@ -1,5 +1,6 @@
-import { relations } from "drizzle-orm";
+import { relations, sql } from "drizzle-orm";
 import {
+  check,
   index,
   jsonb,
   pgEnum,
@@ -10,6 +11,7 @@ import {
 } from "drizzle-orm/pg-core";
 import { member, organization } from "./auth";
 import { teamSeasons } from "./seasons";
+import { staff } from "./staff";
 import { teamSwimmerMemberships } from "./swimmers";
 
 export const credentialTypeEnum = pgEnum("credential_type", [
@@ -140,7 +142,11 @@ export const auditLog = pgTable(
     organizationId: text("organization_id").references(() => organization.id, {
       onDelete: "cascade",
     }),
-    actorUserId: text("actor_user_id").notNull(),
+    actorUserId: text("actor_user_id"),
+    /** Set when a Lane4 staff account made the change. Coach actions leave this null. */
+    actorStaffId: text("actor_staff_id").references(() => staff.id, {
+      onDelete: "set null",
+    }),
     action: text("action").notNull(),
     resourceType: text("resource_type").notNull(),
     resourceId: text("resource_id").notNull(),
@@ -160,6 +166,14 @@ export const auditLog = pgTable(
     index("idx_audit_log_actor_created").on(
       table.actorUserId,
       table.createdAt.desc(),
+    ),
+    index("idx_audit_log_staff_created").on(
+      table.actorStaffId,
+      table.createdAt.desc(),
+    ),
+    check(
+      "audit_log_actor_present",
+      sql`${table.actorUserId} IS NOT NULL OR ${table.actorStaffId} IS NOT NULL`,
     ),
   ],
 );

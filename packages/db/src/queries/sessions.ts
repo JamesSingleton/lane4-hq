@@ -1,4 +1,4 @@
-import { and, eq, gt } from "drizzle-orm";
+import { and, eq, gt, isNull } from "drizzle-orm";
 import { db } from "../client";
 import { session } from "../schema/auth";
 
@@ -14,7 +14,7 @@ export async function extendSessionExpiry(id: string, expiresAt: Date) {
     .where(eq(session.id, id));
 }
 
-/** Active Better Auth sessions for a user. Does not require a fresh session. */
+/** Active Better Auth sessions for a user. Support sessions stay out of this list. */
 export async function listActiveSessionsForUser(userId: string) {
   return db
     .select({
@@ -26,5 +26,12 @@ export async function listActiveSessionsForUser(userId: string) {
       expiresAt: session.expiresAt,
     })
     .from(session)
-    .where(and(eq(session.userId, userId), gt(session.expiresAt, new Date())));
+    .where(
+      and(
+        eq(session.userId, userId),
+        gt(session.expiresAt, new Date()),
+        isNull(session.impersonatedBy),
+        isNull(session.impersonatedByStaffId),
+      ),
+    );
 }

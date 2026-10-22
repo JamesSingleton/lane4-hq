@@ -7,7 +7,7 @@ import { Button } from "@lane4hq/ui/components/button";
 import { PageIntro, Section } from "@/components/section";
 import { SupportForm } from "@/components/support-form";
 import { pageMetadata } from "@/lib/metadata";
-import { GITHUB_ISSUES_URL } from "@/lib/site";
+import { GITHUB_ISSUES_URL, REQUEST_ACCESS_URL } from "@/lib/site";
 
 export const metadata = pageMetadata(
   "Support",
@@ -20,7 +20,16 @@ export default function SupportPage() {
       <PageIntro
         title="If a meet file will not import, send it here."
         description="Questions about entries, billing, and imports that failed belong here. Feature ideas and bugs can also go on GitHub."
-      />
+      >
+        <p className="text-sm text-pretty">
+          Lane4 is in a private beta.{" "}
+          <a href={REQUEST_ACCESS_URL} className="underline underline-offset-4">
+            Request access
+          </a>{" "}
+          if you need a coach account. This form is for questions about the
+          product.
+        </p>
+      </PageIntro>
       <Section className="grid gap-10 pt-0 lg:grid-cols-[minmax(0,1fr)_minmax(0,20rem)]">
         <SupportForm />
         <div className="flex flex-col gap-4">

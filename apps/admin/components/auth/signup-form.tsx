@@ -41,10 +41,14 @@ type SignupFormValues = z.infer<typeof signupSchema>;
 
 export function SignupForm({
   socialProviders = [],
+  lockedEmail,
+  inviteSource = "beta",
   className,
   ...props
 }: React.ComponentProps<"form"> & {
   socialProviders?: SocialProvider[];
+  lockedEmail: string;
+  inviteSource?: "beta" | "team";
 }) {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -59,7 +63,7 @@ export function SignupForm({
     defaultValues: {
       firstName: "",
       lastName: "",
-      email: "",
+      email: lockedEmail,
       password: "",
       confirmPassword: "",
     },
@@ -76,7 +80,7 @@ export function SignupForm({
       name: `${values.firstName.trim()} ${values.lastName.trim()}`,
       firstName: values.firstName.trim(),
       lastName: values.lastName.trim(),
-      email: values.email,
+      email: lockedEmail,
       password: values.password,
       callbackURL: callbackUrl,
       fetchOptions: {
@@ -90,7 +94,7 @@ export function SignupForm({
     }
 
     const checkEmail = new URL("/check-email", window.location.origin);
-    checkEmail.searchParams.set("email", values.email);
+    checkEmail.searchParams.set("email", lockedEmail);
     router.push(`${checkEmail.pathname}${checkEmail.search}`);
     router.refresh();
   }
@@ -110,7 +114,9 @@ export function SignupForm({
           <div className="flex flex-col items-center gap-1 text-center">
             <h1 className="text-2xl font-bold">Create your account</h1>
             <p className="text-muted-foreground text-sm text-balance">
-              Start managing your swim team with Lane4 HQ
+              {inviteSource === "team"
+                ? `This team invite is for ${lockedEmail}.`
+                : `This beta invite is for ${lockedEmail}.`}
             </p>
           </div>
           {error ? <FieldError>{error}</FieldError> : null}
@@ -145,13 +151,13 @@ export function SignupForm({
             <Input
               id="email"
               type="email"
-              placeholder="coach@example.com"
               autoComplete="email"
+              readOnly
               aria-invalid={!!errors.email}
               {...register("email")}
             />
             <FieldDescription>
-              We&apos;ll use this for team invites and account notices.
+              Google or Microsoft sign-up has to use this same address.
             </FieldDescription>
             <FieldError errors={[errors.email]} />
           </Field>

@@ -31,8 +31,8 @@ import {
   DOCS_URL,
   PRIMARY_CTA,
   productLinks,
+  REQUEST_ACCESS_URL,
   SIGN_IN_URL,
-  SIGN_UP_URL,
   SITE_TAGLINE,
 } from "@/lib/site";
 
@@ -61,6 +61,12 @@ export function SiteHeader() {
           <BrandLogo />
           <span className="hidden sm:inline">Lane4 HQ</span>
         </Link>
+        <a
+          href={REQUEST_ACCESS_URL}
+          className="text-muted-foreground hidden text-xs font-medium sm:inline"
+        >
+          Private beta
+        </a>
 
         <NavigationMenu className="hidden flex-1 md:flex">
           <NavigationMenuList>
@@ -120,7 +126,7 @@ export function SiteHeader() {
             Sign in
           </CtaLink>
           <CtaLink
-            href={SIGN_UP_URL}
+            href={REQUEST_ACCESS_URL}
             size="sm"
             className="hidden rounded-full md:inline-flex"
           >
@@ -234,7 +240,7 @@ export function SiteHeader() {
                   >
                     Sign in
                   </CtaLink>
-                  <CtaLink href={SIGN_UP_URL} className="w-full">
+                  <CtaLink href={REQUEST_ACCESS_URL} className="w-full">
                     {PRIMARY_CTA}
                   </CtaLink>
                 </div>

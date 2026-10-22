@@ -8,7 +8,7 @@ export const DOCS_URL =
   process.env.NEXT_PUBLIC_DOCS_URL ?? "http://localhost:3004";
 
 export const SIGN_IN_URL = `${APP_URL}/sign-in`;
-export const SIGN_UP_URL = `${APP_URL}/sign-up`;
+export const REQUEST_ACCESS_URL = `${APP_URL}/request-access`;
 export const GITHUB_URL = "https://github.com/JamesSingleton/lane4-hq";
 export const GITHUB_ISSUES_URL = `${GITHUB_URL}/issues`;
 
@@ -22,7 +22,7 @@ export const SITE_TITLE = `${SITE_NAME} · seed times, entries, and results for 
 export const SITE_DESCRIPTION =
   "Stop retyping seed times the night entries are due. Lane4 fills them from best times and puts Sunday's results next to previous best, for club and high school.";
 
-export const PRIMARY_CTA = "Create your free team";
+export const PRIMARY_CTA = "Request access";
 
 export const productLinks = [
   {
@@ -187,6 +187,11 @@ export const coachEasier = [
 
 export const faqs = [
   {
+    question: "Can I sign up right now?",
+    answer:
+      "Lane4 is in a private beta for club and high school coaches. Request access and tell us about your team and why you want to use it. We'll email an invite if it's a fit. Coaches who already have an account can sign in. A coach can still invite an assistant onto a team that already exists.",
+  },
+  {
     question: "Do you host meets or merge other teams' entries?",
     answer:
       "No. You manage the roster, entries, and results for meets your team attends, whether that is a club invitational or a high school dual. The host receives files and runs the pool in Meet Manager, SwimTopia, SwimCloud, or TeamUnify. Lane4 HQ does not merge other teams' entries or replace a timing console.",
@@ -226,7 +231,7 @@ export const plans = [
     summary:
       "Seeds, the lineup, and progression for one coach. Club or high school.",
     cta: PRIMARY_CTA,
-    href: SIGN_UP_URL,
+    href: REQUEST_ACCESS_URL,
     featured: true,
     features: [
       "Unlimited swimmers and meets",
@@ -243,8 +248,8 @@ export const plans = [
     seats: "Up to 5 coach seats",
     summary:
       "Extra coaches, leftover individual spots filled from best times, and a roster-wide cut list.",
-    cta: "Start Pro from the app",
-    href: SIGN_UP_URL,
+    cta: PRIMARY_CTA,
+    href: REQUEST_ACCESS_URL,
     featured: false,
     features: [
       "Everything on Free",
