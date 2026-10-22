@@ -28,7 +28,10 @@ function context() {
 /** Starts once. `instrumentation-client.ts` calls this before hydration. */
 export function browserAnalytics(): Analytics {
   if (current) return current;
-  if (typeof window === "undefined" || !process.env.NEXT_PUBLIC_POSTHOG_PROJECT_TOKEN) {
+  if (
+    typeof window === "undefined" ||
+    !process.env.NEXT_PUBLIC_POSTHOG_PROJECT_TOKEN
+  ) {
     current = createAnalytics(context(), null);
     if (typeof window !== "undefined") markReady();
     return current;
