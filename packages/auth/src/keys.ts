@@ -21,8 +21,6 @@ export const keys = () =>
       MICROSOFT_CLIENT_ID: z.string().optional(),
       MICROSOFT_CLIENT_SECRET: z.string().optional(),
       MICROSOFT_TENANT_ID: z.string().optional(),
-      /** Comma-separated emails allowed to send beta invites and impersonate users. */
-      BETA_OPERATOR_EMAILS: z.string().optional(),
     },
     client: {
       NEXT_PUBLIC_BETTER_AUTH_URL: z.url().optional(),
@@ -41,7 +39,6 @@ export const keys = () =>
       MICROSOFT_CLIENT_ID: process.env.MICROSOFT_CLIENT_ID,
       MICROSOFT_CLIENT_SECRET: process.env.MICROSOFT_CLIENT_SECRET,
       MICROSOFT_TENANT_ID: process.env.MICROSOFT_TENANT_ID,
-      BETA_OPERATOR_EMAILS: process.env.BETA_OPERATOR_EMAILS,
       NEXT_PUBLIC_BETTER_AUTH_URL: process.env.NEXT_PUBLIC_BETTER_AUTH_URL,
     },
   });

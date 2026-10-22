@@ -175,11 +175,11 @@ export function LoginForm({
               <>
                 Lane4 is in private beta.{" "}
                 <Link
-                  href="/sign-up"
+                  href="/request-access"
                   className="underline underline-offset-4"
                   prefetch={false}
                 >
-                  You need an invitation
+                  Request access
                 </Link>
               </>
             )}

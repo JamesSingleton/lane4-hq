@@ -10,6 +10,7 @@ import {
   timestamp,
   uniqueIndex,
 } from "drizzle-orm/pg-core";
+import { staff } from "./staff";
 
 export const user = pgTable("user", {
   id: text("id").primaryKey(),
@@ -38,10 +39,15 @@ export const session = pgTable(
       .notNull()
       .references(() => user.id, { onDelete: "cascade" }),
     activeOrganizationId: text("active_organization_id"),
-    /** Set on support sessions to the operator's user id. */
+    /** Set when a coach user opened this support session. */
     impersonatedBy: text("impersonated_by").references(() => user.id, {
       onDelete: "set null",
     }),
+    /** Set when a Lane4 staff account opened this support session. */
+    impersonatedByStaffId: text("impersonated_by_staff_id").references(
+      () => staff.id,
+      { onDelete: "set null" },
+    ),
   },
   (table) => [index("session_user_id_idx").on(table.userId)],
 );

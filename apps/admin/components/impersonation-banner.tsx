@@ -7,9 +7,11 @@ import { useState } from "react";
 export function ImpersonationBanner({
   name,
   email,
+  returnTo = "http://localhost:3005",
 }: {
   name: string;
   email: string;
+  returnTo?: string;
 }) {
   const [pending, setPending] = useState(false);
   const [error, setError] = useState("");
@@ -23,7 +25,7 @@ export function ImpersonationBanner({
       setError(result.error.message ?? "Could not restore your session");
       return;
     }
-    window.location.assign("/beta");
+    window.location.assign(returnTo);
   }
 
   return (

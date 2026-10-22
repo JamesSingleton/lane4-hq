@@ -81,6 +81,28 @@ export async function sendBetaInvite({
   });
 }
 
+export async function sendBetaAccessRequest({
+  to,
+  name,
+  email,
+  team,
+  reason,
+  reviewUrl,
+}: {
+  to: string | string[];
+  name: string;
+  email: string;
+  team: string;
+  reason: string;
+  reviewUrl: string;
+}) {
+  await sendEmail({
+    type: "beta-access-request",
+    to,
+    props: { name, email, team, reason, reviewUrl },
+  });
+}
+
 export async function sendCoachInvitation(data: {
   email: string;
   organization: { name: string };

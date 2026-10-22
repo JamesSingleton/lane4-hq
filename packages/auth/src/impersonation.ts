@@ -1,5 +1,4 @@
 import type { AuditEvent } from "@lane4hq/db/audit";
-import { isBetaOperator } from "./beta-access";
 
 /** Support sessions expire after one hour. */
 export const IMPERSONATION_SESSION_SECONDS = 60 * 60;
@@ -8,10 +7,6 @@ export const IMPERSONATION_FORBIDDEN_MESSAGE = "You cannot impersonate users.";
 export const IMPERSONATION_NESTED_MESSAGE =
   "Stop the current impersonation first.";
 export const IMPERSONATION_MISSING_USER_MESSAGE = "No user with that id.";
-export const IMPERSONATION_SELF_MESSAGE =
-  "You are already signed in as this user.";
-export const IMPERSONATION_OPERATOR_MESSAGE =
-  "Operators cannot impersonate other operators.";
 export const IMPERSONATION_LOCKED_MESSAGE =
   "Stop impersonating before changing account security, sessions, devices, or billing.";
 
@@ -38,21 +33,11 @@ export type ImpersonationDecision =
       message: string;
     };
 
-/** Whether this operator may open a session as the target user. */
-export function canStartImpersonation(input: {
-  actorId: string;
-  actorEmail: string;
-  operators: ReadonlySet<string>;
+/** Whether a staff account may open a session as this coach. */
+export function canStartStaffView(input: {
   alreadyImpersonating: boolean;
-  target: { id: string; email: string } | null;
+  target: { id: string } | null;
 }): ImpersonationDecision {
-  if (!isBetaOperator(input.actorEmail, input.operators)) {
-    return {
-      ok: false,
-      status: "FORBIDDEN",
-      message: IMPERSONATION_FORBIDDEN_MESSAGE,
-    };
-  }
   if (input.alreadyImpersonating) {
     return {
       ok: false,
@@ -67,29 +52,33 @@ export function canStartImpersonation(input: {
       message: IMPERSONATION_MISSING_USER_MESSAGE,
     };
   }
-  if (input.target.id === input.actorId) {
-    return {
-      ok: false,
-      status: "BAD_REQUEST",
-      message: IMPERSONATION_SELF_MESSAGE,
-    };
-  }
-  if (isBetaOperator(input.target.email, input.operators)) {
-    return {
-      ok: false,
-      status: "FORBIDDEN",
-      message: IMPERSONATION_OPERATOR_MESSAGE,
-    };
-  }
   return { ok: true };
 }
 
-/** The operator user id stored on a support session, if this session is one. */
+function sessionActorId(value: unknown): string | null {
+  return typeof value === "string" && value.length > 0 ? value : null;
+}
+
+/** Who opened a support session: a Lane4 staff account, or a legacy coach user. */
+export function supportViewer(
+  session:
+    | { impersonatedBy?: unknown; impersonatedByStaffId?: unknown }
+    | null
+    | undefined,
+): { kind: "staff" | "user"; id: string } | null {
+  const staffId = sessionActorId(session?.impersonatedByStaffId);
+  if (staffId) return { kind: "staff", id: staffId };
+  const userId = sessionActorId(session?.impersonatedBy);
+  if (userId) return { kind: "user", id: userId };
+  return null;
+}
+
+/** The coach user id stored on a legacy support session. */
 export function impersonatorId(
   session: { impersonatedBy?: unknown } | null | undefined,
 ): string | null {
-  const value = session?.impersonatedBy;
-  return typeof value === "string" && value.length > 0 ? value : null;
+  const viewer = supportViewer(session);
+  return viewer?.kind === "user" ? viewer.id : null;
 }
 
 /**
@@ -122,18 +111,26 @@ export function unpackImpersonatorCookie(
   };
 }
 
-export function impersonationAuditEvent(input: {
-  action: "auth.impersonation.start" | "auth.impersonation.stop";
-  actorUserId: string;
-  targetUserId: string;
-  targetEmail: string;
-}): AuditEvent {
-  return {
+export function impersonationAuditEvent(
+  input: {
+    action: "auth.impersonation.start" | "auth.impersonation.stop";
+    targetUserId: string;
+    targetEmail: string;
+  } & (
+    | { actorUserId: string; actorStaffId?: never }
+    | { actorStaffId: string; actorUserId?: never }
+  ),
+): AuditEvent {
+  const base = {
     organizationId: null,
-    actorUserId: input.actorUserId,
     action: input.action,
     resourceType: "user",
     resourceId: input.targetUserId,
     metadata: { targetEmail: input.targetEmail },
   };
+  const actorStaffId = input.actorStaffId;
+  if (typeof actorStaffId === "string") {
+    return { ...base, actorStaffId };
+  }
+  return { ...base, actorUserId: input.actorUserId as string };
 }

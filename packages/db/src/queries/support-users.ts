@@ -1,4 +1,4 @@
-import { or, sql } from "drizzle-orm";
+import { eq, or, sql } from "drizzle-orm";
 import { db } from "../client";
 import { user } from "../schema";
 
@@ -30,4 +30,15 @@ export async function searchUsersForSupport(raw: string, limit = 20) {
     )
     .orderBy(user.email)
     .limit(capped);
+}
+
+export async function findUserForSupport(id: string) {
+  const trimmed = id.trim();
+  if (!trimmed) return null;
+  const [row] = await db
+    .select({ id: user.id, name: user.name, email: user.email })
+    .from(user)
+    .where(eq(user.id, trimmed))
+    .limit(1);
+  return row ?? null;
 }

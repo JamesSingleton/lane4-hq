@@ -9,7 +9,7 @@ import {
   meetWeek,
   PRIMARY_CTA,
   productLinks,
-  SIGN_UP_URL,
+  REQUEST_ACCESS_URL,
   weekLoad,
 } from "@/lib/site";
 
@@ -29,7 +29,7 @@ export function HomePage() {
             times.
           </p>
           <div className="flex flex-wrap items-center gap-3">
-            <CtaLink href={SIGN_UP_URL} icon>
+            <CtaLink href={REQUEST_ACCESS_URL} icon>
               {PRIMARY_CTA}
             </CtaLink>
             <CtaLink href="#meet-week" variant="outline">
@@ -38,7 +38,9 @@ export function HomePage() {
           </div>
         </div>
         <p className="max-w-xs text-sm text-muted-foreground text-pretty lg:justify-self-end">
-          Private beta for club and high school coaches. You need an invitation.
+          Lane4 is in a private beta. Request access and tell us about your
+          team. We email an invite when it&apos;s a fit. The app is not open for
+          public sign-up.
         </p>
       </Section>
 

@@ -8,6 +8,8 @@ const publicRoutes = [
   "/2fa",
   "/forgot-password",
   "/reset-password",
+  "/request-access",
+  "/support/handoff",
 ];
 
 export async function proxy(request: NextRequest) {

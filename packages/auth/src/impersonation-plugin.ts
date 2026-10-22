@@ -1,4 +1,6 @@
 import { writeAuditLog } from "@lane4hq/db/audit";
+import { findStaffById } from "@lane4hq/db/queries/staff";
+import { consumeSupportHandoff } from "@lane4hq/db/queries/support-handoffs";
 import type { BetterAuthPlugin } from "better-auth";
 import {
   APIError,
@@ -14,19 +16,17 @@ import {
 } from "better-auth/cookies";
 import { z } from "zod";
 import { authAuditContext } from "./audit-events";
-import { parseOperatorEmails } from "./beta-access";
 import {
-  canStartImpersonation,
+  canStartStaffView,
+  IMPERSONATION_FORBIDDEN_MESSAGE,
   IMPERSONATION_LOCKED_MESSAGE,
   IMPERSONATION_MISSING_USER_MESSAGE,
   IMPERSONATION_SESSION_SECONDS,
   impersonationAuditEvent,
-  impersonatorId,
   isBlockedWhileImpersonating,
-  packImpersonatorCookie,
+  supportViewer,
   unpackImpersonatorCookie,
 } from "./impersonation";
-import { keys } from "./keys";
 
 const IMPERSONATOR_COOKIE = "impersonator_session";
 
@@ -34,8 +34,13 @@ const impersonateBodySchema = z.object({
   userId: z.string().trim().min(1).max(200),
 });
 
+const handoffBodySchema = z.object({
+  token: z.string().trim().min(20).max(200),
+});
+
 type SessionRecord = {
   impersonatedBy?: unknown;
+  impersonatedByStaffId?: unknown;
   token?: string;
   userId?: string;
 };
@@ -96,6 +101,11 @@ export function impersonation() {
             required: false,
             input: false,
           },
+          impersonatedByStaffId: {
+            type: "string" as const,
+            required: false,
+            input: false,
+          },
         },
       },
     },
@@ -107,7 +117,7 @@ export function impersonation() {
           },
           handler: createAuthMiddleware(async (ctx) => {
             const session = await getAuthoritativeSessionFromCtx(ctx);
-            if (impersonatorId(asSession(session?.session))) {
+            if (supportViewer(asSession(session?.session))) {
               throw new APIError("FORBIDDEN", {
                 message: IMPERSONATION_LOCKED_MESSAGE,
               });
@@ -120,14 +130,16 @@ export function impersonation() {
           },
           handler: createAuthMiddleware(async (ctx) => {
             const session = await getSessionFromCtx(ctx).catch(() => null);
-            const actorUserId = impersonatorId(asSession(session?.session));
+            const viewer = supportViewer(asSession(session?.session));
             const target = asUser(session?.user);
-            if (actorUserId && target) {
+            if (viewer && target) {
               await recordAudit(
                 ctx.headers,
                 impersonationAuditEvent({
                   action: "auth.impersonation.stop",
-                  actorUserId,
+                  ...(viewer.kind === "staff"
+                    ? { actorStaffId: viewer.id }
+                    : { actorUserId: viewer.id }),
                   targetUserId: target.id,
                   targetEmail: target.email,
                 }),
@@ -149,7 +161,7 @@ export function impersonation() {
             const response = await endpointJson(ctx);
             if (!Array.isArray(response)) return;
             return ctx.json(
-              response.filter((session) => !impersonatorId(asSession(session))),
+              response.filter((session) => !supportViewer(asSession(session))),
             );
           }),
         },
@@ -163,26 +175,39 @@ export function impersonation() {
           body: impersonateBodySchema,
           requireHeaders: true,
         },
+        async () => {
+          throw new APIError("FORBIDDEN", {
+            message: "Open this coach from Lane4 Ops.",
+          });
+        },
+      ),
+      impersonateHandoff: createAuthEndpoint(
+        "/impersonate-handoff",
+        {
+          method: "POST",
+          body: handoffBodySchema,
+          requireHeaders: true,
+        },
         async (ctx) => {
-          const current = await getAuthoritativeSessionFromCtx(ctx);
-          const actor = asUser(current?.user);
-          if (!current || !actor) {
-            throw new APIError("UNAUTHORIZED", {
-              message: "You must be signed in",
+          const handoff = await consumeSupportHandoff(ctx.body.token);
+          if (!handoff) {
+            throw new APIError("BAD_REQUEST", {
+              message: "This view link has expired",
             });
           }
-          const operators = parseOperatorEmails(keys().BETA_OPERATOR_EMAILS);
+          const member = await findStaffById(handoff.staffId);
           const targetRow = await ctx.context.internalAdapter.findUserById(
-            ctx.body.userId,
+            handoff.targetUserId,
           );
           const target = asUser(targetRow);
-          const decision = canStartImpersonation({
-            actorId: actor.id,
-            actorEmail: actor.email,
-            operators,
-            alreadyImpersonating:
-              impersonatorId(asSession(current.session)) !== null,
-            target: target ? { id: target.id, email: target.email } : null,
+          if (!member) {
+            throw new APIError("FORBIDDEN", {
+              message: IMPERSONATION_FORBIDDEN_MESSAGE,
+            });
+          }
+          const decision = canStartStaffView({
+            alreadyImpersonating: false,
+            target: target ? { id: target.id } : null,
           });
           if (!decision.ok) {
             throw new APIError(decision.status, { message: decision.message });
@@ -198,7 +223,7 @@ export function impersonation() {
           const created = await ctx.context.internalAdapter.createSession(
             target.id,
             true,
-            { impersonatedBy: actor.id, expiresAt },
+            { impersonatedByStaffId: member.id, expiresAt },
             true,
           );
           if (!created) {
@@ -206,26 +231,7 @@ export function impersonation() {
               message: "Could not open that account",
             });
           }
-          const operatorToken = asSession(current.session)?.token;
-          if (!operatorToken) {
-            throw new APIError("INTERNAL_SERVER_ERROR", {
-              message: "Could not open that account",
-            });
-          }
-          const remember =
-            (await ctx.getSignedCookie(
-              ctx.context.authCookies.dontRememberToken.name,
-              ctx.context.secret,
-            )) || "";
           deleteSessionCookie(ctx);
-          const impersonatorCookie =
-            ctx.context.createAuthCookie(IMPERSONATOR_COOKIE);
-          await ctx.setSignedCookie(
-            impersonatorCookie.name,
-            packImpersonatorCookie(operatorToken, remember),
-            ctx.context.secret,
-            ctx.context.authCookies.sessionToken.attributes,
-          );
           await setSessionCookie(
             ctx,
             { session: created, user: targetRow },
@@ -235,14 +241,12 @@ export function impersonation() {
             ctx.headers,
             impersonationAuditEvent({
               action: "auth.impersonation.start",
-              actorUserId: actor.id,
+              actorStaffId: member.id,
               targetUserId: target.id,
               targetEmail: target.email,
             }),
           );
-          return ctx.json({
-            user: { id: target.id, email: target.email, name: target.name },
-          });
+          return ctx.json({ ok: true });
         },
       ),
       stopImpersonating: createAuthEndpoint(
@@ -251,14 +255,37 @@ export function impersonation() {
         async (ctx) => {
           const current = await getAuthoritativeSessionFromCtx(ctx);
           const target = asUser(current?.user);
-          const actorUserId = impersonatorId(asSession(current?.session));
-          if (!current || !target || !actorUserId) {
+          const viewer = supportViewer(asSession(current?.session));
+          if (!current || !target || !viewer) {
             throw new APIError("BAD_REQUEST", {
               message: "You are not impersonating anyone",
             });
           }
+          if (viewer.kind === "staff") {
+            const impersonationToken = asSession(current.session)?.token;
+            if (impersonationToken) {
+              await ctx.context.internalAdapter.deleteSession(
+                impersonationToken,
+              );
+            }
+            deleteSessionCookie(ctx);
+            expireCookie(
+              ctx,
+              ctx.context.createAuthCookie(IMPERSONATOR_COOKIE),
+            );
+            await recordAudit(
+              ctx.headers,
+              impersonationAuditEvent({
+                action: "auth.impersonation.stop",
+                actorStaffId: viewer.id,
+                targetUserId: target.id,
+                targetEmail: target.email,
+              }),
+            );
+            return ctx.json({ ok: true });
+          }
           const operator = asUser(
-            await ctx.context.internalAdapter.findUserById(actorUserId),
+            await ctx.context.internalAdapter.findUserById(viewer.id),
           );
           if (!operator) {
             throw new APIError("INTERNAL_SERVER_ERROR", {

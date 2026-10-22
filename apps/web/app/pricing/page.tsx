@@ -90,7 +90,7 @@ export default function PricingPage() {
     <>
       <PageIntro
         title="One coach can take a full season of meets on Free."
-        description="Unlimited swimmers, meet files, seed times from best times, and progression, for a club or a high school. Pro adds coach seats, lineup suggestions for open individual spots, and a roster-wide cut list. Billing is per team."
+        description="Unlimited swimmers, meet files, seed times from best times, and progression, for a club or a high school. Pro adds coach seats, lineup suggestions for open individual spots, and a roster-wide cut list. Billing is per team. Lane4 is in a private beta, so new coaches request access first."
       />
       <section className="mx-auto grid w-full max-w-6xl items-stretch gap-4 px-4 pb-16 md:grid-cols-3 md:px-6">
         {plans.map((plan) => (

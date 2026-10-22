@@ -31,6 +31,8 @@
         "UPSTASH_REDIS_REST_TOKEN",
         "DESKTOP_RELEASES_REPO",
         "GITHUB_RELEASE_TOKEN",
+        "ADMIN_URL",
+        "OPS_URL",
         "LANE4_*",
         "SKIP_ENV_VALIDATION"
       ]
@@ -61,6 +63,8 @@
         "UPSTASH_REDIS_REST_TOKEN",
         "DESKTOP_RELEASES_REPO",
         "GITHUB_RELEASE_TOKEN",
+        "ADMIN_URL",
+        "OPS_URL",
         "LANE4_*",
         "SKIP_ENV_VALIDATION"
       ]

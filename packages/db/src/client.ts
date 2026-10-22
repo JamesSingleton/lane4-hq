@@ -2,6 +2,7 @@ import { drizzle } from "drizzle-orm/postgres-js";
 import postgresClient from "postgres";
 import { getDatabaseUrl } from "./keys";
 import * as schema from "./schema/index";
+import { staffAuthSchema } from "./staff-auth-schema";
 
 const connectionString = getDatabaseUrl();
 
@@ -21,6 +22,12 @@ const client =
 globalForDb.client = client;
 
 export const db = drizzle(client, { schema });
+
+/**
+ * Staff Better Auth only. Same pool as `db`, but `query` has no coach `user`
+ * key, so email sign-in reads `staff` instead of the coach table.
+ */
+export const staffDb = drizzle(client, { schema: staffAuthSchema });
 
 export type Database = typeof db;
 

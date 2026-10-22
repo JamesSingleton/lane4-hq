@@ -31,6 +31,7 @@ export async function listActiveSessionsForUser(userId: string) {
         eq(session.userId, userId),
         gt(session.expiresAt, new Date()),
         isNull(session.impersonatedBy),
+        isNull(session.impersonatedByStaffId),
       ),
     );
 }

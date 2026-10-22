@@ -12,7 +12,11 @@
     "./device-clients": "./src/device-clients.ts",
     "./keys": "./src/keys.ts",
     "./beta-access": "./src/beta-access.ts",
-    "./impersonation": "./src/impersonation.ts"
+    "./impersonation": "./src/impersonation.ts",
+    "./staff-server": "./src/staff-server.ts",
+    "./staff-client": "./src/staff-client.ts",
+    "./staff-session": "./src/staff-session.ts",
+    "./staff-account": "./src/staff-account.ts"
   },
   "scripts": {
     "check:types": "tsc --noEmit",

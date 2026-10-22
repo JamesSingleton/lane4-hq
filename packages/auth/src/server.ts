@@ -234,6 +234,7 @@ function createAuth(polarClient: Polar) {
         "/sign-in/email": { window: 60, max: 10 },
         "/request-password-reset": { window: 60, max: 5 },
         "/impersonate-user": { window: 60, max: 10 },
+        "/impersonate-handoff": { window: 60, max: 10 },
         "/stop-impersonating": { window: 60, max: 30 },
       },
     },

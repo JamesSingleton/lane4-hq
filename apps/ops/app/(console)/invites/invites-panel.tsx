@@ -2,13 +2,6 @@
 
 import { Button } from "@lane4hq/ui/components/button";
 import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@lane4hq/ui/components/card";
-import {
   Field,
   FieldError,
   FieldGroup,
@@ -17,17 +10,16 @@ import {
 import { Input } from "@lane4hq/ui/components/input";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-import { createBetaInviteAction, revokeBetaInviteAction } from "./actions";
+import { createBetaInviteAction, revokeBetaInviteAction } from "../actions";
 
-export type BetaInviteRow = {
+export type InviteRow = {
   id: string;
   email: string;
   status: string;
   expiresAt: string;
-  createdAt: string;
 };
 
-export function BetaInvitesPanel({ invites }: { invites: BetaInviteRow[] }) {
+export function InvitesPanel({ invites }: { invites: InviteRow[] }) {
   const [email, setEmail] = useState("");
   const [error, setError] = useState("");
   const [inviteUrl, setInviteUrl] = useState("");
@@ -54,47 +46,36 @@ export function BetaInvitesPanel({ invites }: { invites: BetaInviteRow[] }) {
 
   return (
     <div className="flex flex-col gap-6">
-      <Card>
-        <CardHeader>
-          <CardTitle>Invite a coach</CardTitle>
-          <CardDescription>
-            The link expires in 14 days. Sending again replaces the previous
-            pending link for that email.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <form onSubmit={(event) => void onSubmit(event)}>
-            <FieldGroup>
-              {error ? <FieldError>{error}</FieldError> : null}
-              <Field>
-                <FieldLabel htmlFor="beta-email">Email</FieldLabel>
-                <Input
-                  id="beta-email"
-                  type="email"
-                  autoComplete="email"
-                  value={email}
-                  onChange={(event) => setEmail(event.target.value)}
-                  required
-                />
-              </Field>
-              <Button type="submit" disabled={pending}>
-                {pending ? "Sending..." : "Send invite"}
-              </Button>
-              {inviteUrl ? (
-                <Field>
-                  <FieldLabel htmlFor="beta-link">Invite link</FieldLabel>
-                  <Input id="beta-link" readOnly value={inviteUrl} />
-                  <p className="text-muted-foreground text-sm">
-                    {emailed
-                      ? "Email sent. You can also copy this link."
-                      : "The email did not send. Copy this link instead."}
-                  </p>
-                </Field>
-              ) : null}
-            </FieldGroup>
-          </form>
-        </CardContent>
-      </Card>
+      <form onSubmit={(event) => void onSubmit(event)}>
+        <FieldGroup>
+          {error ? <FieldError>{error}</FieldError> : null}
+          <Field>
+            <FieldLabel htmlFor="invite-email">Email</FieldLabel>
+            <Input
+              id="invite-email"
+              type="email"
+              autoComplete="email"
+              value={email}
+              onChange={(event) => setEmail(event.target.value)}
+              required
+            />
+          </Field>
+          <Button type="submit" disabled={pending}>
+            {pending ? "Sending..." : "Send invite"}
+          </Button>
+          {inviteUrl ? (
+            <Field>
+              <FieldLabel htmlFor="invite-link">Invite link</FieldLabel>
+              <Input id="invite-link" readOnly value={inviteUrl} />
+              <p className="text-muted-foreground text-sm">
+                {emailed
+                  ? "Email sent. You can also copy this link."
+                  : "The email did not send. Copy this link instead."}
+              </p>
+            </Field>
+          ) : null}
+        </FieldGroup>
+      </form>
       <ul className="flex flex-col gap-2">
         {invites.length === 0 ? (
           <li className="text-muted-foreground text-sm">No invites yet.</li>

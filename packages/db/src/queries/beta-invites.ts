@@ -108,7 +108,8 @@ export async function listBetaInvites(limit = 100) {
 
 export async function createBetaInvite(input: {
   email: string;
-  invitedByUserId: string;
+  invitedByUserId?: string | null;
+  invitedByStaffId?: string | null;
   now?: Date;
 }) {
   const email = normalizedEmail(input.email);
@@ -133,7 +134,8 @@ export async function createBetaInvite(input: {
     token,
     status: "pending",
     expiresAt,
-    invitedByUserId: input.invitedByUserId,
+    invitedByUserId: input.invitedByUserId ?? null,
+    invitedByStaffId: input.invitedByStaffId ?? null,
     createdAt: now,
   });
 
