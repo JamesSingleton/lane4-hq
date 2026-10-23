@@ -12,8 +12,7 @@ export default defineConfig({
       thresholds: {
         lines: 100,
         functions: 100,
-        // Defensive `?? 0` reads of truncated simulator input.
-        branches: 95,
+        branches: 100,
         statements: 100,
       },
     },

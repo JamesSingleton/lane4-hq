@@ -11,6 +11,7 @@ import {
   decodePoolSetup,
   decodeSplitsSetup,
   encodePoolSetup,
+  encodeSplitsSetup,
   poolCourse,
 } from "../src/setups";
 
@@ -283,10 +284,15 @@ describe("setups", () => {
     expect(() => decodePoolSetup(Uint8Array.of(1))).toThrow(/5 bytes/);
   });
 
-  it("decodes the splits setup", () => {
-    expect(decodeSplitsSetup(Uint8Array.of(1, 0))).toEqual({
-      cumulativeSplits: true,
-      byLapSplits: false,
-    });
+  it("round-trips every splits setup", () => {
+    for (const setup of [
+      { cumulativeSplits: true, byLapSplits: false },
+      { cumulativeSplits: false, byLapSplits: true },
+      { cumulativeSplits: false, byLapSplits: false },
+      { cumulativeSplits: true, byLapSplits: true },
+    ]) {
+      expect(decodeSplitsSetup(encodeSplitsSetup(setup))).toEqual(setup);
+    }
+    expect(() => decodeSplitsSetup(Uint8Array.of(1))).toThrow(/2 bytes/);
   });
 });

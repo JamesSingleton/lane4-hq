@@ -232,6 +232,54 @@ describe("CtsTimer against the simulator", () => {
     expect(toHex(truncatedRace)).toBe("32 00");
   });
 
+  it("seeks a race by a one-byte event or by race number", async () => {
+    const { sim, timer } = setup();
+    runHeat(sim, 5, 1);
+    const byEvent = await sim.request(Uint8Array.of(0x53, 0x45, 1, 5));
+    expect(byEvent.length).toBeGreaterThan(2);
+    const byNumber = await sim.request(Uint8Array.of(0x53, 0x52, 1, 0));
+    expect(byNumber.length).toBeGreaterThan(2);
+    const ignored = await sim.request(Uint8Array.of(0x53, 0x51));
+    expect(ignored.length).toBeGreaterThan(2);
+    expect((await timer.race({ kind: "pointer" })).race.event).toBe(5);
+  });
+
+  it("stores at most ten places and defaults a missing event and heat", async () => {
+    const { sim, timer } = setup({ pool: { lanesInPool: 11 } });
+    sim.runRace({
+      lengths: 1,
+      lanes: Array.from({ length: 11 }, (_, i) => ({
+        lane: i + 1,
+        finalMs: 30_000 + i * 10,
+      })),
+    });
+    const race = await timer.race({ kind: "pointer" });
+    expect(race.race.event).toBe(0);
+    expect(race.race.heat).toBe(0);
+    expect(race.race.lanes[0]!.place).toBe(1);
+    expect(race.race.lanes[9]!.place).toBe(10);
+    expect(race.race.lanes[10]!.place).toBe(0);
+  });
+
+  it("leaves the meet pointer when an older empty meet is not the one stored", async () => {
+    const sim = createSimulator({ capacity: 2, now: () => NOW });
+    runHeat(sim, 1, 1);
+    sim.powerOn();
+    runHeat(sim, 2, 1);
+    sim.powerOn();
+    const meets = (
+      sim as unknown as {
+        meets: Array<{ date: unknown; races: unknown[]; nextRace: number }>;
+        meetIndex: number;
+      }
+    ).meets;
+    meets.unshift({ date: meets[0]!.date, races: [], nextRace: 1 });
+    (sim as unknown as { meetIndex: number }).meetIndex = 0;
+    runHeat(sim, 3, 1);
+    expect(sim.raceCount).toBe(2);
+    expect((sim as unknown as { meetIndex: number }).meetIndex).toBe(0);
+  });
+
   it("accepts ACK replies without throwing", async () => {
     const transport: TimerTransport = {
       request: async () => Uint8Array.of(6, 0),
