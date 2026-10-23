@@ -196,6 +196,170 @@ describe("meet program reports", () => {
     expect(unscored.meetDateLabel).toBeNull();
   });
 
+  it("covers a one-day meet, missing swimmers, and unscored teams", () => {
+    let meet = createMeet(
+      {
+        name: "Edges",
+        course: "SCY",
+        poolLanes: 6,
+        startDate: "2026-10-25",
+        endDate: "2026-10-25",
+        scoring: "dual",
+      },
+      { newId: () => "meet", now: NOW },
+    );
+    meet = addEvent(
+      meet,
+      { number: 1, distance: 50, stroke: "free", gender: "female" },
+      { newId: () => "open" },
+    );
+    meet = addEvent(
+      meet,
+      { number: 2, distance: 200, stroke: "free_relay", gender: "female" },
+      { newId: () => "relay" },
+    );
+    meet = addEvent(
+      meet,
+      {
+        number: 3,
+        distance: 50,
+        stroke: "free",
+        gender: "female",
+        round: "final",
+        finalHeats: 2,
+      },
+      { newId: () => "final" },
+    );
+    meet = addEvent(
+      meet,
+      { number: 4, distance: 100, stroke: "back", gender: "male" },
+      { newId: () => "empty" },
+    );
+    meet = {
+      ...meet,
+      teams: [
+        { code: "AAA", name: "Ants" },
+        { code: "ZZZ", name: "Zero" },
+      ],
+      athletes: [
+        {
+          id: "solo",
+          teamCode: "AAA",
+          firstName: "",
+          lastName: "Solo",
+          dateOfBirth: "2010-01-01",
+        },
+      ],
+      entries: [
+        {
+          id: "ghost",
+          eventId: "open",
+          teamCode: "GONE",
+          seedTimeMs: null,
+          exhibition: false,
+          scratched: false,
+        },
+        {
+          id: "rel",
+          eventId: "relay",
+          teamCode: "AAA",
+          seedTimeMs: 90_000,
+          exhibition: false,
+          scratched: false,
+          relay: { letter: "A", legAthleteIds: ["solo", "missing"] },
+        },
+        {
+          id: "f1",
+          eventId: "final",
+          teamCode: "AAA",
+          seedTimeMs: null,
+          exhibition: false,
+          scratched: false,
+          athleteId: "solo",
+        },
+        {
+          id: "f2",
+          eventId: "final",
+          teamCode: "AAA",
+          seedTimeMs: null,
+          exhibition: false,
+          scratched: false,
+          athleteId: "solo",
+        },
+        {
+          id: "f3",
+          eventId: "final",
+          teamCode: "AAA",
+          seedTimeMs: null,
+          exhibition: false,
+          scratched: false,
+          athleteId: "solo",
+        },
+      ],
+      heats: [
+        { eventId: "open", number: 1, lanes: [{ lane: 1, entryId: "ghost" }] },
+        { eventId: "relay", number: 1, lanes: [{ lane: 3, entryId: "rel" }] },
+        { eventId: "final", number: 1, lanes: [{ lane: 1, entryId: "f1" }] },
+        { eventId: "final", number: 2, lanes: [{ lane: 1, entryId: "f2" }] },
+        { eventId: "final", number: 3, lanes: [{ lane: 1, entryId: "f3" }] },
+      ],
+      results: [
+        {
+          entryId: "ghost",
+          eventId: "open",
+          heat: 1,
+          lane: 1,
+          status: "ok" as const,
+          timeMs: 28_000,
+          source: "manual" as const,
+          splitsMs: [],
+          backupMs: null,
+          buttonsMs: [],
+          relayExchangesMs: [],
+        },
+        ...[1, 2, 3].map((heat) => ({
+          entryId: `f${heat}`,
+          eventId: "final",
+          heat,
+          lane: 1,
+          status: heat === 3 ? ("dq" as const) : ("ok" as const),
+          timeMs: heat === 3 ? null : 30_000 + heat,
+          source: "manual" as const,
+          splitsMs: [],
+          backupMs: null,
+          buttonsMs: [],
+          relayExchangesMs: [],
+        })),
+      ],
+    };
+
+    const sheet = buildHeatSheetReport(meet, { generatedAt: NOW });
+    expect(sheet.meetDateLabel).toBe("25-Oct-26");
+    expect(sheet.location).toBeNull();
+    expect(sheet.events.map((e) => e.eventId)).toEqual([
+      "open",
+      "relay",
+      "final",
+    ]);
+    const relay = sheet.events.find((e) => e.eventId === "relay")!;
+    expect(relay.heats[0]!.rows[0]!.legs).toEqual(["Solo 16", "Unknown"]);
+    expect(
+      sheet.events.find((e) => e.eventId === "open")!.heats[0]!.rows[0]!.name,
+    ).toBe("Unknown");
+
+    const results = buildMeetResultsReport(meet, { generatedAt: NOW });
+    const finals = results.events.find((e) => e.eventId === "final")!;
+    expect(finals.sections.length).toBeGreaterThan(1);
+    expect(finals.sections.some((s) => s.label == null)).toBe(true);
+    expect(
+      finals.sections[0]!.rows.some((r) => r.note == null || r.mark === "DQ"),
+    ).toBe(true);
+    expect(results.teamScores.map((s) => s.team)).toEqual(
+      expect.arrayContaining(["Zero", "GONE"]),
+    );
+    expect(results.teamScores.find((s) => s.team === "Zero")!.points).toBe("0");
+  });
+
   it("renders both PDFs", async () => {
     const meet = sampleMeet();
     for (const doc of [

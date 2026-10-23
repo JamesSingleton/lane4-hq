@@ -2,6 +2,8 @@ import { describe, expect, it } from "vitest";
 import {
   buildTeamBestTimesReport,
   formatTeamBestTimesCsv,
+  suggestFreeRelayTeams,
+  suggestMedleyRelayTeams,
 } from "../src/team-best-times/build";
 
 describe("buildTeamBestTimesReport", () => {
@@ -164,5 +166,153 @@ describe("buildTeamBestTimesReport", () => {
     expect(csv).toContain("Ada Lovelace");
     expect(csv).toContain("Relay suggestions");
     expect(csv).toContain("200 Free Relay");
+  });
+
+  it("drops rows that are not a scy swim and keeps the faster duplicate", () => {
+    const report = buildTeamBestTimesReport({
+      teamName: "Edges",
+      times: [
+        {
+          swimmerId: "f1",
+          swimmerName: "Ada",
+          gender: "female",
+          eventKey: "50_free_scy_f",
+          course: "SCY",
+          timeMs: 30_000,
+        },
+        {
+          swimmerId: "f1",
+          swimmerName: "Ada",
+          gender: "female",
+          eventKey: "50_free_scy_f",
+          course: "SCY",
+          timeMs: 28_000,
+        },
+        {
+          swimmerId: "f1",
+          swimmerName: "Ada",
+          gender: "female",
+          eventKey: "50_free_scy_f",
+          course: "SCY",
+          timeMs: 29_000,
+        },
+        {
+          swimmerId: "f1",
+          swimmerName: "Ada",
+          gender: "female",
+          eventKey: "50_kick_scy_f",
+          course: "SCY",
+          timeMs: 40_000,
+        },
+        {
+          swimmerId: "f1",
+          swimmerName: "Ada",
+          gender: "female",
+          eventKey: "50_pull_scy_f",
+          course: "SCY",
+          timeMs: 41_000,
+        },
+        {
+          swimmerId: "f1",
+          swimmerName: "Ada",
+          gender: "female",
+          eventKey: "200_free_relay_scy_f",
+          course: "SCY",
+          timeMs: 120_000,
+        },
+        {
+          swimmerId: "f1",
+          swimmerName: "Ada",
+          gender: "female",
+          eventKey: "50_back_scy_f",
+          course: "SCY",
+          timeMs: 0,
+        },
+        {
+          swimmerId: "x1",
+          swimmerName: "Skip",
+          gender: "mixed",
+          eventKey: "50_free_scy_x",
+          course: "SCY",
+          timeMs: 25_000,
+        },
+        {
+          swimmerId: "f2",
+          swimmerName: "Bad",
+          gender: "female",
+          eventKey: "not-an-event",
+          course: "SCY",
+          timeMs: 25_000,
+        },
+        {
+          swimmerId: "f3",
+          swimmerName: "Wrong course",
+          gender: "female",
+          eventKey: "50_free_lcm_f",
+          course: "SCY",
+          timeMs: 25_000,
+        },
+        {
+          swimmerId: "m1",
+          swimmerName: "Only relay",
+          gender: "male",
+          eventKey: "200_free_relay_scy_m",
+          course: "SCY",
+          timeMs: 100_000,
+        },
+      ],
+    });
+    const female = report.sections.find((s) => s.gender === "female")!;
+    expect(female.columns.map((c) => c.label)).toEqual([
+      "50 Free",
+      "50 Kick",
+      "50 Pull",
+    ]);
+    expect(female.rows[0]!.timesByEventKey["50_free_scy_f"]).toBe(28_000);
+    expect(report.sections.some((s) => s.gender === "male")).toBe(false);
+
+    const empty = buildTeamBestTimesReport({ teamName: "Empty", times: [] });
+    expect(formatTeamBestTimesCsv(empty)).not.toContain("Relay suggestions");
+    const short = formatTeamBestTimesCsv({
+      ...empty,
+      relaySuggestions: [
+        {
+          eventKey: "200_free_relay_scy_f",
+          title: "200 Free Relay",
+          gender: "female",
+          genderLabel: "Female",
+          letter: "A",
+          seedTimeMs: 1_000,
+          seedLabel: "1.00",
+          legs: [
+            {
+              legOrder: 1,
+              roleLabel: "Free",
+              swimmerId: "f1",
+              swimmerName: "Ada",
+              splitTimeMs: 1_000,
+              splitLabel: "1.00",
+            },
+          ],
+        },
+      ],
+    });
+    expect(short).toContain("Ada");
+    expect(
+      suggestFreeRelayTeams(
+        "100_free_relay_scy_f",
+        "100 Free Relay",
+        "female",
+        new Map(),
+      ),
+    ).toEqual([]);
+    expect(
+      suggestMedleyRelayTeams(
+        "100_medley_relay_scy_f",
+        "100 Medley Relay",
+        "female",
+        new Map(),
+      ),
+    ).toEqual([]);
   });
 });

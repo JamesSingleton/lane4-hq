@@ -179,7 +179,7 @@ function bestByEventKey(
   return ranked;
 }
 
-function suggestFreeRelayTeams(
+export function suggestFreeRelayTeams(
   eventKey: string,
   title: string,
   gender: Gender,
@@ -224,7 +224,7 @@ function suggestFreeRelayTeams(
   return suggestions;
 }
 
-function suggestMedleyRelayTeams(
+export function suggestMedleyRelayTeams(
   eventKey: string,
   title: string,
   gender: Gender,

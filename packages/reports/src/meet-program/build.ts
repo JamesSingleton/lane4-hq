@@ -250,6 +250,11 @@ function pointsLabel(points: number): string {
   return Number.isInteger(points) ? String(points) : points.toFixed(2);
 }
 
+/** Missing finals labels sort as blank, with the lettered finals. */
+function sectionLabel(label: string | null): string {
+  return label ?? "";
+}
+
 export function buildMeetResultsReport(
   meet: Meet,
   options: MeetReportOptions = {},
@@ -315,7 +320,7 @@ export function buildMeetResultsReport(
             ? "Prelims"
             : "Finals",
       sections: [...sections.values()].sort((a, b) =>
-        (a.label ?? "").localeCompare(b.label ?? ""),
+        sectionLabel(a.label).localeCompare(sectionLabel(b.label)),
       ),
     });
   }

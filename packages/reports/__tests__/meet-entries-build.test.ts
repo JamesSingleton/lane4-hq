@@ -271,6 +271,94 @@ describe("buildMeetEntriesReport", () => {
     expect(report.swimmers[0]?.lines[0]?.eventLabel).toContain("50");
   });
 
+  it("fills a blank team name, an address, and tied seeds", () => {
+    expect(formatMeetDateCompact("not a date").endsWith("-Jan-")).toBe(false);
+    expect(formatMeetDateCompact("not-a-date")).toContain("Jan");
+    const snapshot = buildMeetLineupSnapshot({
+      meet: { name: "Invite", startDate: "2026-09-12", course: "SCY" },
+      team: {
+        teamCode: "MARI",
+        addressLine1: "1 Lane",
+        city: "Phoenix",
+        region: "AZ",
+        postalCode: "85001",
+      },
+      relayLegs: [],
+      events: [
+        {
+          id: "e1",
+          eventNumber: 1,
+          stroke: "free",
+          distance: 50,
+          gender: "female",
+          eventKey: "50_free_scy_f",
+        },
+      ],
+      entries: [
+        {
+          id: "a",
+          meetEventId: "e1",
+          membershipId: "m-a",
+          seedTimeMs: 30_000,
+          exhibition: false,
+          status: "entered",
+        },
+        {
+          id: "b",
+          meetEventId: "e1",
+          membershipId: "m-b",
+          seedTimeMs: 30_000,
+          exhibition: false,
+          status: "entered",
+        },
+        {
+          id: "c",
+          meetEventId: "e1",
+          membershipId: "m-c",
+          seedTimeMs: 31_000,
+          exhibition: false,
+          status: "entered",
+        },
+      ],
+      members: [
+        {
+          membershipId: "m-a",
+          swimmerId: "s-a",
+          firstName: "Bea",
+          lastName: "Zed",
+          gender: "female",
+        },
+        {
+          membershipId: "m-b",
+          swimmerId: "s-b",
+          firstName: "Ann",
+          lastName: "Young",
+          gender: "open",
+        },
+        {
+          membershipId: "m-c",
+          swimmerId: "s-c",
+          firstName: "Cy",
+          lastName: "Male",
+          gender: "male",
+        },
+      ],
+    });
+    const report = buildMeetEntriesReport(snapshot);
+    expect(report.teamName).toBe("Team");
+    expect(report.teamAddress).toBe("1 Lane, Phoenix, AZ, 85001");
+    const athletes = report.events[0];
+    expect(athletes?.kind).toBe("individual");
+    if (athletes?.kind === "individual") {
+      expect(athletes.athletes.map((a) => a.name)).toEqual([
+        "Ann Young",
+        "Bea Zed",
+        "Cy Male",
+      ]);
+    }
+    expect(report.summary.maleIndividualEntries).toBe(1);
+  });
+
   it("keeps not-going swimmers and accepts coach overrides", () => {
     const snapshot = buildMeetLineupSnapshot({
       meet: {
