@@ -59,6 +59,97 @@ describe("parseHy3Roster", () => {
     expect(parseHy3Roster(content)).toEqual([]);
   });
 
+  it("reads SwimTopia birth dates, ids, and parent records", () => {
+    function at(value: string, width: number): string {
+      return value.slice(0, width).padEnd(width, " ");
+    }
+    function put(line: string, column: number, value: string): string {
+      const chars = line.padEnd(column + value.length, " ").split("");
+      for (let i = 0; i < value.length; i++) chars[column - 1 + i] = value[i]!;
+      return chars.join("");
+    }
+    const emily = put(
+      put(
+        put(
+          `D1F${at("395", 5)}${at("Alder", 20)}${at("Emily", 20)}${"".padEnd(20, " ")}M${at("0123456789ABCD", 14)}`,
+          89,
+          "01222015",
+        ),
+        100,
+        "FR",
+      ),
+      1,
+      "D1",
+    );
+    const address = `D2${at("3554 Maple Park Dr.", 30)}${at("Apt 2", 30)}${at("Kingwood", 30)}TX${at("77339", 10)}USA`;
+    const admin = `D3${"".padEnd(30, " ")}${"n/a".padEnd(20, " ")}${"956-337-1962".padEnd(20, " ")}${"".padEnd(20, " ")}`;
+    const parents = `DB${at("Alder", 20)}${at("Kristina", 20)}`;
+    const parentPhones = `DD${at("NA", 20)}${"".padEnd(20, " ")}${at("281-912-4584", 20)}`;
+    const parentEmail = `DE${at("sherrie@example.com", 36)}`;
+    const henry = put(
+      `D1M${at("456", 5)}${at("Barrett", 20)}${at("Henry", 20)}${at("Harry", 20)}D`,
+      89,
+      "01182019",
+    );
+    const otherParents = `DB${"".padEnd(60, " ")}${at("Barrett", 20)}${at("Renee", 20)}`;
+
+    const rows = parseHy3Roster(
+      [
+        "D2ignored before a swimmer",
+        emily,
+        address,
+        admin,
+        parents,
+        parentPhones,
+        parentEmail,
+        "D7later@example.com",
+        henry,
+        "D2",
+        otherParents,
+        "D7harry.parent@example.com",
+        put(
+          `D1F${at("1", 5)}${at("NoPhone", 20)}${at("Ada", 20)}`,
+          89,
+          "03032016",
+        ),
+        "DBAda",
+        "D3",
+        "DD",
+      ].join("\n"),
+    );
+
+    expect(rows.find((row) => row.lastName === "Alder")).toMatchObject({
+      firstName: "Emily",
+      gender: "female",
+      dateOfBirth: "2015-01-22",
+      classYear: "FR",
+      middleName: "M",
+      usaMemberId: "0123456789ABCD",
+      contacts: {
+        parentName: "Kristina Alder",
+        parentEmail: "sherrie@example.com",
+        parentPhone: "281-912-4584",
+        addressLine1: "3554 Maple Park Dr.",
+        addressLine2: "Apt 2",
+        city: "Kingwood",
+        state: "TX",
+        postalCode: "77339",
+        country: "USA",
+      },
+    });
+    expect(rows.find((row) => row.lastName === "Barrett")).toMatchObject({
+      firstName: "Henry",
+      preferredName: "Harry",
+      middleName: "D",
+      dateOfBirth: "2019-01-18",
+      gender: "male",
+      contacts: {
+        parentName: "Renee Barrett",
+        parentEmail: "harry.parent@example.com",
+      },
+    });
+  });
+
   it("exports deprecated alias parseHy3StyleRoster", () => {
     expect(parseHy3StyleRoster).toBe(parseHy3Roster);
   });

@@ -65,10 +65,25 @@ describe("parseHy3", () => {
     expect(meet.hy3Software).toBe("Win-TM 8.0De");
     expect(meet.entries.length).toBe(1);
     expect(meet.entries[0]?.exhibition).toBe(true);
+    expect(meet.entries[0]?.meetDivision).toBeUndefined();
     expect(meet.entries[0]?.eventNumber).toBe(6);
     expect(meet.entries[0]?.swimmerName).toBe("Max Hanse");
     expect(meet.events[0]?.stroke).toBe("free");
     expect(meet.events[0]?.distance).toBe(50);
+  });
+
+  it("keeps a letter division and ignores the seed-field zero", () => {
+    const base = [
+      "A102Meet Entries             Hy-Tek, Ltd    Win-TM 8.0De  10112025  7:47 PMTEAM",
+      "D1M   28Hanse               Max                                                                    0SR",
+    ];
+    const jv = `${"E1M   28HanseMM    50A 15 18  0U  0.00  6B   27.76S".padEnd(76, " ")}JV`;
+    const fallback = `${"E1M   28HanseMM    50A 15 18  0U  0.00  7B   28.00S".padEnd(91, " ")}VR`;
+    const meet = parseHy3([...base, jv, fallback].join("\n"));
+    expect(meet.entries.map((entry) => entry.meetDivision)).toEqual([
+      "JV",
+      "VR",
+    ]);
   });
 
   it("parses prelim/finals metadata from results fixtures", () => {
@@ -554,5 +569,98 @@ describe("parseHy3", () => {
     expect(meet.entries[0]?.classYear).toBe("SR");
     expect(meet.entries[0]?.seedCourse).toBe("SCY");
     expect(meet.athletes?.[0]?.meetSwimmerId).toBe(32);
+  });
+
+  it("keeps SwimTopia multi-age letters as separate events", () => {
+    function put(line: string[], oneBased: number, s: string) {
+      for (let i = 0; i < s.length; i++) line[oneBased - 1 + i] = s[i]!;
+    }
+    function blank(len = 130): string[] {
+      return Array.from({ length: len }, () => " ");
+    }
+
+    const d1 = blank();
+    put(d1, 1, "D1F");
+    put(d1, 4, "    1");
+    put(d1, 9, "Alder");
+    put(d1, 29, "Emily");
+
+    const young = blank();
+    put(young, 1, "E1F");
+    put(young, 4, "    1");
+    put(young, 14, "F");
+    put(young, 16, "    50");
+    put(young, 22, "B");
+    put(young, 23, " 11");
+    put(young, 26, " 11");
+    put(young, 39, " 42A");
+    put(young, 52, "   49.17");
+
+    const open = blank();
+    put(open, 1, "E1F");
+    put(open, 4, "    1");
+    put(open, 14, "F");
+    put(open, 16, "    50");
+    put(open, 22, "B");
+    put(open, 23, " 17");
+    put(open, 26, " 18");
+    put(open, 39, " 42K");
+    put(open, 52, "   31.20");
+
+    const e2 = blank();
+    put(e2, 1, "E2");
+    put(e2, 3, "F");
+    put(e2, 4, "  31.50");
+
+    const letterOnly = blank();
+    put(letterOnly, 1, "E1F");
+    put(letterOnly, 4, "    1");
+    put(letterOnly, 14, "F");
+    put(letterOnly, 16, "    25");
+    put(letterOnly, 22, "A");
+    put(letterOnly, 39, "   A");
+
+    const relay = blank();
+    put(relay, 1, "F1");
+    put(relay, 3, "BB");
+    put(relay, 8, "A");
+    put(relay, 13, "F");
+    put(relay, 14, "FF");
+    put(relay, 16, "   100");
+    put(relay, 22, "A");
+    put(relay, 23, "  0");
+    put(relay, 26, "  6");
+    put(relay, 39, "  3B");
+
+    const meet = parseHy3(
+      [
+        d1.join(""),
+        young.join(""),
+        open.join(""),
+        e2.join(""),
+        letterOnly.join(""),
+        relay.join(""),
+      ].join("\n"),
+    );
+
+    expect(
+      meet.events.map((event) => [
+        event.eventNumber,
+        event.eventSuffix,
+        event.ageGroup,
+      ]),
+    ).toEqual([
+      [42, "A", "11-11"],
+      [42, "K", "17-18"],
+      [undefined, "A", undefined],
+      [3, "B", "0-6"],
+    ]);
+    expect(meet.entries.map((entry) => entry.eventSuffix)).toEqual([
+      "A",
+      "K",
+      "A",
+    ]);
+    expect(meet.results[0]?.eventSuffix).toBe("K");
+    expect(meet.relays?.[0]?.eventSuffix).toBe("B");
   });
 });

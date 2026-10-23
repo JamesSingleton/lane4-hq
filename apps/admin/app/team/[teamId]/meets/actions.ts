@@ -476,6 +476,7 @@ export type MeetImportPreview = {
     gender: string;
     ageGroup?: string;
     eventKey: string;
+    eventSuffix?: string;
     qualifyingTimeMs?: number;
     eventKind?: "swim" | "dive";
     diveCount?: number;
@@ -731,6 +732,7 @@ export async function parseMeetFilePreviewAction(
       gender: e.gender,
       ageGroup: e.ageGroup,
       eventKey: e.eventKey,
+      eventSuffix: e.eventSuffix,
       qualifyingTimeMs: e.qualifyingTimeMs,
       eventKind: e.eventKind,
       diveCount: e.diveCount,
@@ -790,6 +792,7 @@ export type MeetImportReviewOverrides = {
     gender: string;
     ageGroup?: string;
     eventKey: string;
+    eventSuffix?: string;
     qualifyingTimeMs?: number;
     eventKind?: "swim" | "dive";
     diveCount?: number;
@@ -974,6 +977,7 @@ export async function importMeetFileAction(
         gender: e.gender as ParsedMeet["events"][number]["gender"],
         ageGroup: e.ageGroup,
         eventKey: e.eventKey,
+        eventSuffix: e.eventSuffix,
         qualifyingTimeMs: e.qualifyingTimeMs,
         eventKind: e.eventKind,
         diveCount: e.diveCount,
@@ -1056,25 +1060,57 @@ export async function importMeetFileAction(
 
     const existingEvents = await getMeetEvents(meetId);
     const eventIdByNumber = new Map<number, string>();
-    const eventIdByKey = new Map<string, string>();
+    const eventIdBySlot = new Map<string, string>();
     let fallbackEventId: string | undefined;
 
+    function importSlot(event: {
+      eventNumber?: number | null;
+      eventSuffix?: string;
+      ageGroup?: string | null;
+      eventKey: string;
+    }): string {
+      return [
+        event.eventNumber ?? "",
+        event.eventSuffix ?? "",
+        event.ageGroup ?? "",
+        event.eventKey,
+      ].join("|");
+    }
+
     for (const event of existingEvents) {
-      if (event.eventNumber != null) {
+      eventIdBySlot.set(importSlot(event), event.id);
+      if (
+        event.eventNumber != null &&
+        !eventIdByNumber.has(event.eventNumber)
+      ) {
         eventIdByNumber.set(event.eventNumber, event.id);
-      }
-      if (!eventIdByKey.has(event.eventKey)) {
-        eventIdByKey.set(event.eventKey, event.id);
       }
       fallbackEventId ??= event.id;
     }
 
     let eventsAdded = 0;
     for (const event of parsed.events) {
+      const slot = importSlot(event);
+      const slottedId = eventIdBySlot.get(slot);
+      if (slottedId) {
+        const existing = existingEvents.find((row) => row.id === slottedId);
+        if (existing?.importedFromFile) {
+          await updateMeetEvent(slottedId, meetId, {
+            ageGroup: event.ageGroup ?? null,
+            qualifyingTimeMs: event.qualifyingTimeMs ?? null,
+          });
+        }
+        continue;
+      }
+
+      const numbered =
+        event.eventNumber == null
+          ? []
+          : existingEvents.filter(
+              (row) => row.eventNumber === event.eventNumber,
+            );
       const existingByNumber =
-        event.eventNumber != null
-          ? existingEvents.find((row) => row.eventNumber === event.eventNumber)
-          : undefined;
+        !event.eventSuffix && numbered.length === 1 ? numbered[0] : undefined;
       const importedSnapshot = {
         eventNumber: event.eventNumber ?? null,
         eventKey: event.eventKey,
@@ -1100,6 +1136,7 @@ export async function importMeetFileAction(
       );
 
       if (existingByNumber) {
+        eventIdBySlot.set(slot, existingByNumber.id);
         if (decision === "replace") {
           await updateMeetEvent(existingByNumber.id, meetId, {
             stroke: event.stroke,
@@ -1110,7 +1147,6 @@ export async function importMeetFileAction(
             qualifyingTimeMs: event.qualifyingTimeMs ?? null,
             course: parsed.course,
           });
-          eventIdByKey.set(event.eventKey, existingByNumber.id);
         } else if (decision === "refresh") {
           await updateMeetEvent(existingByNumber.id, meetId, {
             ageGroup: event.ageGroup ?? null,
@@ -1120,30 +1156,19 @@ export async function importMeetFileAction(
         continue;
       }
 
-      if (eventIdByKey.has(event.eventKey)) {
-        const existingId = eventIdByKey.get(event.eventKey)!;
-        const existing = existingEvents.find((row) => row.id === existingId);
-        if (existing?.importedFromFile) {
-          await updateMeetEvent(existingId, meetId, {
-            ageGroup: event.ageGroup ?? null,
-            qualifyingTimeMs: event.qualifyingTimeMs ?? null,
-          });
-        }
-        if (event.eventNumber != null) {
-          eventIdByNumber.set(event.eventNumber, existingId);
-        }
-        continue;
-      }
-
       const eventId = await addMeetEvent(meetId, {
         ...event,
         course: parsed.course,
         importedFromFile: true,
       });
-      if (event.eventNumber != null) {
+      eventIdBySlot.set(slot, eventId);
+      if (
+        event.eventNumber != null &&
+        !event.eventSuffix &&
+        !eventIdByNumber.has(event.eventNumber)
+      ) {
         eventIdByNumber.set(event.eventNumber, eventId);
       }
-      eventIdByKey.set(event.eventKey, eventId);
       fallbackEventId ??= eventId;
       eventsAdded++;
     }
@@ -1264,30 +1289,44 @@ export async function importMeetFileAction(
 
     async function eventIdFor(
       num?: number,
-      options?: { allowFallback?: boolean },
+      options?: { allowFallback?: boolean; eventSuffix?: string },
     ) {
       const allowFallback = options?.allowFallback !== false;
-      if (num != null && eventIdByNumber.has(num)) {
-        return eventIdByNumber.get(num)!;
+      const suffix = options?.eventSuffix ?? "";
+      if (num != null) {
+        const matches = parsed.events.filter(
+          (event) =>
+            event.eventNumber === num && (event.eventSuffix ?? "") === suffix,
+        );
+        for (const match of matches) {
+          const id = eventIdBySlot.get(importSlot(match));
+          if (id) return id;
+        }
+        if (!suffix && eventIdByNumber.has(num)) {
+          return eventIdByNumber.get(num)!;
+        }
       }
       const fromParsed =
         num != null
-          ? parsed.events.find((e) => e.eventNumber === num)
+          ? parsed.events.find(
+              (event) =>
+                event.eventNumber === num &&
+                (event.eventSuffix ?? "") === suffix,
+            )
           : undefined;
-      if (fromParsed && eventIdByKey.has(fromParsed.eventKey)) {
-        const id = eventIdByKey.get(fromParsed.eventKey)!;
-        if (num != null) eventIdByNumber.set(num, id);
-        return id;
-      }
       if (fromParsed) {
+        const existingId = eventIdBySlot.get(importSlot(fromParsed));
+        if (existingId) return existingId;
         const eventId = await addMeetEvent(meetId!, {
           ...fromParsed,
           course: parsed.course,
           importedFromFile: true,
         });
         registerEventDetail(eventId, fromParsed);
-        if (num != null) eventIdByNumber.set(num, eventId);
-        eventIdByKey.set(fromParsed.eventKey, eventId);
+        eventIdBySlot.set(importSlot(fromParsed), eventId);
+        if (num != null && !suffix && !eventIdByNumber.has(num)) {
+          eventIdByNumber.set(num, eventId);
+        }
         fallbackEventId ??= eventId;
         return eventId;
       }
@@ -1338,7 +1377,9 @@ export async function importMeetFileAction(
         continue;
       }
 
-      const meetEventId = await eventIdFor(entry.eventNumber);
+      const meetEventId = await eventIdFor(entry.eventNumber, {
+        eventSuffix: entry.eventSuffix,
+      });
       if (!meetEventId) {
         entriesSkipped++;
         continue;
@@ -1428,7 +1469,9 @@ export async function importMeetFileAction(
         continue;
       }
 
-      const meetEventId = await eventIdFor(result.eventNumber);
+      const meetEventId = await eventIdFor(result.eventNumber, {
+        eventSuffix: result.eventSuffix,
+      });
       if (!meetEventId) {
         resultsSkipped++;
         continue;
@@ -1508,6 +1551,7 @@ export async function importMeetFileAction(
     for (const relay of parsed.relays ?? []) {
       const meetEventId = await eventIdFor(relay.eventNumber, {
         allowFallback: false,
+        eventSuffix: relay.eventSuffix,
       });
       if (!meetEventId) continue;
       const letter = deriveRelayLetter(relay.relayLetter, 1);

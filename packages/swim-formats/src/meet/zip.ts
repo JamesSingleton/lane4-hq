@@ -1,6 +1,6 @@
 import { unzipSync } from "fflate";
 import { detectCl2FileKind } from "../cl2/kind";
-import type { ParsedMeet, ParsedRelayEntry } from "../types";
+import type { ParsedEvent, ParsedMeet, ParsedRelayEntry } from "../types";
 import { withEventsSortedByNumber } from "./sort-events";
 
 export type MeetZipFormat = "sdif" | "hy3" | "ev3" | "hyv" | "cl2" | "xls";
@@ -222,8 +222,29 @@ export function extractMeetFileFromZip(bytes: Uint8Array): ExtractedMeetFile {
   return extractAllMeetFilesFromZip(bytes).primary;
 }
 
-function indexKey(name: string, eventNumber?: number): string {
-  return `${(eventNumber ?? "").toString()}|${name.trim().toLowerCase()}`;
+function indexKey(
+  name: string,
+  eventNumber?: number,
+  eventSuffix?: string,
+): string {
+  return `${(eventNumber ?? "").toString()}${eventSuffix ?? ""}|${name.trim().toLowerCase()}`;
+}
+
+function sameMergedEvent(a: ParsedEvent, b: ParsedEvent): boolean {
+  if (
+    a.eventNumber != null &&
+    b.eventNumber != null &&
+    a.eventNumber === b.eventNumber &&
+    (a.eventSuffix ?? "") !== (b.eventSuffix ?? "")
+  ) {
+    return false;
+  }
+  return (
+    (a.eventNumber != null &&
+      b.eventNumber != null &&
+      a.eventNumber === b.eventNumber) ||
+    a.eventKey === b.eventKey
+  );
 }
 
 function relayTeamCodesMatch(a: string, b: string): boolean {
@@ -242,6 +263,7 @@ function findMergedRelayIndex(
   return merged.findIndex(
     (existing) =>
       (existing.eventNumber ?? "") === eventNumber &&
+      (existing.eventSuffix ?? "") === (relay.eventSuffix ?? "") &&
       (existing.relayLetter ?? "").trim().toUpperCase() === letter &&
       relayTeamCodesMatch((existing.teamCode ?? "").trim().toLowerCase(), team),
   );
@@ -311,22 +333,24 @@ export function mergeParsedMeets(
     }
 
     for (const event of extra.events) {
-      const exists = merged.events.some(
-        (e) =>
-          (event.eventNumber != null && e.eventNumber === event.eventNumber) ||
-          e.eventKey === event.eventKey,
-      );
+      const exists = merged.events.some((e) => sameMergedEvent(e, event));
       if (!exists) merged.events.push(event);
     }
 
     const entryKeys = new Set(
-      merged.entries.map((e) => indexKey(e.swimmerName, e.eventNumber)),
+      merged.entries.map((e) =>
+        indexKey(e.swimmerName, e.eventNumber, e.eventSuffix),
+      ),
     );
     for (const entry of extra.entries) {
-      const key = indexKey(entry.swimmerName, entry.eventNumber);
+      const key = indexKey(
+        entry.swimmerName,
+        entry.eventNumber,
+        entry.eventSuffix,
+      );
       if (entryKeys.has(key)) {
         const existing = merged.entries.find(
-          (e) => indexKey(e.swimmerName, e.eventNumber) === key,
+          (e) => indexKey(e.swimmerName, e.eventNumber, e.eventSuffix) === key,
         );
         if (existing && !existing.usaMemberId && entry.usaMemberId) {
           existing.usaMemberId = entry.usaMemberId;
@@ -341,10 +365,16 @@ export function mergeParsedMeets(
     }
 
     const resultKeys = new Set(
-      merged.results.map((r) => indexKey(r.swimmerName, r.eventNumber)),
+      merged.results.map((r) =>
+        indexKey(r.swimmerName, r.eventNumber, r.eventSuffix),
+      ),
     );
     for (const result of extra.results) {
-      const key = indexKey(result.swimmerName, result.eventNumber);
+      const key = indexKey(
+        result.swimmerName,
+        result.eventNumber,
+        result.eventSuffix,
+      );
       if (resultKeys.has(key)) continue;
       resultKeys.add(key);
       merged.results.push(result);

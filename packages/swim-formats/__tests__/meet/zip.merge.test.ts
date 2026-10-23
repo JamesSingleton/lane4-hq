@@ -630,4 +630,132 @@ describe("mergeParsedMeets", () => {
     ]);
     expect(merged.athletes).toEqual([{ name: "Zip Only", relayOnly: true }]);
   });
+
+  it("keeps multi-age suffixes apart and still merges an unnumbered twin", () => {
+    const merged = mergeParsedMeets(
+      {
+        name: "Primary",
+        course: "SCY",
+        events: [
+          {
+            eventNumber: 42,
+            eventSuffix: "A",
+            distance: 50,
+            stroke: "back",
+            gender: "female",
+            ageGroup: "11-11",
+            eventKey: "50_back_scy_f",
+          },
+          {
+            distance: 100,
+            stroke: "free",
+            gender: "male",
+            eventKey: "open",
+          },
+        ],
+        entries: [
+          {
+            eventNumber: 42,
+            eventSuffix: "A",
+            swimmerName: "Ada Lovelace",
+            seedTime: "49.17",
+          },
+        ],
+        results: [
+          {
+            eventNumber: 42,
+            eventSuffix: "A",
+            swimmerName: "Ada Lovelace",
+            time: "48.00",
+          },
+        ],
+        relays: [
+          {
+            eventNumber: 3,
+            eventSuffix: "B",
+            relayLetter: "A",
+            teamCode: "BB",
+            swimmerNames: ["Ada Lovelace"],
+          },
+        ],
+      },
+      [
+        {
+          name: "Extra",
+          course: "SCY",
+          events: [
+            {
+              eventNumber: 42,
+              eventSuffix: "A",
+              distance: 50,
+              stroke: "back",
+              gender: "female",
+              ageGroup: "11-11",
+              eventKey: "50_back_scy_f",
+            },
+            {
+              eventNumber: 42,
+              eventSuffix: "K",
+              distance: 50,
+              stroke: "back",
+              gender: "female",
+              ageGroup: "17-18",
+              eventKey: "50_back_scy_f",
+            },
+            {
+              eventNumber: 7,
+              distance: 100,
+              stroke: "free",
+              gender: "female",
+              eventKey: "other",
+            },
+            {
+              distance: 200,
+              stroke: "free",
+              gender: "male",
+              eventKey: "different",
+            },
+            {
+              distance: 100,
+              stroke: "free",
+              gender: "male",
+              eventKey: "open",
+            },
+          ],
+          entries: [
+            {
+              eventNumber: 42,
+              eventSuffix: "K",
+              swimmerName: "Ada Lovelace",
+              seedTime: "31.20",
+            },
+          ],
+          results: [
+            {
+              eventNumber: 42,
+              eventSuffix: "K",
+              swimmerName: "Ada Lovelace",
+              time: "31.00",
+            },
+          ],
+          relays: [
+            {
+              eventNumber: 3,
+              eventSuffix: "C",
+              relayLetter: "A",
+              teamCode: "BB",
+              swimmerNames: ["Bea Ng"],
+            },
+          ],
+        },
+      ],
+    );
+
+    expect(
+      merged.events.map((event) => event.eventSuffix ?? event.eventNumber),
+    ).toEqual([7, "A", "K", undefined, undefined]);
+    expect(merged.entries).toHaveLength(2);
+    expect(merged.results).toHaveLength(2);
+    expect(merged.relays).toHaveLength(2);
+  });
 });
