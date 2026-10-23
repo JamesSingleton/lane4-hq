@@ -5,22 +5,45 @@ description: Add swimmers, organize groups, and import roster data.
 
 # Manage the roster
 
-The **Roster** area is where you add swimmers, maintain their team details, and organize them into groups.
+Roster is where you add swimmers, keep season details current, and sort the team into groups. The season selector at the top chooses which year you are looking at.
+
+<video controls src="/videos/roster.mp4" width="100%" />
 
 ## Add swimmers
 
-Use **Roster → Swimmers** to create a swimmer record. Add the contact and eligibility details your team needs, then update the record when the swimmer’s group or status changes.
+Open Roster, then Swimmers. Add a swimmer, or import a file if the team already has a roster somewhere else. High-school teams track class year. Club teams can keep a USA Swimming ID. Update the group or status when it changes.
 
-Club teams can keep a USA Swimming ID. High-school teams can track class year and school-specific eligibility details.
+<Frame>
+  <img
+    src="/images/roster.png"
+    alt="2026 Saguaro Ridge roster with 15 boys and 15 girls, class year, and training group."
+  />
+</Frame>
+
+Open a swimmer to see progression for one person. That page is times and events, not contact details.
+
+<Frame>
+  <img
+    src="/images/swimmer-progression.png"
+    alt="Progression page for one Saguaro Ridge swimmer."
+  />
+</Frame>
 
 ## Organize groups and coaches
 
-Use the **Groups** and **Coaches** tabs to organize training groups and the staff connected to them. Groups make roster and practice work easier to scan without mixing teams together.
+Use the Groups and Coaches tabs on the roster. Groups make practice and entries easier to scan. Coaches lists the staff connected to this team.
+
+<Frame>
+  <img
+    src="/images/roster-groups.png"
+    alt="Training groups for Saguaro Ridge, including varsity."
+  />
+</Frame>
 
 ## Import and export
 
-The roster import/export tools accept Lane4 HQ share packs (`.lane4hq.json`), CSV, SD3, CL2, HY3, and roster ZIP files.
+Import and Export roster sit above the table. Lane4 accepts its own share pack (`.lane4hq.json`), plus CSV, SD3, CL2, HY3, and roster ZIP files.
 
 <Warning>
-  Review the import mapping and any unmatched rows before treating an import as complete. An unsupported file type or a missing identity field can prevent a row from being matched.
+  Check the import mapping and any unmatched rows before you treat the import as finished. An unsupported file, or a row missing the field Lane4 uses to recognize a swimmer, will not match.
 </Warning>
