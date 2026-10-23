@@ -1,8 +1,10 @@
 import { Separator } from "@lane4hq/ui/components/separator";
+import { cn } from "@lane4hq/ui/lib/utils";
 import Link from "next/link";
 import { BrandLogo } from "@/components/brand-logo";
 import { CtaLink } from "@/components/cta-link";
 import { GithubStars } from "@/components/github-stars";
+import { siteContainer } from "@/components/section";
 import {
   audienceLinks,
   DOCS_URL,
@@ -29,7 +31,7 @@ const legalLinks = [
 export async function SiteFooter() {
   return (
     <footer className="border-t border-border pb-[env(safe-area-inset-bottom)]">
-      <div className="mx-auto flex w-full max-w-6xl flex-col gap-10 px-4 py-12 md:px-6 md:py-16">
+      <div className={cn(siteContainer, "flex flex-col gap-10 py-12 md:py-16")}>
         <div className="flex flex-col justify-between gap-6 md:flex-row md:items-end">
           <Link
             href="/"

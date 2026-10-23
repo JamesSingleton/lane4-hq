@@ -69,10 +69,6 @@ export default function RootLayout({
             >
               Skip to content
             </a>
-            <div
-              aria-hidden="true"
-              className="lane-grid pointer-events-none fixed inset-0 -z-10"
-            />
             <SiteHeader />
             <main id="content">{children}</main>
             <SiteFooter />

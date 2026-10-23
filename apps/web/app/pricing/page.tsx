@@ -6,7 +6,6 @@ import {
   CardHeader,
   CardTitle,
 } from "@lane4hq/ui/components/card";
-import { Separator } from "@lane4hq/ui/components/separator";
 import {
   Table,
   TableBody,
@@ -15,9 +14,10 @@ import {
   TableHeader,
   TableRow,
 } from "@lane4hq/ui/components/table";
+import { cn } from "@lane4hq/ui/lib/utils";
 import { CtaLink } from "@/components/cta-link";
 import { MarketingCta } from "@/components/marketing-cta";
-import { PageIntro } from "@/components/section";
+import { PageIntro, siteContainer } from "@/components/section";
 import { pageMetadata } from "@/lib/metadata";
 import { plans } from "@/lib/site";
 
@@ -92,11 +92,18 @@ export default function PricingPage() {
         title="One coach can take a full season of meets on Free."
         description="Unlimited swimmers, meet files, seed times from best times, and progression, for a club or a high school. Pro adds coach seats, lineup suggestions for open individual spots, and a roster-wide cut list. Billing is per team."
       />
-      <section className="mx-auto grid w-full max-w-6xl items-stretch gap-4 px-4 pb-16 md:grid-cols-3 md:px-6">
+      <section
+        className={cn(
+          siteContainer,
+          "grid items-stretch gap-4 pb-12 md:grid-cols-3",
+        )}
+      >
         {plans.map((plan) => (
           <Card
             key={plan.id}
-            className={plan.featured ? "h-full ring-foreground/20" : "h-full"}
+            className={
+              plan.featured ? "h-full border-foreground/30 shadow-none" : "h-full"
+            }
           >
             <CardHeader>
               <div className="flex items-center justify-between gap-2">
@@ -125,29 +132,30 @@ export default function PricingPage() {
           </Card>
         ))}
       </section>
-      <section className="mx-auto w-full max-w-6xl px-4 pb-16 md:px-6">
-        <Table aria-label="Features included on Free, Pro, and Enterprise">
-          <TableHeader>
-            <TableRow>
-              <TableHead>Included</TableHead>
-              <TableHead>Free</TableHead>
-              <TableHead>Pro</TableHead>
-              <TableHead>Enterprise</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {comparison.map((row) => (
-              <TableRow key={row.feature}>
-                <TableCell className="font-medium">{row.feature}</TableCell>
-                <TableCell>{row.free}</TableCell>
-                <TableCell>{row.pro}</TableCell>
-                <TableCell>{row.enterprise}</TableCell>
+      <section className="border-t border-border/70 bg-muted/40">
+        <div className={cn(siteContainer, "overflow-x-auto py-14 md:py-16")}>
+          <Table aria-label="Features included on Free, Pro, and Enterprise">
+            <TableHeader>
+              <TableRow>
+                <TableHead>Included</TableHead>
+                <TableHead>Free</TableHead>
+                <TableHead>Pro</TableHead>
+                <TableHead>Enterprise</TableHead>
               </TableRow>
-            ))}
-          </TableBody>
-        </Table>
+            </TableHeader>
+            <TableBody>
+              {comparison.map((row) => (
+                <TableRow key={row.feature}>
+                  <TableCell className="font-medium">{row.feature}</TableCell>
+                  <TableCell>{row.free}</TableCell>
+                  <TableCell>{row.pro}</TableCell>
+                  <TableCell>{row.enterprise}</TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </div>
       </section>
-      <Separator className="mx-auto max-w-6xl" />
       <MarketingCta
         title="Start on Free with the meet you are entering now."
         body="Import the event file and export the lineup before you add coach seats. The same plans cover a club and a high school."

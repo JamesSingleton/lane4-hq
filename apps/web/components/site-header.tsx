@@ -25,6 +25,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { BrandLogo } from "@/components/brand-logo";
 import { CtaLink } from "@/components/cta-link";
+import { siteContainer } from "@/components/section";
 import { ThemeToggle } from "@/components/theme-toggle";
 import {
   audienceLinks,
@@ -49,10 +50,21 @@ function isActivePath(pathname: string, href: string) {
 
 export function SiteHeader() {
   const pathname = usePathname();
+  const onHome = pathname === "/";
+  const homeLink = onHome
+    ? "bg-transparent text-white hover:bg-white/10 hover:text-white data-[popup-open]:bg-white/10 data-[popup-open]:text-white"
+    : undefined;
 
   return (
-    <header className="sticky top-3 z-40 px-3 pt-[env(safe-area-inset-top)] md:px-4">
-      <div className="mx-auto flex max-w-6xl items-center gap-2 rounded-2xl bg-background/80 p-1 ring-1 ring-foreground/10 backdrop-blur-xl">
+    <header
+      className={cn(
+        "sticky top-0 z-40 border-b pt-[env(safe-area-inset-top)]",
+        onHome
+          ? "border-white/10 bg-[#07080b] text-white"
+          : "border-border/80 bg-background",
+      )}
+    >
+      <div className={cn(siteContainer, "flex h-16 items-center gap-2")}>
         <Link
           href="/"
           aria-label="Lane4 HQ home"
@@ -65,7 +77,9 @@ export function SiteHeader() {
         <NavigationMenu className="hidden flex-1 md:flex">
           <NavigationMenuList>
             <NavigationMenuItem>
-              <NavigationMenuTrigger>Product</NavigationMenuTrigger>
+              <NavigationMenuTrigger className={homeLink}>
+                Product
+              </NavigationMenuTrigger>
               <NavigationMenuContent className="w-[min(36rem,calc(100vw-2rem))] p-2">
                 <ul className="grid gap-1 sm:grid-cols-2">
                   {productLinks.map((item) => (
@@ -85,9 +99,29 @@ export function SiteHeader() {
               </NavigationMenuContent>
             </NavigationMenuItem>
             <NavigationMenuItem>
+              <NavigationMenuTrigger>Teams</NavigationMenuTrigger>
+              <NavigationMenuContent className="w-[min(28rem,calc(100vw-2rem))] p-2">
+                <ul className="grid gap-1">
+                  {audienceLinks.map((item) => (
+                    <li key={item.href}>
+                      <NavigationMenuLink
+                        render={<Link href={item.href} />}
+                        className="flex flex-col items-start gap-0.5"
+                      >
+                        <span className="font-medium">{item.title}</span>
+                        <span className="text-muted-foreground text-sm">
+                          {item.description}
+                        </span>
+                      </NavigationMenuLink>
+                    </li>
+                  ))}
+                </ul>
+              </NavigationMenuContent>
+            </NavigationMenuItem>
+            <NavigationMenuItem>
               <NavigationMenuLink
                 render={<a href={DOCS_URL} target="_blank" rel="noreferrer" />}
-                className={navigationMenuTriggerStyle()}
+                className={cn(navigationMenuTriggerStyle(), homeLink)}
               >
                 Docs
                 <span className="sr-only"> (opens in a new tab)</span>
@@ -99,7 +133,9 @@ export function SiteHeader() {
                   render={<Link href={link.href} />}
                   className={cn(
                     navigationMenuTriggerStyle(),
-                    isActivePath(pathname, link.href) && "bg-muted",
+                    homeLink,
+                    isActivePath(pathname, link.href) &&
+                      (onHome ? "bg-white/10" : "bg-muted"),
                   )}
                 >
                   {link.title}
@@ -110,19 +146,27 @@ export function SiteHeader() {
         </NavigationMenu>
 
         <div className="ml-auto flex items-center gap-1">
-          <ThemeToggle />
+          <ThemeToggle
+            className={onHome ? "text-white hover:bg-white/10" : undefined}
+          />
           <CtaLink
             href={SIGN_IN_URL}
             variant="ghost"
             size="sm"
-            className="hidden md:inline-flex"
+            className={cn(
+              "hidden md:inline-flex",
+              onHome && "text-white hover:bg-white/10 hover:text-white",
+            )}
           >
             Sign in
           </CtaLink>
           <CtaLink
             href={SIGN_UP_URL}
             size="sm"
-            className="hidden rounded-full md:inline-flex"
+            className={cn(
+              "hidden md:inline-flex",
+              onHome && "bg-white text-[#07080b] hover:bg-white/90",
+            )}
           >
             {PRIMARY_CTA}
           </CtaLink>
@@ -132,7 +176,10 @@ export function SiteHeader() {
                 <Button
                   variant="ghost"
                   size="icon"
-                  className="press-scale md:hidden"
+                  className={cn(
+                    "press-scale md:hidden",
+                    onHome && "text-white hover:bg-white/10",
+                  )}
                   aria-label="Open menu"
                 />
               }

@@ -41,8 +41,9 @@ export function CtaLink({
       href={href}
       className={cn(
         buttonVariants({ variant, size }),
-        "press-scale",
-        icon && "group h-12 rounded-full pr-1.5 pl-5",
+        "press-scale rounded-full",
+        size === "lg" && "h-11 px-5 text-base",
+        icon && "group pr-1.5 pl-5",
         className,
       )}
     >

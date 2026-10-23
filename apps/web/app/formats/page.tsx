@@ -3,10 +3,9 @@ import {
   AlertDescription,
   AlertTitle,
 } from "@lane4hq/ui/components/alert";
-import { Badge } from "@lane4hq/ui/components/badge";
-import { Separator } from "@lane4hq/ui/components/separator";
+import { cn } from "@lane4hq/ui/lib/utils";
 import { MarketingCta } from "@/components/marketing-cta";
-import { PageIntro } from "@/components/section";
+import { PageIntro, siteContainer } from "@/components/section";
 import { pageMetadata } from "@/lib/metadata";
 import { formats } from "@/lib/site";
 
@@ -22,7 +21,7 @@ export default function FormatsPage() {
         title="Export the file Meet Manager already knows how to open."
         description="You build the lineup once. HY3, CL2, and SDIF are the interchange Meet Manager, SwimTopia, SwimCloud, and TeamUnify already use."
       />
-      <section className="mx-auto flex w-full max-w-6xl flex-col gap-12 px-4 pb-16 md:px-6">
+      <section className={cn(siteContainer, "flex flex-col gap-10 pb-16")}>
         <Alert>
           <AlertTitle>The host still opens the file</AlertTitle>
           <AlertDescription>
@@ -32,20 +31,25 @@ export default function FormatsPage() {
             can still reject a file under their own rules.
           </AlertDescription>
         </Alert>
-        <ul className="grid gap-x-12 gap-y-8 sm:grid-cols-2">
+        <ul className="border-t border-foreground/15">
           {formats.map((format) => (
-            <li key={format.code} className="flex flex-col gap-2">
-              <Badge variant="secondary" className="w-fit">
+            <li
+              key={format.code}
+              className="grid gap-1 border-b border-foreground/10 py-4 sm:grid-cols-[10rem_minmax(0,36rem)] sm:items-baseline sm:gap-8"
+            >
+              <p
+                className="font-display text-lg font-semibold tracking-tight"
+                translate="no"
+              >
                 {format.code}
-              </Badge>
-              <p className="text-muted-foreground text-sm text-pretty">
+              </p>
+              <p className="leading-relaxed text-muted-foreground">
                 {format.use}
               </p>
             </li>
           ))}
         </ul>
       </section>
-      <Separator className="mx-auto max-w-6xl" />
       <MarketingCta />
     </>
   );

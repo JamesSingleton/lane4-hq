@@ -1,11 +1,12 @@
 "use client";
 
 import { Button } from "@lane4hq/ui/components/button";
+import { cn } from "@lane4hq/ui/lib/utils";
 import { MoonIcon, SunIcon } from "lucide-react";
 import { useTheme } from "next-themes";
 import { useEffect, useState } from "react";
 
-export function ThemeToggle() {
+export function ThemeToggle({ className }: { className?: string }) {
   const { resolvedTheme, setTheme } = useTheme();
   const [mounted, setMounted] = useState(false);
 
@@ -20,7 +21,7 @@ export function ThemeToggle() {
       type="button"
       variant="ghost"
       size="icon"
-      className="press-scale"
+      className={cn("press-scale", className)}
       aria-label={isDark ? "Switch to light theme" : "Switch to dark theme"}
       onClick={() => setTheme(isDark ? "light" : "dark")}
     >

@@ -1,5 +1,6 @@
+import { cn } from "@lane4hq/ui/lib/utils";
 import { CtaLink } from "@/components/cta-link";
-import { Section } from "@/components/section";
+import { siteContainer } from "@/components/section";
 import { PRIMARY_CTA, SIGN_IN_URL, SIGN_UP_URL } from "@/lib/site";
 
 export function MarketingCta({
@@ -10,31 +11,30 @@ export function MarketingCta({
   body?: string;
 }) {
   return (
-    <Section className="pt-0">
-      <div className="shot-shell">
-        <div className="lane-cta flex flex-col gap-6 rounded-[calc(2rem-0.4rem)] px-6 py-12 md:px-12 md:py-20">
-          <h2 className="font-display max-w-3xl text-3xl font-semibold tracking-tight text-pretty md:text-6xl md:leading-[0.95]">
-            {title}
-          </h2>
-          <p className="max-w-xl text-pretty text-[#071016]/90">{body}</p>
-          <div className="flex flex-wrap items-center gap-3">
-            <CtaLink
-              href={SIGN_UP_URL}
-              icon
-              className="bg-[#071016] text-white hover:bg-[#071016]/90"
-            >
-              {PRIMARY_CTA}
-            </CtaLink>
-            <CtaLink
-              href={SIGN_IN_URL}
-              variant="outline"
-              className="border-[#071016]/20 bg-transparent text-[#071016] hover:bg-[#071016]/10"
-            >
-              Sign in
-            </CtaLink>
-          </div>
+    <section data-closing className="bg-[#0c2430] text-[#f3f6f6]">
+      <div className={cn(siteContainer, "flex flex-col gap-6 py-24 md:py-32")}>
+        <h2 className="font-display max-w-3xl text-4xl font-semibold tracking-[-0.03em] text-pretty md:text-6xl md:leading-[1.02]">
+          {title}
+        </h2>
+        <p className="max-w-xl text-pretty text-lg leading-relaxed text-[#f3f6f6]/75">
+          {body}
+        </p>
+        <div className="flex flex-wrap items-center gap-3">
+          <CtaLink
+            href={SIGN_UP_URL}
+            className="bg-[#f3f6f6] text-[#0c2430] hover:bg-white"
+          >
+            {PRIMARY_CTA}
+          </CtaLink>
+          <CtaLink
+            href={SIGN_IN_URL}
+            variant="outline"
+            className="border-[#f3f6f6]/30 bg-transparent text-[#f3f6f6] hover:bg-[#f3f6f6]/10"
+          >
+            Sign in
+          </CtaLink>
         </div>
       </div>
-    </Section>
+    </section>
   );
 }

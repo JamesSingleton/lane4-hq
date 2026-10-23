@@ -547,6 +547,9 @@ importers:
 
   apps/web:
     dependencies:
+      '@gsap/react':
+        specifier: ^2.1.2
+        version: 2.1.2(gsap@3.15.0)(react@19.3.1)
       '@lane4hq/analytics':
         specifier: workspace:*
         version: link:../../packages/analytics
@@ -571,6 +574,9 @@ importers:
       geist:
         specifier: ^1.8.2
         version: 1.8.2(next@16.4.2(@babel/core@7.29.7(supports-color@8.1.1))(@opentelemetry/api@1.10.0)(@types/node@26.6.5)(react-dom@19.3.1(react@19.3.1))(react@19.3.1))
+      gsap:
+        specifier: ^3.15.0
+        version: 3.15.0
       lucide-react:
         specifier: 'catalog:'
         version: 1.61.0(@types/react@19.3.0)(react@19.3.1)
@@ -2067,6 +2073,12 @@ packages:
 
   '@fontsource-variable/geist@5.3.0':
     resolution: {integrity: sha512-j0m+vLQuG5XAYoHtGCVu0spvlGreR3EzpECUVzkFmI1mTVnAO38l/NEPDCFgZ177JxzYJCLSmTQibIiYPilGrA==}
+
+  '@gsap/react@2.1.2':
+    resolution: {integrity: sha512-JqliybO1837UcgH2hVOM4VO+38APk3ECNrsuSM4MuXp+rbf+/2IG2K1YJiqfTcXQHH7XlA0m3ykniFYstfq0Iw==}
+    peerDependencies:
+      gsap: ^3.12.5
+      react: '>=17'
 
   '@hono/node-server@2.1.5':
     resolution: {integrity: sha512-MgP/I06GdvsilDspMk/qmRzpk8LOUStP6jFAbSRi40W09DhoyUn+Mj7eyKICPqeYKybOjVFLVIAQzvu1bfIa7Q==}
@@ -5622,6 +5634,9 @@ packages:
   graphql@16.11.0:
     resolution: {integrity: sha512-mS1lbMsxgQj6hge1XZ6p7GPhbrtFwUFYi3wRzXAC/FmYnyXMTvvI3td3rjmQ2u8ewXueaSvRPWaEcgVVOT9Jnw==}
     engines: {node: ^12.22.0 || ^14.16.0 || ^16.0.0 || >=17.0.0}
+
+  gsap@3.15.0:
+    resolution: {integrity: sha512-dMW4CWBTUK1AEEDeZc1g4xpPGIrSf9fJF960qbTZmN/QwZIWY5wgliS6JWl9/25fpTGJrMRtSjGtOmPnfjZB+A==}
 
   harfbuzzjs@0.10.0:
     resolution: {integrity: sha512-SN8LVwCOzvTq3OPNd0+EAghgXugItz56wst567D1vs7LnnKGWprhi3EG58aVOBwhN8HEbQxL4I9NDWkcXUutRw==}
@@ -9560,6 +9575,11 @@ snapshots:
 
   '@fontsource-variable/geist@5.3.0': {}
 
+  '@gsap/react@2.1.2(gsap@3.15.0)(react@19.3.1)':
+    dependencies:
+      gsap: 3.15.0
+      react: 19.3.1
+
   '@hono/node-server@2.1.5(hono@4.13.13)':
     dependencies:
       hono: 4.13.13
@@ -13281,6 +13301,8 @@ snapshots:
 
   graphql@16.11.0: {}
 
+  gsap@3.15.0: {}
+
   harfbuzzjs@0.10.0: {}
 
   has-bigints@1.1.0: {}
@@ -15086,28 +15108,28 @@ snapshots:
 
   postal-mime@2.7.6: {}
 
-  postcss-import@15.1.0(postcss@8.5.23):
+  postcss-import@15.1.0(postcss@8.5.31):
     dependencies:
-      postcss: 8.5.23
+      postcss: 8.5.31
       postcss-value-parser: 4.2.0
       read-cache: 1.0.2
       resolve: 1.22.13
 
-  postcss-js@4.1.0(postcss@8.5.23):
+  postcss-js@4.1.0(postcss@8.5.31):
     dependencies:
       camelcase-css: 2.0.1
-      postcss: 8.5.23
+      postcss: 8.5.31
 
-  postcss-load-config@4.0.2(postcss@8.5.23):
+  postcss-load-config@4.0.2(postcss@8.5.31):
     dependencies:
       lilconfig: 3.1.4
-      yaml: 2.8.3
+      yaml: 2.9.1
     optionalDependencies:
-      postcss: 8.5.23
+      postcss: 8.5.31
 
-  postcss-nested@6.2.0(postcss@8.5.23):
+  postcss-nested@6.2.0(postcss@8.5.31):
     dependencies:
-      postcss: 8.5.23
+      postcss: 8.5.31
       postcss-selector-parser: 6.1.5
 
   postcss-selector-parser@6.1.5:
@@ -16326,11 +16348,11 @@ snapshots:
       normalize-path: 3.0.0
       object-hash: 3.0.0
       picocolors: 1.1.1
-      postcss: 8.5.23
-      postcss-import: 15.1.0(postcss@8.5.23)
-      postcss-js: 4.1.0(postcss@8.5.23)
-      postcss-load-config: 4.0.2(postcss@8.5.23)
-      postcss-nested: 6.2.0(postcss@8.5.23)
+      postcss: 8.5.31
+      postcss-import: 15.1.0(postcss@8.5.31)
+      postcss-js: 4.1.0(postcss@8.5.31)
+      postcss-load-config: 4.0.2(postcss@8.5.31)
+      postcss-nested: 6.2.0(postcss@8.5.31)
       postcss-selector-parser: 6.1.5
       resolve: 1.22.13
       sucrase: 3.35.1

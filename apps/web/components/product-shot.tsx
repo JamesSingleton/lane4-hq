@@ -1,7 +1,8 @@
 import { existsSync } from "node:fs";
 import path from "node:path";
-import { cn } from "@lane4hq/ui/lib/utils";
 import Image from "next/image";
+import { ShotFrame } from "@/components/shot-frame";
+import { ShotLightbox } from "@/components/shot-lightbox";
 import { type ProductShotId, productShots } from "@/lib/screenshots";
 
 export function ProductShot({
@@ -9,28 +10,63 @@ export function ProductShot({
   priority = false,
   className,
   showCaption = true,
-  compact = false,
-  bleed = false,
+  framed = false,
+  inverse = false,
 }: {
   shot: ProductShotId;
   priority?: boolean;
   className?: string;
   showCaption?: boolean;
-  compact?: boolean;
-  bleed?: boolean;
+  framed?: boolean;
+  inverse?: boolean;
 }) {
   const spec = productShots[shot];
   const filePath = path.join(process.cwd(), "public", "screenshots", spec.file);
   const ready = existsSync(filePath);
   const src = `/screenshots/${spec.file}`;
 
+  if (!ready) {
+    return (
+      <figure className={className}>
+        <div className="shot-shell">
+          <div className="shot-core">
+            <div className="flex aspect-[16/10] flex-col justify-end gap-1 bg-muted px-5 py-4">
+              <p className="text-sm font-medium">{spec.caption}</p>
+              <p className="text-muted-foreground text-sm">
+                Add {spec.file} to public/screenshots.
+              </p>
+            </div>
+          </div>
+        </div>
+      </figure>
+    );
+  }
+
   return (
-    <figure
-      className={cn("flex flex-col gap-3", bleed && "shot-bleed", className)}
+    <ShotLightbox
+      src={src}
+      alt={spec.alt}
+      caption={spec.caption}
+      showCaption={showCaption}
+      inverse={inverse}
+      className={className}
     >
-      <div className="shot-shell">
-        <div className="shot-core">
-          {ready ? (
+      {framed ? (
+        <ShotFrame>
+          <Image
+            src={src}
+            alt=""
+            width={1440}
+            height={900}
+            unoptimized
+            priority={priority}
+            className="h-auto w-full"
+            sizes="(min-width: 1280px) 960px, 100vw"
+          />
+        </ShotFrame>
+      ) : (
+        <div className="shot-shell">
+          <div className="shot-core">
             <Image
               src={src}
               alt=""
@@ -38,34 +74,12 @@ export function ProductShot({
               height={900}
               unoptimized
               priority={priority}
-              className={
-                compact
-                  ? "h-auto w-full object-cover object-top lg:max-h-[26rem]"
-                  : "h-auto w-full"
-              }
-              sizes={
-                bleed
-                  ? "(min-width: 1280px) 1120px, 100vw"
-                  : "(min-width: 1024px) 42rem, 100vw"
-              }
+              className="h-auto w-full"
+              sizes="(min-width: 1280px) 1152px, 100vw"
             />
-          ) : (
-            <div className="flex aspect-[16/10] flex-col justify-end gap-1 bg-muted px-5 py-4">
-              <p className="text-sm font-medium">{spec.caption}</p>
-              <p className="text-muted-foreground text-sm">
-                Add {spec.file} to public/screenshots.
-              </p>
-            </div>
-          )}
+          </div>
         </div>
-      </div>
-      {showCaption ? (
-        <figcaption className="text-muted-foreground max-w-prose text-sm text-pretty">
-          {spec.caption}
-        </figcaption>
-      ) : (
-        <figcaption className="sr-only">{spec.alt}</figcaption>
       )}
-    </figure>
+    </ShotLightbox>
   );
 }

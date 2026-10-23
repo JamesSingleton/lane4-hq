@@ -11,6 +11,7 @@ export default function HighSchoolPage() {
     <FeaturePage
       title="Enter the dual with class year and your association's limits already on the lineup."
       description="Duals and invitationals use the same entry board. Freshman through senior, JV and Varsity from the host file, and your association's scoring caps are checked before you export."
+      shot="roster"
     >
       <FeatureBlock title="Roster">
         <p>

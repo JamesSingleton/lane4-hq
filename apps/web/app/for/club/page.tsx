@@ -11,6 +11,7 @@ export default function ClubPage() {
     <FeaturePage
       title="Club meet week starts from each swimmer's best time."
       description="Import the invitational, fill seeds from best times, and export the file the host asked for. Sunday's results come back next to previous best and a cut you entered, such as JO or sectionals."
+      shot="entries"
     >
       <FeatureBlock title="The invitational">
         <p>
