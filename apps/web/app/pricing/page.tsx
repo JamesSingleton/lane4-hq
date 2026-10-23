@@ -102,7 +102,9 @@ export default function PricingPage() {
           <Card
             key={plan.id}
             className={
-              plan.featured ? "h-full border-foreground/30 shadow-none" : "h-full"
+              plan.featured
+                ? "h-full border-foreground/30 shadow-none"
+                : "h-full"
             }
           >
             <CardHeader>
