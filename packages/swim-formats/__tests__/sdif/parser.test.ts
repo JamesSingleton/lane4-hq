@@ -3,6 +3,7 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 import { exportSdif, parseSdif, parseTime } from "../../src/sdif/parser";
+import { parseUssSdif } from "../../src/sdif/uss";
 
 const fixturesDir = join(
   dirname(fileURLToPath(import.meta.url)),
@@ -30,8 +31,25 @@ describe("parseSdif", () => {
     ).toString("utf8");
     const meet = parseSdif(content);
 
-    expect(meet.name.length).toBeGreaterThan(0);
-    expect(meet.entries.length).toBeGreaterThan(0);
+    expect(meet.name).toBe("AZSI Swimming 2026 SCY Regiona");
+    expect(meet.course).toBe("SCY");
+    expect(meet.startDate).toBe("2026-02-20");
+    expect(meet.endDate).toBe("2026-02-22");
+    expect(meet.importKind).toBe("entries");
+    expect(meet.teamCode).toBe("AZAZSL");
+    expect(meet.entries).toHaveLength(42);
+    expect(meet.entries[0]).toMatchObject({
+      swimmerName: "Ethan Armstrong",
+      eventNumber: 40,
+      seedTime: "4:56.31",
+      seedCourse: "LCM",
+      dateOfBirth: "2009-03-21",
+      gender: "male",
+      usaMemberId: "F6250F958AD545",
+      eventSuffix: "B",
+    });
+    expect(meet.events.some((event) => event.eventNumber === 40)).toBe(true);
+    expect(meet.relays).toBeUndefined();
   });
 
   it("parses synthetic SDIF records for all branches", () => {
@@ -301,6 +319,324 @@ describe("parseSdif", () => {
       stroke: "free",
       gender: "male",
     });
+  });
+});
+
+describe("USS SDIF v3", () => {
+  function record(
+    code: string,
+    fields: Array<[number, string]>,
+    length = 160,
+  ): string {
+    const chars = Array.from({ length }, () => " ");
+    function put(column: number, value: string) {
+      for (let i = 0; i < value.length; i++) {
+        const at = column - 1 + i;
+        if (at >= 0 && at < chars.length) chars[at] = value[i]!;
+      }
+    }
+    put(1, code);
+    for (const [column, value] of fields) put(column, value);
+    return chars.join("");
+  }
+
+  function individual(options: {
+    name: string;
+    dob: string;
+    sex?: string;
+    eventSex?: string;
+    distance?: string;
+    stroke?: string;
+    event?: string;
+    age?: string;
+    seed?: string;
+    course?: string;
+    uss?: string;
+  }): string {
+    return record("D0", [
+      [3, "1"],
+      [12, options.name],
+      [40, options.uss ?? ""],
+      [56, options.dob],
+      [66, options.sex ?? "F"],
+      [67, options.eventSex ?? options.sex ?? "F"],
+      [68, (options.distance ?? "50").padStart(4, " ")],
+      [72, options.stroke ?? "1"],
+      [73, options.event ?? ""],
+      [77, options.age ?? ""],
+      [89, options.seed ?? ""],
+      [97, options.course ?? ""],
+    ]);
+  }
+
+  it("parses SwimTopia-style entries, relays, and swimmer info", () => {
+    const content = [
+      record("D3", [[3, "EARLYID"]]),
+      record("F0", [[23, "Nobody, Yet"]]),
+      record("A0", [
+        [3, "1"],
+        [4, "V3"],
+        [12, "01"],
+      ]),
+      record("B1", [
+        [12, "2026 BTA Summer Champs"],
+        [86, "Kingwood"],
+        [106, "TX"],
+        [122, "06072026"],
+        [130, "06072026"],
+        [150, "Y"],
+      ]),
+      record("C1", [[18, "Ghost Team"]]),
+      record("C1", [[12, "  BB  "]]),
+      record("C1", [
+        [12, "BB"],
+        [18, "Bear Branch Swim Team"],
+        [48, "Bear Branch"],
+        [64, "2261 Northpark Dr"],
+        [86, "#122"],
+        [108, "Kingwood"],
+        [128, "TX"],
+        [130, "77339"],
+        [140, "USA"],
+      ]),
+      individual({
+        name: "Barrett, Henry D",
+        dob: "01182019",
+        sex: "M",
+        distance: "25",
+        stroke: "9",
+        event: "8",
+        seed: "NT",
+        uss: "ABCDEF123456",
+      }),
+      individual({
+        name: "Alder, Emily M",
+        dob: "01222015",
+        distance: "50",
+        stroke: "2",
+        event: "42A",
+        age: "1111",
+        seed: "49.17",
+        course: "Y",
+      }),
+      record("D3", [[17, "Em"]]),
+      record("D3", [[3, "99999999999999"]]),
+      record("D3", []),
+      individual({
+        name: "Alder, Emily M",
+        dob: "01222015",
+        distance: "25",
+        stroke: "1",
+        event: "27B",
+        age: "1111",
+        seed: "23.00",
+        course: "Y",
+      }),
+      individual({
+        name: "Barrett, Henry D",
+        dob: "01182019",
+        sex: "M",
+        distance: "25",
+        stroke: "9",
+        event: "8",
+        seed: "30.00",
+        uss: "ABCDEF123456",
+      }),
+      individual({
+        name: "No, Event",
+        dob: "",
+        sex: "X",
+        distance: "0",
+        stroke: "1",
+        event: "",
+        seed: "",
+      }),
+      individual({
+        name: "Letter, Only",
+        dob: "01012010",
+        distance: "0",
+        stroke: "1",
+        event: "A",
+        seed: "",
+      }),
+      record("D3", [[3, "ONLYUSA1234567"]]),
+      record("E0", [
+        [12, "A"],
+        [13, "  BB  "],
+        [21, "X"],
+        [22, " 200"],
+        [26, "7"],
+        [27, "  3"],
+        [31, "1112"],
+        [46, "1:45.00"],
+        [54, "Y"],
+      ]),
+      record("F0", [
+        [23, "West, Josette G"],
+        [66, "01012010"],
+        [76, "F"],
+        [77, "222"],
+      ]),
+      record("F0", [
+        [23, "Alder, Emily M"],
+        [66, "01222015"],
+        [76, "F"],
+        [77, "111"],
+      ]),
+      record("F0", [[23, ""]]),
+      record("E0", [
+        [21, "F"],
+        [22, " 100"],
+        [26, "9"],
+        [31, "UN06"],
+        [46, "NT"],
+        [54, "S"],
+      ]),
+      record("F0", [
+        [23, "Only, Relay"],
+        [76, "F"],
+        [77, "   "],
+      ]),
+      record("E0", [
+        [22, "   0"],
+        [26, "6"],
+      ]),
+    ].join("\r\n");
+
+    const meet = parseSdif(content);
+    expect(meet).toMatchObject({
+      name: "2026 BTA Summer Champs",
+      course: "SCY",
+      startDate: "2026-06-07",
+      endDate: undefined,
+      location: "Kingwood, TX",
+      importKind: "entries",
+      teamCode: "BB",
+      teamName: "Bear Branch Swim Team",
+      teamShortName: "Bear Branch",
+      teamAddressLine1: "2261 Northpark Dr",
+      teamAddressLine2: "#122",
+      teamCity: "Kingwood",
+      teamRegion: "TX",
+      teamPostalCode: "77339",
+      teamCountry: "USA",
+    });
+    expect(meet.entries[0]).toMatchObject({
+      swimmerName: "Henry Barrett",
+      seedTime: undefined,
+      gender: "male",
+      seedCourse: "SCY",
+      usaMemberId: "ABCDEF123456",
+    });
+    expect(meet.entries[1]).toMatchObject({
+      swimmerName: "Em Alder",
+      eventNumber: 42,
+      eventSuffix: "A",
+      seedTime: "49.17",
+      seedCourse: "SCY",
+      gender: "female",
+      dateOfBirth: "2015-01-22",
+      usaMemberId: "99999999999999",
+    });
+    expect(meet.entries[2]?.swimmerName).toBe("Em Alder");
+    expect(meet.entries[2]?.eventSuffix).toBe("B");
+    expect(
+      meet.entries.find((entry) => entry.swimmerName === "Only Letter"),
+    ).toMatchObject({ eventNumber: undefined, eventSuffix: "A" });
+    expect(meet.entries[2]?.usaMemberId).toBe("99999999999999");
+    expect(meet.entries[4]?.gender).toBeUndefined();
+    expect(meet.entries[4]?.dateOfBirth).toBeUndefined();
+    expect(meet.events.map((event) => event.stroke)).toEqual(
+      expect.arrayContaining(["back", "free", "medley_relay", "free_relay"]),
+    );
+    expect(
+      meet.events.find((event) => event.eventNumber === 42)?.ageGroup,
+    ).toBe("11-11");
+    expect(meet.relays?.[0]).toMatchObject({
+      eventNumber: 3,
+      relayLetter: "A",
+      teamCode: "BB",
+      seedTime: "1:45.00",
+      seedCourse: "SCY",
+      swimmerNames: ["Emily Alder", "Josette West"],
+    });
+    expect(meet.relays?.[1]).toMatchObject({
+      seedTime: undefined,
+      seedCourse: "SCM",
+      teamCode: "BB",
+      swimmerNames: ["Relay Only"],
+    });
+    expect(meet.relays?.[2]?.swimmerNames).toEqual([]);
+    expect(
+      meet.athletes?.find((athlete) => athlete.name === "Relay Only"),
+    ).toMatchObject({ relayOnly: true, gender: "female" });
+    expect(
+      meet.athletes?.find((athlete) => athlete.name === "Em Alder")?.relayOnly,
+    ).toBe(false);
+  });
+
+  it("reads the other meet, course, and file-code branches", () => {
+    const dob = individual({
+      name: "Lane, Ada",
+      dob: "01012010",
+      distance: "100",
+      stroke: "1",
+      event: "1",
+      course: "L",
+    });
+    const results = parseSdif(
+      [
+        record("D0", [
+          [3, "1"],
+          [12, "NoComma Name"],
+          [56, "01012010"],
+        ]),
+        record("D0", [
+          [3, "1"],
+          [56, "BAD"],
+        ]),
+        record("A0", [
+          [4, "V3"],
+          [12, "02"],
+        ]),
+        record("B1", [
+          [12, "City Only Meet"],
+          [86, "Austin"],
+          [150, "L"],
+        ]),
+        dob,
+      ].join("\n"),
+    );
+    expect(results.importKind).toBe("results");
+    expect(results.location).toBe("Austin");
+    expect(results.course).toBe("LCM");
+    expect(results.startDate).toBeUndefined();
+
+    const stateOnly = parseSdif(
+      [
+        record("A0", [
+          [4, "V3"],
+          [12, "99"],
+        ]),
+        record("B1", [
+          [106, "TX"],
+          [150, "S"],
+        ]),
+        dob,
+      ].join("\n"),
+    );
+    expect(stateOnly.importKind).toBeUndefined();
+    expect(stateOnly.name).toBe("Imported Meet");
+    expect(stateOnly.location).toBe("TX");
+    expect(stateOnly.course).toBe("SCM");
+
+    const bare = parseSdif([record("B1", [[122, "notadate"]]), dob].join("\n"));
+    expect(bare.importKind).toBeUndefined();
+    expect(bare.location).toBeUndefined();
+    expect(bare.endDate).toBeUndefined();
+    expect(bare.course).toBe("SCY");
+    expect(parseUssSdif("B1\n").athletes).toBeUndefined();
+    expect(parseUssSdif("B1\n").relays).toBeUndefined();
   });
 });
 

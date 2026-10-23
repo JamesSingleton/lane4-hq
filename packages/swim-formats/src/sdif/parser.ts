@@ -13,6 +13,7 @@ import type {
   ParsedRelayEntry,
   ParsedResult,
 } from "../types";
+import { isUssSdifV3, parseUssSdif } from "./uss";
 
 const STROKE_MAP: Record<string, string> = {
   FR: "free",
@@ -64,6 +65,9 @@ function eventNumberFromLine(line: string): number | undefined {
 
 /** Parse SDIF/SD3 file content into structured meet data */
 export function parseSdif(content: string): ParsedMeet {
+  // SwimTopia and TeamUnify write USA Swimming SDIF v3. Lane4's own
+  // export and the older loose layout stay on the path below.
+  if (isUssSdifV3(content)) return parseUssSdif(content);
   const lines = content.split(/\r?\n/).filter((l) => l.trim());
   const meet: ParsedMeet = {
     name: "Imported Meet",

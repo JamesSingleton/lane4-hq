@@ -151,6 +151,8 @@ export interface ParsedEntry {
   meetSwimmerId?: number;
   /** Course letter on this entry's seed (CL2 D0 col 97 / HY3 E1 col 51). */
   seedCourse?: "SCY" | "SCM" | "LCM";
+  /** Letter after the event number on SwimTopia multi-age entries (`42A`). */
+  eventSuffix?: string;
   /** CL2 D3 cols 17–31, when the legal first name is different. */
   preferredName?: string;
   /**
@@ -192,6 +194,12 @@ export interface ParsedEvent {
   gender: EventGender;
   ageGroup?: string;
   eventKey: string;
+  /**
+   * SwimTopia / Meet Manager multi-age suffix. Column 42 of an HY3 entry
+   * (`42A`) and the last character of an SD3 event number. The integer
+   * `eventNumber` stays the base number.
+   */
+  eventSuffix?: string;
   /** `dive` for Hy-Tek dive events (stroke F/6); default swim. */
   eventKind?: "swim" | "dive";
   /** Number of dives when present on EV3 dive rows. */
@@ -219,6 +227,8 @@ export interface ParsedResult {
   lane?: number;
   dqCode?: string;
   exhibition?: boolean;
+  /** Letter after the event number on SwimTopia multi-age results. */
+  eventSuffix?: string;
   /** Split times in milliseconds when present (e.g. HY3 G1). */
   splitsMs?: number[];
 }
@@ -232,6 +242,8 @@ export interface ParsedRelayEntry {
   seedCourse?: "SCY" | "SCM" | "LCM";
   teamCode?: string;
   relayLetter?: string;
+  /** Letter after the event number on SwimTopia multi-age relays (`3A`). */
+  eventSuffix?: string;
   /** Recorded team attempts from HY3 F2 relay-result records. */
   results?: ParsedRelayResult[];
   /** CL2 F0 columns 23–62, one entry per leg, parallel to `swimmerNames`. */

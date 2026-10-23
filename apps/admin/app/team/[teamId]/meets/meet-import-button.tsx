@@ -1063,6 +1063,7 @@ export function MeetImportButton({
                     >
                       <span className="text-muted-foreground tabular-nums">
                         #{event.eventNumber ?? "—"}
+                        {event.eventSuffix ?? ""}
                       </span>
                       <span className="truncate">
                         {formatEventName(event.distance, event.stroke)}

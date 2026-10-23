@@ -98,6 +98,7 @@ type Hy3Entry = {
   exhibition: boolean;
   meetDivision?: string;
   entryMark?: string;
+  eventSuffix?: string;
   teamCode?: string;
   relayLetter?: string;
   legSwimmers: Map<number, number>;
@@ -127,6 +128,7 @@ type Hy3Event = {
   ageMin?: number;
   ageMax?: number;
   relay: boolean;
+  suffix?: string;
 };
 
 type ParseState = {
@@ -179,10 +181,30 @@ function secondsToTimeString(seconds: number | undefined): string | undefined {
   return formatMs(Math.round(seconds * 1000));
 }
 
-function parseNumericEventNumber(raw: string): number | undefined {
-  const digits = raw.replace(/\D/g, "");
-  if (!digits) return undefined;
-  return Number.parseInt(digits, 10);
+/**
+ * Team-level text such as JV. SwimTopia (and Team Manager entry lines)
+ * leave columns 77–78 blank and put `0.00` in the next field, which a
+ * 3-column read turns into the division `"0"`.
+ */
+function divisionCode(raw: string): string | undefined {
+  const token = raw.trim();
+  return /^[A-Za-z]{1,3}$/.test(token) ? token : undefined;
+}
+
+/** HY3 cols 39–42. Team Manager leaves column 42 blank. SwimTopia writes the multi-age letter there (`42A`). */
+function splitEventToken(raw: string): {
+  eventNumber?: number;
+  eventSuffix?: string;
+} {
+  const token = raw.trim();
+  const letter = /[A-Za-z]$/.test(token)
+    ? token.slice(-1).toUpperCase()
+    : undefined;
+  const digits = token.replace(/\D/g, "");
+  return {
+    eventNumber: digits ? Number.parseInt(digits, 10) : undefined,
+    eventSuffix: letter,
+  };
 }
 
 function parseTimeField(raw: string): number | undefined {
@@ -252,6 +274,7 @@ function pushResultFromRound(
     isDq,
     usaMemberId: swimmer.usaMemberId,
     dateOfBirth: swimmer.dateOfBirth,
+    eventSuffix: entry.eventSuffix,
     gender:
       swimmer.gender === "male" || swimmer.gender === "female"
         ? swimmer.gender
@@ -458,11 +481,12 @@ function parseE1(line: string, state: ParseState): void {
   const seedSeconds = parseTimeField(extract(line, 52, 8));
   const seedCourse = mapCourse(extract(line, 60, 1), eventCourse);
   const meetDivision =
-    extract(line, 77, 3) || extract(line, 92, 2) || undefined;
+    divisionCode(line.slice(76, 78)) || divisionCode(extract(line, 92, 2));
   const entryMark = extract(line, 92, 1) || undefined;
   const exhibition = extract(line, 84, 1).toUpperCase() === "X";
   const stroke = mapStroke(strokeCode, false);
-  const eventNumber = parseNumericEventNumber(eventNumberRaw);
+  const token = splitEventToken(eventNumberRaw);
+  const eventNumber = token.eventNumber;
   const eventKey = eventNumberRaw || `${distance}-${stroke}-${eventGender}`;
 
   ensureEvent(state, eventKey, {
@@ -475,6 +499,7 @@ function parseE1(line: string, state: ParseState): void {
     ageMin: ageMin >= 0 ? ageMin : undefined,
     ageMax: ageMax >= 0 ? ageMax : undefined,
     relay: false,
+    suffix: token.eventSuffix,
   });
 
   const entry: Hy3Entry = {
@@ -486,6 +511,7 @@ function parseE1(line: string, state: ParseState): void {
     exhibition,
     meetDivision,
     entryMark,
+    eventSuffix: token.eventSuffix,
     legSwimmers: new Map(),
   };
   state.entries.push(entry);
@@ -534,7 +560,8 @@ function parseF1(line: string, state: ParseState): void {
   const seedSeconds = parseTimeField(extract(line, 52, 8));
   const seedCourse = mapCourse(extract(line, 60, 1), eventCourse);
   const stroke = mapStroke(strokeCode, true);
-  const eventNumber = parseNumericEventNumber(eventNumberRaw);
+  const token = splitEventToken(eventNumberRaw);
+  const eventNumber = token.eventNumber;
   const eventKey = eventNumberRaw || `${distance}-${stroke}-${eventGender}-R`;
 
   ensureEvent(state, eventKey, {
@@ -547,6 +574,7 @@ function parseF1(line: string, state: ParseState): void {
     ageMin: ageMin >= 0 ? ageMin : undefined,
     ageMax: ageMax >= 0 ? ageMax : undefined,
     relay: true,
+    suffix: token.eventSuffix,
   });
 
   const entry: Hy3Entry = {
@@ -557,6 +585,7 @@ function parseF1(line: string, state: ParseState): void {
     exhibition: false,
     teamCode,
     relayLetter,
+    eventSuffix: token.eventSuffix,
     legSwimmers: new Map(),
   };
   state.entries.push(entry);
@@ -621,7 +650,6 @@ function parseH2(_line: string, _state: ParseState): void {
 
 function flatten(state: ParseState): ParsedMeet {
   const events: ParsedEvent[] = [];
-  const seenEventKeys = new Set<string>();
 
   for (const event of state.events.values()) {
     const gender = event.gender;
@@ -633,15 +661,15 @@ function flatten(state: ParseState): ParsedMeet {
       course,
       gender,
     );
-    if (seenEventKeys.has(eventKey + String(event.eventNumber ?? ""))) continue;
-    seenEventKeys.add(eventKey + String(event.eventNumber ?? ""));
+    const ageGroup = formatAgeGroup(event.ageMin, event.ageMax);
     events.push({
       eventNumber: event.eventNumber,
       distance: event.distance,
       stroke,
       gender,
-      ageGroup: formatAgeGroup(event.ageMin, event.ageMax),
+      ageGroup,
       eventKey,
+      eventSuffix: event.suffix,
     });
   }
 
@@ -667,6 +695,7 @@ function flatten(state: ParseState): ParsedMeet {
         seedCourse: entry.seedCourse,
         teamCode: entry.teamCode,
         relayLetter: entry.relayLetter,
+        eventSuffix: entry.eventSuffix,
         results: relayResults.length > 0 ? relayResults : undefined,
       });
       continue;
@@ -699,6 +728,7 @@ function flatten(state: ParseState): ParsedMeet {
       exhibition: entry.exhibition,
       meetDivision: entry.meetDivision,
       hy3EntryMark: entry.entryMark,
+      eventSuffix: entry.eventSuffix,
     });
 
     const rounds = allRoundResults(entry);
