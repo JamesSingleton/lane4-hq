@@ -230,6 +230,66 @@ describe("TimingSession", () => {
     expect(resumeCursor(captures, null)).toBe(0);
   });
 
+  it("describes a non-error rejection and stops polling if the session drops", async () => {
+    const sim = createSimulator({ now: () => NOW });
+    let mode: "ok" | "string" | "drop" = "ok";
+    const session = new TimingSession({
+      transport: {
+        request: async (data) => {
+          if (mode === "string") return Promise.reject("nope");
+          if (mode === "drop") {
+            session.disconnect();
+            throw new Error("dropped");
+          }
+          return sim.request(data);
+        },
+      },
+      onRace: () => {},
+      onStatus: () => {},
+    });
+    mode = "string";
+    await expect(session.connect()).rejects.toBe("nope");
+    expect(session.current).toEqual({ state: "error", message: "nope" });
+
+    mode = "ok";
+    await session.connect();
+    mode = "drop";
+    await session.pollOnce();
+    expect(session.current.state).toBe("idle");
+  });
+
+  it("uses the default failure limit and skips the cursor update after disconnect", async () => {
+    const sim = createSimulator({ now: () => NOW });
+    const meet = seededMeet();
+    let fail = false;
+    const session = new TimingSession({
+      transport: {
+        request: async (data) => {
+          if (fail) throw new Error("lost");
+          return sim.request(data);
+        },
+      },
+      onRace: () => {
+        session.disconnect();
+      },
+      onStatus: () => {},
+    });
+    await session.connect();
+    simulateHeat(sim, meet, { eventId: meet.events[0]!.id, heat: 1 }, 1);
+    await session.pollOnce();
+    expect(session.current.state).toBe("idle");
+
+    await session.connect();
+    fail = true;
+    for (let i = 0; i < 4; i++) await session.pollOnce();
+    expect(session.current).toMatchObject({
+      state: "connected",
+      error: "lost",
+    });
+    await session.pollOnce();
+    expect(session.current).toEqual({ state: "error", message: "lost" });
+  });
+
   it("refuses to simulate unseeded heats", () => {
     const sim = createSimulator();
     expect(() =>

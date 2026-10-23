@@ -10,6 +10,12 @@ export default defineConfig({
       include: ["src/lib/**/*.ts"],
       // Thin wrappers over Tauri IPC; exercised by running the app.
       exclude: ["src/lib/native.ts", "src/lib/tauri-repository.ts"],
+      thresholds: {
+        lines: 100,
+        functions: 100,
+        branches: 100,
+        statements: 100,
+      },
     },
   },
 });

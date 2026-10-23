@@ -63,6 +63,7 @@ describe("desktop analytics", () => {
   });
 
   it("stays off when the Vite key is missing", () => {
+    expect(startDesktopAnalytics().enabled).toBe(false);
     const analytics = startDesktopAnalytics({ key: "" });
     trackMeetCreated();
     trackExport("Desert Champs.hy3", true);

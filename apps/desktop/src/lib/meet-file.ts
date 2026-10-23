@@ -42,7 +42,7 @@ export type InspectedFiles =
 const ROSTER_ONLY = /Rosters Only|roster export/i;
 
 export function hasMeetFileExtension(filename: string): boolean {
-  const ext = filename.toLowerCase().split(".").pop() ?? "";
+  const ext = filename.toLowerCase().split(".").pop() || "";
   return (MEET_FILE_EXTENSIONS as readonly string[]).includes(ext);
 }
 

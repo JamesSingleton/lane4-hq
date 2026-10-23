@@ -57,5 +57,9 @@ describe("formatDateRange", () => {
       "Dec 31, 2026 – Jan 2, 2027",
     );
     expect(formatDateRange("TBD")).toBe("TBD");
+    expect(formatDateRange("TBD", "TBD")).toBe("TBD");
+    expect(formatDateRange("not-a-date", "also-not")).toBe(
+      "not-a-date – also-not",
+    );
   });
 });

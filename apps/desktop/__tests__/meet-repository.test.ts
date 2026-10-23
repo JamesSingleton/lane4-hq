@@ -38,10 +38,30 @@ describe("browser repository", () => {
     await repo.appendCapture("beta", "{}");
     expect(storage.map.get("lane4.captures.v1:beta")).toBe("{}\n{}\n");
     expect(await repo.readJournal("beta")).toBe("{}\n{}\n");
+    expect(await repo.readJournal("missing")).toBe("");
     await expect(repo.restoreBackup("beta")).rejects.toThrow(/desktop app/);
     await repo.remove("beta");
     await expect(repo.load("beta")).rejects.toThrow(/not found/);
     expect(await repo.list()).toHaveLength(1);
+  });
+
+  it("skips index entries whose document is gone and sorts undated meets", async () => {
+    const storage = {
+      getItem: (k: string) =>
+        k === "lane4.meets.v1" ? JSON.stringify(["ghost"]) : null,
+      setItem: () => {},
+      removeItem: () => {},
+    };
+    const repo = createBrowserRepository(storage);
+    expect(await repo.list()).toEqual([]);
+
+    const undated = createBrowserRepository(null);
+    await undated.save({ ...meet("First", ""), updatedAt: undefined! });
+    await undated.save({ ...meet("Second", ""), updatedAt: undefined! });
+    expect((await undated.list()).map((m) => m.name).sort()).toEqual([
+      "First",
+      "Second",
+    ]);
   });
 
   it("works without storage and survives quota errors", async () => {
