@@ -1,4 +1,9 @@
 export { parseCl2Roster } from "./cl2";
+export {
+  exportRosterHy3,
+  type RosterHy3Swimmer,
+  type RosterHy3Team,
+} from "./hy3-export";
 export { parseHy3Roster } from "./hy3-style";
 export {
   parsedRosterRowToImportRaw,

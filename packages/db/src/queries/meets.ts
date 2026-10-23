@@ -400,10 +400,16 @@ export async function getMeetEntries(meetId: string) {
   return db.select().from(meetEntries).where(eq(meetEntries.meetId, meetId));
 }
 
+function storedEventSuffix(value?: string | null): string | null {
+  const letter = value?.trim().charAt(0).toUpperCase() ?? "";
+  return /^[A-Z]$/.test(letter) ? letter : null;
+}
+
 export async function addMeetEvent(
   meetId: string,
   event: {
     eventNumber?: number;
+    eventSuffix?: string | null;
     stroke: string;
     distance: number;
     gender: string;
@@ -430,6 +436,7 @@ export async function addMeetEvent(
     id,
     meetId,
     eventNumber: event.eventNumber,
+    eventSuffix: storedEventSuffix(event.eventSuffix),
     stroke: event.stroke,
     distance: event.distance,
     gender,

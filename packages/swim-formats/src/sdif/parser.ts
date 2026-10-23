@@ -195,4 +195,5 @@ export function parseSdif(content: string): ParsedMeet {
 }
 
 export { exportSdif } from "../export/meet";
+export { exportUssSdif } from "./uss-export";
 export { parseTime };

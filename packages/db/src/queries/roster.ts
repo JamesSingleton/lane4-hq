@@ -725,6 +725,38 @@ export async function getSwimmerById(
   return row ?? null;
 }
 
+export async function getSwimmerContactsByMembership(
+  organizationId: string,
+  membershipIds: string[],
+) {
+  if (membershipIds.length === 0) return [];
+  return db
+    .select({
+      membershipId: swimmerContacts.membershipId,
+      parentName: swimmerContacts.parentName,
+      parentEmail: swimmerContacts.parentEmail,
+      parentPhone: swimmerContacts.parentPhone,
+      emergencyPhone: swimmerContacts.emergencyPhone,
+      addressLine1: swimmerContacts.addressLine1,
+      addressLine2: swimmerContacts.addressLine2,
+      city: swimmerContacts.city,
+      state: swimmerContacts.state,
+      postalCode: swimmerContacts.postalCode,
+      country: swimmerContacts.country,
+    })
+    .from(swimmerContacts)
+    .innerJoin(
+      teamSwimmerMemberships,
+      eq(swimmerContacts.membershipId, teamSwimmerMemberships.id),
+    )
+    .where(
+      and(
+        eq(teamSwimmerMemberships.organizationId, organizationId),
+        inArray(swimmerContacts.membershipId, membershipIds),
+      ),
+    );
+}
+
 export async function getSwimmerContactsForMembership(
   membershipId: string,
   organizationId: string,

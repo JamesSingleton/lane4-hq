@@ -1,0 +1,1 @@
+ALTER TABLE "meet_events" ADD COLUMN "event_suffix" text;

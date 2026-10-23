@@ -438,9 +438,9 @@ describe("exportHy3", () => {
     const a1 = text.split(/\r?\n/).find((line) => line.startsWith("A1"));
     expect(a1?.slice(2, 4)).toBe("02");
     expect(a1?.slice(4, 29)).toBe("Meet Entries".padEnd(25, " "));
-    expect(a1?.slice(29, 44)).toBe("Lane4 HQ, Ltd".padEnd(15, " "));
-    expect(a1?.slice(44, 58)).toBe("Lane4 1.0".padEnd(14, " "));
-    expect(a1).not.toContain("Hy-Tek");
+    expect(a1?.slice(29, 44)).toBe("Hy-Tek, Ltd".padEnd(15, " "));
+    expect(a1?.slice(44, 58)).toBe("Lane4 HQ".padEnd(14, " "));
+    expect(a1).not.toContain("Swimtopia");
     expect(a1).not.toContain("Win-TM");
     expect(a1?.slice(58, 66)).toBe(hy3FileDate());
     expect(hy3FileDate(new Date(2026, 9, 21))).toBe("10212026");
@@ -480,6 +480,147 @@ describe("exportHy3", () => {
     expect(resultsF1.slice(12, 15)).toBe("FFF");
     const resultsB2 = resultsRows.find((line) => line.startsWith("B2"))!;
     expect(resultsB2.slice(102, 108)).toBe("      ");
+  });
+
+  it("writes SwimTopia multi-age letters and replaces SwimTopia branding", () => {
+    const meet: ParsedMeet = {
+      name: "Age Groups",
+      course: "SCY",
+      importKind: "entries",
+      startDate: "2026-06-07",
+      hy3Publisher: "Hy-Tek, Ltd",
+      hy3Software: "Swimtopia",
+      teamCode: "BB",
+      teamName: "Bear Branch",
+      events: [
+        {
+          eventNumber: 42,
+          eventSuffix: "A",
+          distance: 50,
+          stroke: "back",
+          gender: "female",
+          ageGroup: "11-11",
+          eventKey: "50_back_scy_f",
+        },
+        {
+          eventNumber: 42,
+          eventSuffix: "K",
+          distance: 50,
+          stroke: "back",
+          gender: "female",
+          ageGroup: "12-12",
+          eventKey: "50_back_scy_f",
+        },
+        {
+          distance: 50,
+          stroke: "free",
+          gender: "male",
+          eventKey: "50_free_scy_m",
+        },
+      ],
+      entries: [
+        {
+          eventNumber: 42,
+          eventSuffix: "A",
+          swimmerName: "Ada Lane",
+          gender: "female",
+          seedTime: "49.17",
+          dateOfBirth: "2015-01-22",
+        },
+        {
+          eventNumber: 42,
+          eventSuffix: "K",
+          swimmerName: "Ada Lane",
+          gender: "female",
+          seedTime: "48.20",
+          dateOfBirth: "2015-01-22",
+        },
+        {
+          swimmerName: "No Event",
+          gender: "male",
+          seedTime: "30.00",
+        },
+        {
+          eventNumber: 9,
+          swimmerName: "Missing Event",
+          gender: "male",
+        },
+      ],
+      results: [
+        {
+          eventNumber: 42,
+          eventSuffix: "A",
+          swimmerName: "Ada Lane",
+          time: "49.00",
+          gender: "female",
+        },
+      ],
+    };
+    const text = exportHy3(meet);
+    expectHy3Lines(text);
+    const rows = text.split(/\r?\n/);
+    const a1 = rows.find((row) => row.startsWith("A1"))!;
+    expect(a1.slice(29, 44)).toBe("Hy-Tek, Ltd".padEnd(15, " "));
+    expect(a1.slice(44, 58)).toBe("Lane4 HQ".padEnd(14, " "));
+    const e1s = rows.filter((row) => row.startsWith("E1"));
+    expect(e1s.map((row) => row.slice(38, 42))).toEqual([
+      " 42A",
+      " 42K",
+      "    ",
+      "  9 ",
+    ]);
+    expect(e1s[0]?.slice(22, 28)).toBe(" 11 11");
+    expect(e1s[1]?.slice(22, 28)).toBe(" 12 12");
+    expect(rows[rows.indexOf(e1s[0]!) + 1]?.startsWith("E2")).toBe(true);
+    expect(rows.filter((row) => row.startsWith("E2"))).toHaveLength(1);
+
+    const single = exportHy3({
+      ...meet,
+      events: [meet.events[0]!],
+      entries: [
+        {
+          eventNumber: 42,
+          swimmerName: "Ada Lane",
+          gender: "female",
+          seedTime: "49.17",
+        },
+      ],
+      results: [],
+    });
+    const singleE1 = single.split(/\r?\n/).find((row) => row.startsWith("E1"))!;
+    expect(singleE1.slice(38, 42)).toBe(" 42A");
+
+    const ambiguous = exportHy3({
+      ...meet,
+      entries: [
+        {
+          eventNumber: 42,
+          swimmerName: "Ada Lane",
+          gender: "female",
+          seedTime: "49.17",
+        },
+      ],
+      results: [],
+    });
+    const ambiguousE1 = ambiguous
+      .split(/\r?\n/)
+      .find((row) => row.startsWith("E1"))!;
+    expect(ambiguousE1.slice(38, 42)).toBe(" 42 ");
+    expect(ambiguousE1.slice(22, 28)).toBe(" 12 12");
+
+    const replaced = exportHy3({
+      ...meet,
+      hy3Publisher: "SwimTopia",
+      hy3Software: "Swimtopia",
+      entries: [],
+      results: [],
+      relays: [],
+    });
+    const replacedA1 = replaced
+      .split(/\r?\n/)
+      .find((row) => row.startsWith("A1"))!;
+    expect(replacedA1.slice(29, 44).trim()).toBe("Hy-Tek, Ltd");
+    expect(replacedA1.slice(44, 58).trim()).toBe("Lane4 HQ");
   });
 
   it("round-trips Team Manager athlete columns and a preserved C6 line", () => {

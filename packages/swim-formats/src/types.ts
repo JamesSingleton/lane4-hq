@@ -78,13 +78,16 @@ export interface ParsedMeet {
    */
   teamExtra?: string;
   /**
-   * HY3 A1 columns 30–44. Team Manager files say `Hy-Tek, Ltd`. A file
-   * Lane4 creates says `Lane4 HQ, Ltd`. Preserved on re-export.
+   * HY3 A1 columns 30–44. Team Manager and SwimTopia files say `Hy-Tek, Ltd`.
+   * Lane4 meet-entry exports use that same publisher so the file matches
+   * the layout Meet Manager already imports. Preserved on re-export when
+   * the source publisher is not SwimTopia.
    */
   hy3Publisher?: string;
   /**
-   * HY3 A1 columns 45–58. Team Manager files say `Win-TM …`. A file Lane4
-   * creates says `Lane4 1.0`. Preserved on re-export.
+   * HY3 A1 columns 45–58. Team Manager files say `Win-TM …` and that value
+   * is preserved on re-export. SwimTopia's `Swimtopia` token is replaced
+   * with `Lane4 HQ`. A new Lane4 file also says `Lane4 HQ`.
    */
   hy3Software?: string;
   /**

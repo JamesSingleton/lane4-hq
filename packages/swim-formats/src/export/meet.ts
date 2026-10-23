@@ -335,6 +335,11 @@ function hy3RawLine(body: string): string {
   return `${padded}${hy3Checksum(padded)}`;
 }
 
+/** 128 data columns plus the two-character checksum. Used by roster HY3. */
+export function formatHy3Line(body: string): string {
+  return hy3RawLine(body);
+}
+
 /**
  * Team Manager entry files use a different E1/F1 width than Meet Manager
  * results. A meet that already has results keeps the results layout unless
@@ -369,7 +374,7 @@ function ageYearsOnDate(
   const dobMonth = Number(dob[2]);
   const dobDay = Number(dob[3]);
   if (month < dobMonth || (month === dobMonth && day < dobDay)) age -= 1;
-  return age < 0 ? 0 : age;
+  return Math.max(age, 0);
 }
 
 function lastNameStub(lastName: string): string {
@@ -424,8 +429,87 @@ function swimmerRegistryKey(name: string): string {
   return `name:${name.trim().toLowerCase()}`;
 }
 
-function resultGroupKey(eventNumber: number | undefined, name: string): string {
-  return `${eventNumber ?? ""}|${name.trim().toLowerCase()}`;
+function resultGroupKey(
+  eventNumber: number | undefined,
+  name: string,
+  eventSuffix?: string,
+): string {
+  return `${eventNumber ?? ""}|${(eventSuffix ?? "").toUpperCase()}|${name.trim().toLowerCase()}`;
+}
+
+/**
+ * Meet Manager accepts SwimTopia's entry files with publisher `Hy-Tek, Ltd`
+ * and software `Swimtopia`. Lane4 keeps that publisher (it is the file-origin
+ * field, not the SwimTopia name) and writes `Lane4 HQ` where SwimTopia wrote
+ * its own software name. Team Manager re-exports keep `Win-TM`.
+ */
+function hy3PublisherForExport(meet: ParsedMeet): string {
+  const parsed = meet.hy3Publisher?.trim();
+  if (parsed && !/swimtopia/i.test(parsed)) return parsed;
+  return "Hy-Tek, Ltd";
+}
+
+function hy3SoftwareForExport(meet: ParsedMeet): string {
+  const parsed = meet.hy3Software?.trim();
+  if (parsed && !/swimtopia/i.test(parsed)) return parsed;
+  return "Lane4 HQ";
+}
+
+function eventLookupKey(eventNumber: number, eventSuffix?: string): string {
+  return `${eventNumber}|${(eventSuffix ?? "").toUpperCase()}`;
+}
+
+function indexHy3Events(events: ParsedEvent[]): {
+  byKey: Map<string, ParsedEvent>;
+  byNumber: Map<number, ParsedEvent[]>;
+} {
+  const byKey = new Map<string, ParsedEvent>();
+  const byNumber = new Map<number, ParsedEvent[]>();
+  for (const event of events) {
+    if (event.eventNumber == null) continue;
+    const list = byNumber.get(event.eventNumber) ?? [];
+    list.push(event);
+    byNumber.set(event.eventNumber, list);
+    byKey.set(eventLookupKey(event.eventNumber, event.eventSuffix), event);
+  }
+  return { byKey, byNumber };
+}
+
+function hy3EventFor(
+  index: ReturnType<typeof indexHy3Events>,
+  eventNumber: number | undefined,
+  eventSuffix?: string,
+): { event?: ParsedEvent; suffix?: string } {
+  if (eventNumber == null) return {};
+  if (eventSuffix) {
+    return {
+      event: index.byKey.get(eventLookupKey(eventNumber, eventSuffix)),
+      suffix: eventSuffix,
+    };
+  }
+  const list = index.byNumber.get(eventNumber);
+  if (!list) return {};
+  const plain = list.filter((event) => !event.eventSuffix);
+  if (plain.length > 0) return { event: plain[plain.length - 1] };
+  if (list.length === 1) {
+    const only = list[0]!;
+    return { event: only, suffix: only.eventSuffix };
+  }
+  return { event: list[list.length - 1] };
+}
+
+function writeHy3EventNumber(
+  line: FixedLine,
+  eventNumber: string,
+  suffix: string | undefined,
+  tmColumns: boolean,
+): void {
+  if (!tmColumns) {
+    line.setRight(39, 4, eventNumber);
+    return;
+  }
+  line.setRight(39, 3, eventNumber);
+  if (suffix) line.set(42, 1, suffix.slice(0, 1).toUpperCase());
 }
 
 /**
@@ -465,8 +549,8 @@ export function exportHy3(meet: ParsedMeet): string {
         .set(1, 2, "A1")
         .set(3, 2, fileType)
         .set(5, 25, title)
-        .set(30, 15, meet.hy3Publisher?.trim() || LANE4_PUBLISHER)
-        .set(45, 14, meet.hy3Software?.trim() || LANE4_HY3_SOFTWARE)
+        .set(30, 15, hy3PublisherForExport(meet))
+        .set(45, 14, hy3SoftwareForExport(meet))
         .set(59, 8, hy3FileDate())
         .set(67, 9, hy3FileClock())
         .set(76, 53, meet.hy3Licensee?.trim() || meet.teamName),
@@ -635,19 +719,27 @@ export function exportHy3(meet: ParsedMeet): string {
     practiceGroup?: string;
     practiceSubgroup?: string;
     hy3EntryMark?: string;
+    eventSuffix?: string;
   };
   const entryUnits: EntryUnit[] = [];
   const seenUnitKeys = new Set<string>();
   for (const entry of meet.entries) {
     entryUnits.push({ ...entry });
-    seenUnitKeys.add(resultGroupKey(entry.eventNumber, entry.swimmerName));
+    seenUnitKeys.add(
+      resultGroupKey(entry.eventNumber, entry.swimmerName, entry.eventSuffix),
+    );
   }
   for (const result of meet.results) {
-    const key = resultGroupKey(result.eventNumber, result.swimmerName);
+    const key = resultGroupKey(
+      result.eventNumber,
+      result.swimmerName,
+      result.eventSuffix,
+    );
     if (seenUnitKeys.has(key)) continue;
     seenUnitKeys.add(key);
     entryUnits.push({
       eventNumber: result.eventNumber,
+      eventSuffix: result.eventSuffix,
       swimmerName: result.swimmerName,
       usaMemberId: result.usaMemberId,
       dateOfBirth: result.dateOfBirth,
@@ -690,16 +782,17 @@ export function exportHy3(meet: ParsedMeet): string {
 
   const resultsByKey = new Map<string, ParsedResult[]>();
   for (const result of meet.results) {
-    const key = resultGroupKey(result.eventNumber, result.swimmerName);
+    const key = resultGroupKey(
+      result.eventNumber,
+      result.swimmerName,
+      result.eventSuffix,
+    );
     const list = resultsByKey.get(key) ?? [];
     list.push(result);
     resultsByKey.set(key, list);
   }
 
-  const eventByNumber = new Map<number, ParsedEvent>();
-  for (const event of meet.events) {
-    if (event.eventNumber != null) eventByNumber.set(event.eventNumber, event);
-  }
+  const eventIndex = indexHy3Events(meet.events);
 
   const unitsBySwimmer = new Map<string, EntryUnit[]>();
   for (const unit of entryUnits) {
@@ -737,10 +830,12 @@ export function exportHy3(meet: ParsedMeet): string {
     lines.push(hy3Line(d1));
 
     for (const unit of unitsBySwimmer.get(swimmerRegistryKey(rec.name)) ?? []) {
-      const event =
-        unit.eventNumber != null
-          ? eventByNumber.get(unit.eventNumber)
-          : undefined;
+      const matched = hy3EventFor(
+        eventIndex,
+        unit.eventNumber,
+        unit.eventSuffix,
+      );
+      const event = matched.event;
       const ageFields = ageFieldsFromGroup(event?.ageGroup);
       const eventGender = exportGenderCode(
         event?.gender ?? rec.gender ?? "mixed",
@@ -760,9 +855,9 @@ export function exportHy3(meet: ParsedMeet): string {
         .setRight(16, 6, event?.distance ?? 0)
         .set(22, 1, hy3StrokeLetter(event?.stroke))
         .setRight(23, 3, ageFields.min)
-        .setRight(26, 3, ageFields.max)
-        .setRight(39, tmColumns ? 3 : 4, eventNumber)
-        .set(51, 1, unitCourse)
+        .setRight(26, 3, ageFields.max);
+      writeHy3EventNumber(e1, eventNumber, matched.suffix, tmColumns);
+      e1.set(51, 1, unitCourse)
         .setRight(52, 8, seed)
         .set(60, 1, unitCourse)
         .set(84, 1, unit.exhibition ? "X" : "")
@@ -774,8 +869,9 @@ export function exportHy3(meet: ParsedMeet): string {
       lines.push(hy3Line(e1));
 
       const results =
-        resultsByKey.get(resultGroupKey(unit.eventNumber, unit.swimmerName)) ??
-        [];
+        resultsByKey.get(
+          resultGroupKey(unit.eventNumber, unit.swimmerName, unit.eventSuffix),
+        ) ?? [];
       for (const result of results) {
         const kindCode =
           result.resultType === "prelim"
@@ -805,10 +901,12 @@ export function exportHy3(meet: ParsedMeet): string {
   }
 
   for (const relay of meet.relays ?? []) {
-    const event =
-      relay.eventNumber != null
-        ? eventByNumber.get(relay.eventNumber)
-        : undefined;
+    const matched = hy3EventFor(
+      eventIndex,
+      relay.eventNumber,
+      relay.eventSuffix,
+    );
+    const event = matched.event;
     const ageFields = ageFieldsFromGroup(event?.ageGroup);
     const eventGender = exportGenderCode(event?.gender ?? "mixed");
     const seed = toHy3Seconds(relay.seedTime) || "0.00";
@@ -826,11 +924,9 @@ export function exportHy3(meet: ParsedMeet): string {
       .setRight(16, 6, event?.distance ?? 200)
       .set(22, 1, hy3RelayStrokeLetter(event?.stroke))
       .setRight(23, 3, ageFields.min)
-      .setRight(26, 3, ageFields.max)
-      .setRight(39, tmColumns ? 3 : 4, relayEventNumber)
-      .set(51, 1, relayCourse)
-      .setRight(52, 8, seed)
-      .set(60, 1, relayCourse);
+      .setRight(26, 3, ageFields.max);
+    writeHy3EventNumber(f1, relayEventNumber, matched.suffix, tmColumns);
+    f1.set(51, 1, relayCourse).setRight(52, 8, seed).set(60, 1, relayCourse);
     if (tmColumns) {
       f1.set(12, 1, "0");
       f1.set(35, 4, "0.00");
@@ -988,7 +1084,6 @@ export function hy3FileClock(date = new Date()): string {
 }
 
 const LANE4_PUBLISHER = "Lane4 HQ, Ltd";
-const LANE4_HY3_SOFTWARE = "Lane4 1.0";
 /** CL2 entry software is 4 characters. Results software is 10. */
 const LANE4_CL2_ENTRY_SOFTWARE = "L4";
 const LANE4_CL2_RESULTS_SOFTWARE = "Lane4 1.0";

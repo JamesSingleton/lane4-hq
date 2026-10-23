@@ -27,6 +27,7 @@ export type MeetLineupMember = {
 export type MeetLineupEventInput = {
   id: string;
   eventNumber: number | null;
+  eventSuffix?: string | null;
   stroke: string;
   distance: number;
   gender: string;
