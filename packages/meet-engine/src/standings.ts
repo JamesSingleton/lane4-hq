@@ -8,6 +8,11 @@ export type StandingRow = {
   points: number;
 };
 
+/** Exhibition swims rank after scored swims. */
+function exhibitionRank(entry: Entry): number {
+  return entry.exhibition ? 1 : -1;
+}
+
 const STATUS_ORDER: Record<LaneResult["status"], number> = {
   ok: 0,
   dq: 1,
@@ -59,7 +64,7 @@ export function eventStandings(meet: Meet, eventId: string): StandingRow[] {
       const byGroup = group(a.result) - group(b.result);
       if (byGroup !== 0) return byGroup;
       if (a.entry.exhibition !== b.entry.exhibition)
-        return a.entry.exhibition ? 1 : -1;
+        return exhibitionRank(a.entry) - exhibitionRank(b.entry);
       return (
         mark(a.result) - mark(b.result) ||
         (isDive ? 0 : a.result.timeMs! - b.result.timeMs!)

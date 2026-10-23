@@ -9,9 +9,15 @@ import type { Entry, Heat, Meet } from "./model";
 export function laneOrder(lanes: number): number[] {
   const center = Math.ceil(lanes / 2);
   const order = [center];
-  for (let step = 1; order.length < lanes; step++) {
-    if (center + step <= lanes) order.push(center + step);
-    if (center - step >= 1 && order.length < lanes) order.push(center - step);
+  let low = center - 1;
+  let high = center + 1;
+  while (order.length < lanes) {
+    order.push(high);
+    high += 1;
+    if (order.length < lanes) {
+      order.push(low);
+      low -= 1;
+    }
   }
   return order;
 }
