@@ -172,8 +172,7 @@ export function createApp(options: AppOptions) {
       response = c.json(errorBody("internal", "Something went wrong."), 500);
     }
     if (status >= 500) {
-      const errorName =
-        error instanceof Error && error.name ? error.name : "Error";
+      const errorName = error.name || "Error";
       options.onException?.({
         requestId: c.get("requestId"),
         route: c.req.path,

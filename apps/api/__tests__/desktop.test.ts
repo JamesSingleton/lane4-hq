@@ -158,6 +158,79 @@ describe("githubDesktopReleases", () => {
     await expect(releases.latestManifest("x")).rejects.toThrow(/403/);
   });
 
+  it("uses the global fetch when none is passed", async () => {
+    const fetch = fakeGitHub();
+    vi.stubGlobal("fetch", fetch);
+    try {
+      const releases = githubDesktopReleases({ repo: REPO, token: "t" });
+      await expect(
+        releases.latestManifest("https://api/dl"),
+      ).resolves.not.toBeNull();
+      expect(fetch).toHaveBeenCalled();
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
+
+  it("keeps a newer lookup when an older one fails", async () => {
+    let releaseFirst: (response: Response) => void = () => {};
+    const first = new Promise<Response>((resolve) => {
+      releaseFirst = resolve;
+    });
+    let calls = 0;
+    const fetch = vi.fn(
+      async (url: string | URL | Request, init?: RequestInit) => {
+        const href = String(url);
+        if (href.endsWith("/releases?per_page=30")) {
+          calls += 1;
+          if (calls === 1) return first;
+        }
+        return fakeGitHub()(url, init);
+      },
+    );
+    let time = 0;
+    const releases = githubDesktopReleases({
+      repo: REPO,
+      fetch,
+      now: () => time,
+    });
+    const pending = releases.latestManifest("x");
+    time = 5 * 60 * 1000 + 1;
+    const fresh = releases.latestManifest("x");
+    releaseFirst(json({}, 500));
+    await expect(pending).rejects.toThrow(/500/);
+    await expect(fresh).resolves.not.toBeNull();
+    const after = fetch.mock.calls.length;
+    await releases.latestManifest("x");
+    expect(fetch.mock.calls.length).toBe(after);
+  });
+
+  it("rejects a platform url with no file name", async () => {
+    const fetch = fakeGitHub();
+    const releases = githubDesktopReleases({ repo: REPO, fetch });
+    const manifest = {
+      ...MANIFEST,
+      platforms: {
+        "darwin-aarch64": {
+          signature: "sig-mac",
+          url: "https://github.com/lane4/app/releases/download/desktop-v0.2.0/",
+        },
+      },
+    };
+    fetch.mockImplementation(
+      async (url: string | URL | Request, init?: RequestInit) => {
+        const href = String(url);
+        if (href.endsWith("/releases?per_page=30"))
+          return json([desktopRelease]);
+        if (href === "https://api.github.com/assets/11") return json(manifest);
+        return json({}, 404);
+      },
+    );
+    await expect(releases.latestManifest("x")).rejects.toThrow(
+      /no asset named/,
+    );
+  });
+
   it("fails when GitHub won't redirect to the download", async () => {
     const fetch = vi.fn(async (url: string | URL | Request) => {
       const href = String(url);

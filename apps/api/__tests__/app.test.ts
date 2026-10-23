@@ -207,6 +207,30 @@ describe("service routes", () => {
     expect(JSON.stringify(exceptions)).not.toContain("59.40");
   });
 
+  it("labels a throw that is not a named Error", async () => {
+    const exceptions: Array<Record<string, unknown>> = [];
+    const observed = createApp({
+      allowedOrigins: [],
+      logger: testLogger(),
+      onException: (event) => exceptions.push(event),
+    });
+    const unnamed = new Error("unnamed");
+    unnamed.name = "";
+    observed.get("/boom-unnamed", () => {
+      throw unnamed;
+    });
+    expect((await observed.request("/boom-unnamed")).status).toBe(500);
+    expect(exceptions.map((event) => event.errorName)).toEqual(["Error"]);
+  });
+
+  it("uses the default logger and an empty readiness map", async () => {
+    const bare = createApp({ allowedOrigins: [] });
+    expect((await bare.request("/health")).status).toBe(200);
+    const ready = await bare.request("/health/ready");
+    expect(ready.status).toBe(200);
+    expect(await ready.json()).toEqual({ status: "ok", checks: {} });
+  });
+
   it("logs one line per request, with the user once signed in", async () => {
     mocks.getUserTeams.mockResolvedValue([]);
     await app.request("/v1/me", { headers: signedIn });
@@ -416,6 +440,20 @@ describe("hosted meets and live results", () => {
     mocks.getHostedMeet.mockResolvedValue(undefined);
     const res = await app.request("/v1/hosted-meets/meet-1/results");
     expect(res.status).toBe(404);
+  });
+
+  it("serves a meet that has not recorded a publish time", async () => {
+    mocks.getHostedMeet.mockResolvedValue({
+      ...meetRow,
+      lastPublishedAt: null,
+    });
+    mocks.getPublishedHeats.mockResolvedValue([]);
+    const res = await app.request("/v1/hosted-meets/meet-1/results");
+    expect(res.status).toBe(200);
+    expect(await res.json()).toMatchObject({
+      meet: { id: "meet-1", lastPublishedAt: null },
+      heats: [],
+    });
   });
 
   it("serves results publicly without birthdays or member ids", async () => {

@@ -45,7 +45,9 @@ vi.mock("@lane4hq/db/queries/meets", () => ({
 }));
 
 const { createApp } = await import("../src/app");
-const { RATE_LIMITS } = await import("../src/rest/middleware/rate-limit");
+const { RATE_LIMITS, rateLimit } = await import(
+  "../src/rest/middleware/rate-limit"
+);
 const { upstashRateLimiter } = await import("../src/services/upstash");
 const { getClientIp: clientIp } = await import("../src/rest/utils/ip");
 
@@ -189,6 +191,19 @@ describe("rate limiting", () => {
     });
     expect(res.status).toBe(200);
     expect(res.headers.get("RateLimit-Limit")).toBeNull();
+  });
+
+  it("keys a user rule by IP when nobody is signed in", async () => {
+    const { limiter, calls } = fakeLimiter();
+    const bare = createApp({
+      allowedOrigins: [],
+      logger: testLogger(),
+      rateLimiter: limiter,
+    });
+    bare.get("/user-limit", rateLimit("user"), (c) => c.text("ok"));
+    const res = await bare.request("/user-limit");
+    expect(res.status).toBe(200);
+    expect(calls).toEqual([["user", "ip:unknown"]]);
   });
 
   it("falls back to unknown when no proxy header is present", async () => {

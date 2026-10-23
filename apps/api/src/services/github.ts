@@ -107,7 +107,7 @@ export function githubDesktopReleases(options: {
         release.manifest.platforms,
       )) {
         const file = decodeURIComponent(
-          new URL(entry.url).pathname.split("/").pop() ?? "",
+          new URL(entry.url).pathname.split("/").pop() || "",
         );
         const assetId = release.assetIds.get(file);
         if (assetId === undefined) {

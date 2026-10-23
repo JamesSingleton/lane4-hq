@@ -23,6 +23,19 @@ describe("apiEnv", () => {
 
   it("requires Upstash in production", () => {
     expect(() => apiEnv({ NODE_ENV: "production" })).toThrow(/UPSTASH/);
+    expect(() =>
+      apiEnv({
+        NODE_ENV: "production",
+        UPSTASH_REDIS_REST_URL: "https://x.upstash.io",
+      }),
+    ).toThrow(/UPSTASH/);
+    expect(
+      apiEnv({
+        NODE_ENV: "production",
+        UPSTASH_REDIS_REST_URL: "https://x.upstash.io",
+        UPSTASH_REDIS_REST_TOKEN: "tok",
+      }).redis,
+    ).toEqual({ url: "https://x.upstash.io", token: "tok" });
   });
 
   it("reads PORT and a comma-separated origin list", () => {
@@ -58,5 +71,12 @@ describe("apiEnv", () => {
       host: "https://eu.i.posthog.com",
     });
     expect(apiEnv({ POSTHOG_API_KEY: "   " }).posthog).toBeNull();
+    expect(apiEnv({ POSTHOG_API_KEY: "phc_test" }).posthog).toEqual({
+      apiKey: "phc_test",
+      host: undefined,
+    });
+    expect(
+      apiEnv({ POSTHOG_API_KEY: "phc_test", POSTHOG_HOST: "  " }).posthog,
+    ).toEqual({ apiKey: "phc_test", host: undefined });
   });
 });
