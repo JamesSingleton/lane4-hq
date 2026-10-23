@@ -172,3 +172,36 @@ export function individualEventKeyForRelayLeg(input: {
   if (!individual) return null;
   return eventKey;
 }
+
+/**
+ * Individual catalog key for the distance one swimmer races.
+ * A 200 relay is four 50s. Alternates use the racing leg they would replace.
+ */
+export function relayLegTimeKey(
+  relayEventKey: string,
+  slot: number,
+  swimmerGender: Gender,
+): string | null {
+  if (slot < 1 || slot > RELAY_MAX_LEGS) return null;
+  const legOrder = ((slot - 1) % RELAY_PRIMARY_LEG_COUNT) + 1;
+  return individualEventKeyForRelayLeg({
+    relayEventKey,
+    legOrder,
+    swimmerGender,
+  });
+}
+
+/** Individual keys to load when showing or suggesting legs for these genders. */
+export function relayLegBestTimeKeys(
+  relayEventKey: string,
+  swimmerGenders: readonly Gender[],
+): string[] {
+  const keys = new Set<string>();
+  for (const gender of swimmerGenders) {
+    for (let leg = 1; leg <= RELAY_PRIMARY_LEG_COUNT; leg += 1) {
+      const key = relayLegTimeKey(relayEventKey, leg, gender);
+      if (key) keys.add(key);
+    }
+  }
+  return [...keys];
+}

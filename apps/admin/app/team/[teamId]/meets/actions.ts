@@ -1830,25 +1830,8 @@ export const getMeetDetailAction = cache(async function getMeetDetailAction(
     eventKeyForBestTime.set(key, event.eventKey);
     return key;
   });
-  const splitKeys = events.flatMap((event) => {
-    const eventKey = eventKeyForMeetCourse(event);
-    if (!isRelayStroke(event.stroke, eventKey)) return [];
-    return ["free", "back", "breast", "fly"].map((stroke) => {
-      const key = eventKey.replace(
-        /_(free_relay|medley_relay)_/,
-        `_${stroke}_`,
-      );
-      eventKeyForBestTime.set(
-        key,
-        event.eventKey.replace(/_(free_relay|medley_relay)_/, `_${stroke}_`),
-      );
-      return key;
-    });
-  });
   const bestTimes = (
-    await getRosterBestTimesForEvents(teamId, [
-      ...new Set([...eventKeys, ...splitKeys]),
-    ])
+    await getRosterBestTimesForEvents(teamId, [...new Set(eventKeys)])
   ).map((bestTime) => ({
     ...bestTime,
     eventKey: eventKeyForBestTime.get(bestTime.eventKey) ?? bestTime.eventKey,

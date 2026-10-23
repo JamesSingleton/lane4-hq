@@ -8,7 +8,9 @@ import {
   racingRelayCount,
   racingRelayKeysByMember,
   racingRelayTeamKey,
+  relayLegBestTimeKeys,
   relayLegRoleLabel,
+  relayLegTimeKey,
   relayLetterFromIndex,
   relaySlotLabel,
   shouldCreditRelayLeadOff,
@@ -216,6 +218,41 @@ describe("individualEventKeyForRelayLeg", () => {
         swimmerGender: "male",
       }),
     ).toBeNull();
+  });
+
+  it("uses one leg of the relay, including alternates", () => {
+    expect(relayLegTimeKey("200_free_relay_scy_m", 4, "male")).toBe(
+      "50_free_scy_m",
+    );
+    expect(relayLegTimeKey("200_free_relay_scy_f", 5, "female")).toBe(
+      "50_free_scy_f",
+    );
+    expect(relayLegTimeKey("400_medley_relay_scy_m", 2, "male")).toBe(
+      "100_breast_scy_m",
+    );
+    expect(relayLegTimeKey("200_medley_relay_scy_f", 6, "female")).toBe(
+      "50_breast_scy_f",
+    );
+    expect(relayLegBestTimeKeys("200_free_relay_scy_m", ["male"])).toEqual([
+      "50_free_scy_m",
+    ]);
+    expect(relayLegTimeKey("200_free_relay_scy_m", 0, "male")).toBeNull();
+    expect(relayLegTimeKey("200_free_relay_scy_m", 9, "male")).toBeNull();
+    expect(relayLegBestTimeKeys("not_an_event", ["male", "female"])).toEqual(
+      [],
+    );
+    expect(
+      relayLegBestTimeKeys("200_medley_relay_scy_x", ["female", "male"]),
+    ).toEqual([
+      "50_back_scy_f",
+      "50_breast_scy_f",
+      "50_fly_scy_f",
+      "50_free_scy_f",
+      "50_back_scy_m",
+      "50_breast_scy_m",
+      "50_fly_scy_m",
+      "50_free_scy_m",
+    ]);
   });
 
   it("credits a valid racing lead-off regardless of exhibition status", () => {

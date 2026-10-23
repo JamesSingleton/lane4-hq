@@ -275,7 +275,6 @@ function relayPanelPropsFromShared(
     limits: shared.limits,
     individualCountByMembership,
     candidates,
-    bestTimes: shared.bestTimes,
     draftQuota,
   };
 }

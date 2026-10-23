@@ -27,7 +27,9 @@ import {
 } from "@lane4hq/swim-core/entry-limits";
 import {
   formatEventName,
+  type Gender,
   isSwimmerEligibleForEvent,
+  parseEventKey,
 } from "@lane4hq/swim-core/events";
 import { indexMeetCommitments } from "@lane4hq/swim-core/meet-attendance";
 import { getPlanLimits } from "@lane4hq/swim-core/plans";
@@ -37,6 +39,8 @@ import {
   RELAY_PRIMARY_LEG_COUNT,
   RELAY_TEAM_LETTERS,
   racingRelayKeysByMember,
+  relayLegBestTimeKeys,
+  relayLegTimeKey,
   strokeForRelayLeg,
 } from "@lane4hq/swim-core/relay-legs";
 import { blocksMeetEntries } from "@lane4hq/swim-core/team-types";
@@ -560,36 +564,54 @@ export async function suggestRelayOrderAction(
     );
   }
 
-  const times = await getRosterBestTimesForEvents(teamId, [
-    event.eventKey,
-    // Common leg times for ordering
-    event.eventKey.replace(/_(free_relay|medley_relay)_/, "_free_"),
-    event.eventKey.replace(/_(free_relay|medley_relay)_/, "_back_"),
-    event.eventKey.replace(/_(free_relay|medley_relay)_/, "_breast_"),
-    event.eventKey.replace(/_(free_relay|medley_relay)_/, "_fly_"),
-  ]);
+  const relayGenders: Gender[] =
+    event.gender === "male" || event.gender === "female"
+      ? [event.gender]
+      : ["female", "male"];
+  const times = await getRosterBestTimesForEvents(
+    teamId,
+    relayLegBestTimeKeys(event.eventKey, relayGenders),
+  );
 
-  const timeByMember = new Map<string, number>();
+  const timeByMemberAndKey = new Map<string, number>();
   for (const t of times) {
-    const prev = timeByMember.get(t.membershipId);
-    if (prev == null || t.timeMs < prev) {
-      timeByMember.set(t.membershipId, t.timeMs);
-    }
+    const key = `${t.membershipId}|${t.eventKey}`;
+    const prev = timeByMemberAndKey.get(key);
+    if (prev == null || t.timeMs < prev) timeByMemberAndKey.set(key, t.timeMs);
   }
 
+  const parsedRelay = parseEventKey(event.eventKey);
+  const legDistance =
+    parsedRelay != null && parsedRelay.distance % 4 === 0
+      ? parsedRelay.distance / 4
+      : null;
+  const isMedley =
+    event.stroke === "medley_relay" || event.eventKey.includes("medley");
   const swimmerLines = eligible
     .map((s) => {
-      const best = timeByMember.get(s.membershipId);
+      const gender: Gender | null =
+        s.gender === "male" || s.gender === "female" ? s.gender : null;
+      const slots = isMedley ? [1, 2, 3, 4] : [1];
+      const timesForSwimmer = slots
+        .map((slot) => {
+          const stroke = strokeForRelayLeg(event.stroke, slot);
+          const key = gender
+            ? relayLegTimeKey(event.eventKey, slot, gender)
+            : null;
+          const ms = key
+            ? timeByMemberAndKey.get(`${s.membershipId}|${key}`)
+            : null;
+          const label =
+            legDistance != null ? `${legDistance} ${stroke}` : stroke;
+          return `${label} ${ms != null ? formatTime(ms) : "no time"}`;
+        })
+        .join(", ");
       const relayCount = relayEntryCountByMember.get(s.membershipId)?.size ?? 0;
-      return `${s.firstName} ${s.lastName} (${s.membershipId}): ${
-        best != null ? formatTime(best) : "no time"
-      }; currentRelayEntries=${relayCount}; gender=${s.gender}`;
+      return `${s.firstName} ${s.lastName} (${s.membershipId}): ${timesForSwimmer}; currentRelayEntries=${relayCount}; gender=${s.gender}`;
     })
     .join("\n");
 
   const letters = RELAY_TEAM_LETTERS.slice(0, numberOfRelays).join(", ");
-  const isMedley =
-    event.stroke === "medley_relay" || event.eventKey.includes("medley");
 
   const { text } = await generateText({
     model: openai("gpt-4o-mini"),
@@ -602,7 +624,8 @@ Rules:
 - Each team has exactly 4 swimmers.
 - ${allowDoubles ? "Doubles ARE allowed: a swimmer may appear on multiple teams, but prefer not to overload anyone." : "NO doubles: each membershipId may appear at most once across all teams."}
 - Optimize for ${optimizeFor === "participation" ? "participation (spread opportunity; B/C teams get solid athletes too)" : "speed (fastest possible A team, then B, then C)"}.
-- ${isMedley ? "Medley order must be back, breast, fly, free." : "Free relay: put the fastest freestyler last (anchor)."}
+- Times are one leg of the relay (a 200 relay is four 50s, a 400 relay is four 100s).
+- ${isMedley ? "Medley order must be back, breast, fly, free. Use each stroke's time." : "Free relay: every leg is freestyle. Put the fastest freestyler last (anchor)."}
 - Prefer swimmers with fewer currentRelayEntries when near the meet relay entry limit.
 - Never invent membershipIds; use only candidates provided.`,
     prompt: `Event: ${formatEventName(event.distance, event.stroke)} (${event.eventKey})

@@ -78,7 +78,6 @@ type SavedTeam = {
 };
 
 type Candidate = { membershipId: string; name: string; gender: Gender };
-type BestTimeRow = { membershipId: string; eventKey: string; timeMs: number };
 
 const RELAY_TEAM_COUNT_ITEMS = [
   { value: "1", label: "A only" },
@@ -102,7 +101,6 @@ export function RelaySuggestPanel({
   limits,
   individualCountByMembership,
   candidates,
-  bestTimes,
   draftQuota: initialDraftQuota,
 }: {
   teamId: string;
@@ -113,7 +111,6 @@ export function RelaySuggestPanel({
   limits?: MeetEntryLimits | null;
   individualCountByMembership: Record<string, number>;
   candidates: Candidate[];
-  bestTimes: BestTimeRow[];
   draftQuota: SharedDraftQuota;
 }) {
   const router = useRouter();
@@ -153,16 +150,6 @@ export function RelaySuggestPanel({
     [initialTeams],
   );
 
-  const timeByMemberAndKey = useMemo(() => {
-    const map = new Map<string, number>();
-    for (const row of bestTimes) {
-      const key = `${row.membershipId}|${row.eventKey}`;
-      const prev = map.get(key);
-      if (prev == null || row.timeMs < prev) map.set(key, row.timeMs);
-    }
-    return map;
-  }, [bestTimes]);
-
   const dirtyByEvent = useMemo(() => {
     const currentLegs = serializeGroupedLegs(legsByEvent);
     const currentSeeds = serializeSeeds(seedByEvent);
@@ -192,23 +179,6 @@ export function RelaySuggestPanel({
     window.addEventListener("beforeunload", onLeave);
     return () => window.removeEventListener("beforeunload", onLeave);
   }, [anyDirty]);
-
-  function splitMs(
-    membershipId: string,
-    event: RelayEvent,
-    slot: number,
-  ): number | null {
-    const stroke = strokeForRelayLeg(event.stroke, slot);
-    const splitKey = event.eventKey.replace(
-      /_(free_relay|medley_relay|free|back|breast|fly|im)_/,
-      `_${stroke}_`,
-    );
-    return (
-      timeByMemberAndKey.get(`${membershipId}|${splitKey}`) ??
-      timeByMemberAndKey.get(`${membershipId}|${event.eventKey}`) ??
-      null
-    );
-  }
 
   function combinedLegsForEvent(meetEventId: string): RelayLegCountInput[] {
     const others = initialLegs
@@ -654,7 +624,7 @@ export function RelaySuggestPanel({
                   </Button>
                 </CardAction>
               </CardHeader>
-              <CardContent className="flex flex-col gap-4">
+              <CardContent>
                 <div className="grid grid-cols-1 gap-4 @min-[17rem]/relay-event:grid-cols-[repeat(auto-fit,minmax(min(100%,16rem),1fr))]">
                   {letters.map((letter) => (
                     <RelayTeamCard
@@ -667,7 +637,6 @@ export function RelaySuggestPanel({
                       locked={locked}
                       canRemove={letters.indexOf(letter) > 0}
                       eligibleCandidates={eligibleCandidates}
-                      splitMs={splitMs}
                       assignBlockedReason={assignBlockedReason}
                       onSeedChange={(value) =>
                         setSeedByEvent((prev) => ({
@@ -750,7 +719,6 @@ function RelayTeamCard({
   locked,
   canRemove,
   eligibleCandidates,
-  splitMs,
   assignBlockedReason,
   onSeedChange,
   onRemove,
@@ -764,11 +732,6 @@ function RelayTeamCard({
   locked: boolean;
   canRemove: boolean;
   eligibleCandidates: Candidate[];
-  splitMs: (
-    membershipId: string,
-    event: RelayEvent,
-    slot: number,
-  ) => number | null;
   assignBlockedReason: (
     meetEventId: string,
     letter: string,
@@ -811,10 +774,6 @@ function RelayTeamCard({
           const assigned = legs.find(
             (leg) => leg.teamLetter === letter && leg.legOrder === slot,
           );
-          const split =
-            assigned != null
-              ? splitMs(assigned.membershipId, event, slot)
-              : null;
           return (
             <li key={slot} className="flex min-w-0 flex-col gap-1">
               <span className="text-muted-foreground text-xs">
@@ -826,20 +785,12 @@ function RelayTeamCard({
               <RelaySwimmerCombobox
                 label={relaySlotLabel(slot)}
                 value={assigned?.membershipId ?? ""}
-                displayValue={
-                  assigned
-                    ? `${assigned.name}${split != null ? ` · ${formatTime(split)}` : ""}`
-                    : ""
-                }
+                displayValue={assigned?.name ?? ""}
                 disabled={pending || locked}
                 options={eligibleCandidates.map((candidate) => {
-                  const ms = splitMs(candidate.membershipId, event, slot);
                   return {
                     membershipId: candidate.membershipId,
-                    label:
-                      ms != null
-                        ? `${candidate.name} · ${formatTime(ms)}`
-                        : candidate.name,
+                    label: candidate.name,
                     blocked: assignBlockedReason(
                       event.id,
                       letter,
