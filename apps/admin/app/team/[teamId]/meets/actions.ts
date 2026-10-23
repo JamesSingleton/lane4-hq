@@ -111,7 +111,7 @@ import {
   parseMeetFileFromBytes,
   parseMeetFilesFromBytes,
 } from "@lane4hq/swim-formats/meet";
-import { exportSdif } from "@lane4hq/swim-formats/sdif";
+import { exportUssSdif } from "@lane4hq/swim-formats/sdif";
 import { revalidatePath } from "next/cache";
 import { cache } from "react";
 import { trackAdmin } from "@/app/analytics";
@@ -1065,7 +1065,7 @@ export async function importMeetFileAction(
 
     function importSlot(event: {
       eventNumber?: number | null;
-      eventSuffix?: string;
+      eventSuffix?: string | null;
       ageGroup?: string | null;
       eventKey: string;
     }): string {
@@ -1777,7 +1777,7 @@ export async function exportMeetAction(
                       : "results",
                 ),
               ).toString("base64")
-            : exportSdif(payload);
+            : exportUssSdif(payload);
     trackAdmin("entries_exported", session?.user?.id, teamId, { format });
     return {
       content,

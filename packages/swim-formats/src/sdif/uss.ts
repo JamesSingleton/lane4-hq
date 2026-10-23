@@ -16,7 +16,7 @@ import type {
 
 /**
  * USA Swimming SDIF v3 (.sd3), 160 data columns. SwimTopia and TeamUnify
- * write this layout. Lane4's own `exportSdif` does not.
+ * write this layout. `exportUssSdif` writes it. `exportSdif` does not.
  *
  * Column numbers are 1-based, from the April 28, 1998 SDIF version 3 spec.
  */

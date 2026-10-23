@@ -7,6 +7,7 @@ import type {
 import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import {
   exportRosterCsvAction,
+  exportRosterHy3Action,
   saveRosterViewPreferencesAction,
 } from "@/app/team/[teamId]/roster/actions";
 import { RosterImportButton } from "@/app/team/[teamId]/roster/roster-import-export";
@@ -54,6 +55,7 @@ export function RosterTable({
   initialSorting?: SortingState;
 }) {
   const [exporting, setExporting] = useState(false);
+  const [exportingHy3, setExportingHy3] = useState(false);
   const [exportMessage, setExportMessage] = useState("");
   const [, startTransition] = useTransition();
   const skipPersist = useRef(true);
@@ -130,6 +132,34 @@ export function RosterTable({
     }
   }
 
+  async function handleHy3Export() {
+    setExportingHy3(true);
+    setExportMessage("");
+    try {
+      const exportInput = rosterExportInputFromTableState({
+        columnFilters: table.state.columnFilters,
+        sorting,
+        seasonId,
+      });
+      const { content, filename } = await exportRosterHy3Action(
+        teamId,
+        exportInput,
+      );
+      const blob = new Blob([content], { type: "text/plain" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = filename;
+      a.click();
+      URL.revokeObjectURL(url);
+      setExportMessage("Hy-Tek roster exported");
+    } catch (err) {
+      setExportMessage(err instanceof Error ? err.message : "Export failed");
+    } finally {
+      setExportingHy3(false);
+    }
+  }
+
   return (
     <div className="flex flex-col gap-2">
       <DataTable
@@ -146,6 +176,13 @@ export function RosterTable({
         <DataTableToolbar table={table}>
           <RosterImportButton teamId={teamId} />
           <RosterExportButton onExport={handleExport} loading={exporting} />
+          <RosterExportButton
+            onExport={handleHy3Export}
+            loading={exportingHy3}
+            label="Hy-Tek roster"
+            shortLabel="HY3"
+            busyLabel="Exporting HY3…"
+          />
           <DataTableViewOptions table={table} />
         </DataTableToolbar>
       </DataTable>

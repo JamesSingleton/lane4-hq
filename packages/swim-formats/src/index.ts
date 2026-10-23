@@ -56,6 +56,6 @@ export {
   rosterSharePackFilename,
   serializeRosterSharePack,
 } from "./roster/share-pack";
-export { exportSdif, parseSdif } from "./sdif/parser";
+export { exportSdif, exportUssSdif, parseSdif } from "./sdif/parser";
 export * from "./types";
 export { ExportXlsParseError, parseEventExportXls } from "./xls/parser";

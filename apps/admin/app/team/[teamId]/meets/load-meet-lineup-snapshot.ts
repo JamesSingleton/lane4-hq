@@ -117,6 +117,7 @@ export async function loadMeetLineupSnapshot(
     events: events.map((event) => ({
       id: event.id,
       eventNumber: event.eventNumber,
+      eventSuffix: event.eventSuffix,
       stroke: event.stroke,
       distance: event.distance,
       gender: event.gender,
@@ -165,6 +166,11 @@ export function parsedMeetFromLineup(
   const eventNumberById = new Map(
     snapshot.events.map((event) => [event.id, event.eventNumber] as const),
   );
+  const eventSuffixById = new Map(
+    snapshot.events.map(
+      (event) => [event.id, event.eventSuffix || undefined] as const,
+    ),
+  );
   const athleteByMembershipId = new Map(
     snapshot.athletes.map(
       (athlete) => [athlete.membershipId, athlete] as const,
@@ -194,6 +200,7 @@ export function parsedMeetFromLineup(
     teamContactEmail: snapshot.team.contactEmail,
     events: snapshot.events.map((event) => ({
       eventNumber: event.eventNumber ?? undefined,
+      eventSuffix: event.eventSuffix || undefined,
       stroke: event.stroke,
       distance: event.distance,
       gender: parseEventGender(event.gender),
@@ -204,6 +211,7 @@ export function parsedMeetFromLineup(
     })),
     entries: snapshot.individuals.map((entry) => ({
       eventNumber: eventNumberById.get(entry.meetEventId) ?? undefined,
+      eventSuffix: eventSuffixById.get(entry.meetEventId),
       swimmerName: `${entry.firstName} ${entry.lastName}`.trim(),
       seedTime: hostPackSeedTime(entry.seedTimeMs),
       usaMemberId: athleteByMembershipId.get(entry.membershipId)?.usaMemberId,
@@ -216,6 +224,7 @@ export function parsedMeetFromLineup(
       const swimmer = memberBySwimmerId.get(result.swimmerId);
       return {
         eventNumber: eventNumberById.get(result.meetEventId) ?? undefined,
+        eventSuffix: eventSuffixById.get(result.meetEventId),
         swimmerName: swimmer
           ? `${swimmer.firstName} ${swimmer.lastName}`
           : "Unknown",
@@ -251,6 +260,7 @@ export function parsedMeetFromLineup(
         ? undefined
         : snapshot.relayTeams.map((team) => ({
             eventNumber: eventNumberById.get(team.meetEventId) ?? undefined,
+            eventSuffix: eventSuffixById.get(team.meetEventId),
             relayLetter: team.letter,
             seedTime: hostPackSeedTime(team.seedTimeMs),
             swimmerNames: team.legs.map((leg) =>

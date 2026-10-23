@@ -16,12 +16,14 @@ import {
 } from "@lane4hq/db/authz";
 import { db } from "@lane4hq/db/client";
 import { createImportJob, updateImportJob } from "@lane4hq/db/queries/imports";
+import { getTeamExportContact } from "@lane4hq/db/queries/members";
 import { patchTeamUiPreferences } from "@lane4hq/db/queries/preferences";
 import { getSwimmerBestTimes } from "@lane4hq/db/queries/progression";
 import {
   addSwimmer,
   getRoster,
   getRosterForExport,
+  getSwimmerContactsByMembership,
   getSwimmerContactsForMembership,
   getSwimmerIdentityById,
   getSwimmerMedicalForMembership,
@@ -48,6 +50,7 @@ import { parseRosterCsv } from "@lane4hq/swim-formats/csv";
 import {
   buildRosterSharePack,
   detectRosterFileFormat,
+  exportRosterHy3,
   isRosterSharePack,
   parsedRosterRowToImportRaw,
   parseRosterFile,
@@ -382,6 +385,116 @@ export async function exportRosterCsvAction(
   }
 
   return lines.join("\n");
+}
+
+export async function exportRosterHy3Action(
+  teamId: string,
+  options?: RosterPageInput & { swimmerIds?: string[] },
+): Promise<{ content: string; filename: string }> {
+  const session = await getSession();
+  const headerStore = await headers();
+  const ip =
+    headerStore.get("x-forwarded-for")?.split(",")[0]?.trim() ??
+    headerStore.get("x-real-ip") ??
+    undefined;
+
+  await requireRosterImportExportAccess(session?.user?.id, teamId);
+
+  const hasFilters =
+    options &&
+    (options.swimmerIds?.length ||
+      options.q ||
+      options.status?.length ||
+      options.gender?.length ||
+      options.groupId?.length ||
+      options.classYear?.length ||
+      (options.sort?.length ?? 0) > 0);
+
+  const [org, contact, roster] = await Promise.all([
+    db
+      .select({
+        name: organization.name,
+        teamCode: organization.teamCode,
+        lscCode: organization.lscCode,
+        addressLine1: organization.addressLine1,
+        addressLine2: organization.addressLine2,
+        city: organization.city,
+        region: organization.region,
+        postalCode: organization.postalCode,
+        country: organization.country,
+      })
+      .from(organization)
+      .where(eq(organization.id, teamId))
+      .limit(1)
+      .then((rows) => rows[0] ?? null),
+    getTeamExportContact(teamId),
+    hasFilters
+      ? getRosterForExport(teamId, {
+          ...options,
+          status: options.swimmerIds?.length
+            ? options.status?.length
+              ? options.status
+              : ["active", "inactive"]
+            : options.status,
+        })
+      : getRoster(teamId, options?.seasonId),
+  ]);
+
+  if (!org) throw new Error("Team not found");
+
+  const contacts = await getSwimmerContactsByMembership(
+    teamId,
+    roster.map((row) => row.membershipId),
+  );
+  const contactByMembership = new Map(
+    contacts.map((row) => [row.membershipId, row] as const),
+  );
+
+  const content = exportRosterHy3(
+    roster.map((row) => ({
+      firstName: row.firstName,
+      lastName: row.lastName,
+      preferredName: row.preferredName,
+      middleName: row.middleName,
+      dateOfBirth: row.dateOfBirth,
+      gender: row.gender,
+      usaMemberId: row.governingBodyId,
+      classYear: row.classYear,
+      practiceGroup: row.practiceGroup,
+      contacts: contactByMembership.get(row.membershipId),
+    })),
+    {
+      name: org.name,
+      code: org.teamCode,
+      lscCode: org.lscCode,
+      addressLine1: org.addressLine1,
+      addressLine2: org.addressLine2,
+      city: org.city,
+      region: org.region,
+      postalCode: org.postalCode,
+      country: org.country,
+      contactName: contact?.name,
+      email: contact?.email,
+    },
+  );
+
+  if (session?.user?.id) {
+    await writeAuditLog({
+      organizationId: teamId,
+      actorUserId: session.user.id,
+      action: "roster.hy3.export",
+      resourceType: "organization",
+      resourceId: teamId,
+      ipAddress: ip,
+      metadata: { rowCount: roster.length },
+    });
+  }
+
+  const stem = (org.teamCode?.trim() || org.name || "roster")
+    .replace(/[^\w.-]+/g, "_")
+    .replace(/_+/g, "_")
+    .slice(0, 40);
+  return { content, filename: `${stem}-Roster.hy3` };
 }
 
 export async function exportRosterSharePackAction(

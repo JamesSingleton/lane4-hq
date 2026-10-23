@@ -110,6 +110,8 @@ export const meetEvents = pgTable(
       .notNull()
       .references(() => meets.id, { onDelete: "cascade" }),
     eventNumber: integer("event_number"),
+    /** SwimTopia multi-age letter, such as `A` on event 42A. */
+    eventSuffix: text("event_suffix"),
     stroke: text("stroke").notNull(),
     distance: integer("distance").notNull(),
     gender: eventGenderEnum("gender").notNull(),
