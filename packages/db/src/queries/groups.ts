@@ -1,3 +1,4 @@
+import { tagException } from "@lane4hq/analytics";
 import { and, count, desc, eq, gte, inArray } from "drizzle-orm";
 import { db } from "../client";
 import { aiGenerations, trainingGroups } from "../schema/groups";
@@ -92,7 +93,10 @@ export async function assignMembershipGroup(
     .limit(1);
 
   if (!membership) {
-    throw new Error(`Membership not found: ${membershipId}`);
+    throw tagException(
+      new Error("That swimmer is not on this team."),
+      "swimmer_missing",
+    );
   }
 
   const season = seasonId

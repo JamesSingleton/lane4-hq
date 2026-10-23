@@ -12,6 +12,7 @@ import {
   contextProperties,
   createAnalytics,
   errorCode,
+  exceptionReason,
   formatCode,
   ingestRewrites,
   isAnalyticsApp,
@@ -22,6 +23,7 @@ import {
   safeDistinctId,
   sanitizeException,
   sanitizeProperties,
+  tagException,
 } from "../src/index";
 import { otlpLogsBody, sendOtlpLogs } from "../src/logs";
 import {
@@ -234,6 +236,17 @@ describe("privacy", () => {
     expect(sanitizeException({ source: "command" }).source).toBe("command");
     expect(sanitizeException({ source: "client" }).source).toBe("client");
     expect(sanitizeException({ status: 0 }).status).toBe(0);
+    expect(exceptionReason(null)).toBeUndefined();
+    expect(exceptionReason("x")).toBeUndefined();
+    expect(exceptionReason({ lane4Reason: 1 })).toBeUndefined();
+    expect(exceptionReason({ lane4Reason: "nope" })).toBeUndefined();
+    const tagged = tagException(new Error("hidden"), "plan_feature");
+    expect(Object.keys(tagged)).not.toContain("lane4Reason");
+    expect(exceptionReason(tagged)).toBe("plan_feature");
+    expect(sanitizeException({ reason: "plan_feature" })).toEqual({
+      reason: "plan_feature",
+    });
+    expect(sanitizeException({ reason: "Ada" })).toEqual({});
   });
 
   it("strips autocapture text", () => {

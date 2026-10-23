@@ -45,6 +45,7 @@
     "db:push": "drizzle-kit push"
   },
   "dependencies": {
+    "@lane4hq/analytics": "workspace:*",
     "@lane4hq/swim-core": "workspace:*",
     "@t3-oss/env-nextjs": "catalog:",
     "drizzle-orm": "catalog:",

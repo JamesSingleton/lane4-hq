@@ -1,3 +1,4 @@
+import { tagException } from "@lane4hq/analytics";
 import type { SwimsClub, SwimsMember } from "./types";
 
 const SWIMS_BASE_URL =
@@ -13,7 +14,10 @@ export class SwimsClient {
 
   private async request<T>(path: string): Promise<T> {
     if (!this.thumbprint) {
-      throw new Error("USA_SWIMMING_VENDOR_THUMBPRINT is not configured");
+      throw tagException(
+        new Error("USA Swimming sync is not available right now."),
+        "swims_unconfigured",
+      );
     }
 
     const response = await fetch(`${SWIMS_BASE_URL}${path}`, {
@@ -24,8 +28,9 @@ export class SwimsClient {
     });
 
     if (!response.ok) {
-      throw new Error(
-        `SWIMS API error: ${response.status} ${response.statusText}`,
+      throw tagException(
+        new Error("USA Swimming could not be reached."),
+        "swims_unreachable",
       );
     }
 

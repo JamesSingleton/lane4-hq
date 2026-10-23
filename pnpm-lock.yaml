@@ -706,6 +706,9 @@ importers:
 
   packages/billing:
     dependencies:
+      '@lane4hq/analytics':
+        specifier: workspace:*
+        version: link:../analytics
       '@lane4hq/db':
         specifier: workspace:*
         version: link:../db
@@ -762,6 +765,9 @@ importers:
 
   packages/db:
     dependencies:
+      '@lane4hq/analytics':
+        specifier: workspace:*
+        version: link:../analytics
       '@lane4hq/swim-core':
         specifier: workspace:*
         version: link:../swim-core
@@ -1114,6 +1120,9 @@ importers:
 
   packages/usa-swimming:
     dependencies:
+      '@lane4hq/analytics':
+        specifier: workspace:*
+        version: link:../analytics
       '@lane4hq/db':
         specifier: workspace:*
         version: link:../db

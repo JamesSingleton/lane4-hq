@@ -1,3 +1,4 @@
+import { tagException } from "@lane4hq/analytics";
 import { and, eq, gt, inArray, isNull, or, sql } from "drizzle-orm";
 import { db } from "../client";
 import {
@@ -28,7 +29,10 @@ async function resolveSeasonIdForMembership(
     .limit(1);
 
   if (!membership) {
-    throw new Error(`Membership not found: ${membershipId}`);
+    throw tagException(
+      new Error("That swimmer is not on this team."),
+      "swimmer_missing",
+    );
   }
 
   return (await ensureCurrentSeason(membership.organizationId)).id;

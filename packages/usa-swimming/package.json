@@ -17,6 +17,7 @@
     "test:watch": "vitest"
   },
   "dependencies": {
+    "@lane4hq/analytics": "workspace:*",
     "@lane4hq/db": "workspace:*",
     "@lane4hq/emails": "workspace:*",
     "@lane4hq/swim-core": "workspace:*",

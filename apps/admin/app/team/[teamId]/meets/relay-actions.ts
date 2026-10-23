@@ -1,6 +1,7 @@
 "use server";
 
 import { openai } from "@ai-sdk/openai";
+import { tagException } from "@lane4hq/analytics";
 import { getSession } from "@lane4hq/auth/session";
 import { ingestAiGenerationEvent } from "@lane4hq/billing/polar";
 import { requireTeamRole } from "@lane4hq/db/authz";
@@ -484,8 +485,9 @@ export async function suggestRelayOrderAction(
   ]);
 
   if (!process.env.OPENAI_API_KEY) {
-    throw new Error(
-      "Relay suggestions aren't configured. Add OPENAI_API_KEY to apps/admin/.env.",
+    throw tagException(
+      new Error("Relay suggestions are not available right now."),
+      "openai_unconfigured",
     );
   }
 
@@ -673,18 +675,27 @@ ${swimmerLines}`,
     }
     order.forEach((leg, i) => {
       if (!eligibleIds.has(leg.membershipId)) {
-        throw new Error(`Unknown or ineligible swimmer: ${leg.membershipId}`);
+        throw tagException(
+          new Error("That suggestion included a swimmer who is not eligible."),
+          "relay_ineligible",
+        );
       }
       if (!allowDoubles && used.has(leg.membershipId)) {
-        throw new Error(
-          `Double assignment for ${nameById.get(leg.membershipId) ?? leg.membershipId} but doubles are disabled`,
+        throw tagException(
+          new Error(
+            `${nameById.get(leg.membershipId) ?? "A swimmer"} is already on a relay, and doubles are off.`,
+          ),
+          "relay_double",
         );
       }
       const prior = usageCount.get(leg.membershipId) ?? 0;
       const existing = relayEntryCountByMember.get(leg.membershipId)?.size ?? 0;
       if (maxRelayEntries != null && existing + prior + 1 > maxRelayEntries) {
-        throw new Error(
-          `${nameById.get(leg.membershipId) ?? leg.membershipId} would exceed max relay entries (${maxRelayEntries})`,
+        throw tagException(
+          new Error(
+            `${nameById.get(leg.membershipId) ?? "A swimmer"} would be over the relay limit.`,
+          ),
+          "relay_limit",
         );
       }
       used.add(leg.membershipId);

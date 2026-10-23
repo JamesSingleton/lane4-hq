@@ -1,6 +1,6 @@
 "use server";
 
-import { errorCode } from "@lane4hq/analytics";
+import { errorCode, tagException } from "@lane4hq/analytics";
 import { getSession } from "@lane4hq/auth/session";
 import { assertFeature } from "@lane4hq/billing/features";
 import { requireTeamRole } from "@lane4hq/db/authz";
@@ -357,8 +357,9 @@ export async function saveMeetAsEventTemplateAction(
     });
   } catch (error) {
     if (isMeetEventTemplatesTableMissing(error)) {
-      throw new Error(
-        "Team templates require a database migration. Run: pnpm db:migrate",
+      throw tagException(
+        new Error("Team templates are not available right now."),
+        "templates_schema",
       );
     }
     throw error;

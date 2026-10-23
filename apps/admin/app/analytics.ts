@@ -1,4 +1,5 @@
 import type { EventName, EventProperties } from "@lane4hq/analytics";
+import { exceptionReason } from "@lane4hq/analytics";
 import { getServerAnalytics } from "@lane4hq/analytics/server";
 
 function environment(): string {
@@ -65,10 +66,12 @@ export async function reportServerException(
 ): Promise<void> {
   try {
     const analytics = await client();
+    const reason = exceptionReason(error);
     analytics.exception(error, {
       source: "server",
       route,
       distinct_id: distinctId,
+      ...(reason ? { reason } : {}),
     });
   } catch {
     // A reporting failure must not replace the original error.

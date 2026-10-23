@@ -69,7 +69,7 @@ export default async function BillingSettingsPage({
 
       <SettingsSection
         title="Plan"
-        description="Software access for this team via Polar."
+        description="Software access for this team."
       >
         <div className="flex flex-col gap-4">
           <div className="flex items-center justify-between">
