@@ -17,13 +17,13 @@
     "lint:fix": "biome check --write ."
   },
   "dependencies": {
-    "@polar-sh/sdk": "catalog:",
     "@lane4hq/db": "workspace:*",
     "@lane4hq/emails": "workspace:*",
     "@lane4hq/swim-core": "workspace:*",
+    "@polar-sh/sdk": "^1.0.2",
     "@t3-oss/env-nextjs": "catalog:",
     "drizzle-orm": "catalog:",
-    "stripe": "^22.6.2",
+    "stripe": "^23.0.0",
     "zod": "catalog:"
   },
   "devDependencies": {

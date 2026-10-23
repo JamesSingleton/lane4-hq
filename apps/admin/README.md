@@ -31,7 +31,6 @@ Database queries and authenticated storage operations run in the existing Next.j
 ## Database and migrations
 
 `@lane4hq/db` owns the schema and queries:
-
 - Schema: `packages/db/src/schema/`
 - Migrations: `packages/db/drizzle/`
 - Runtime connection: `DATABASE_URL`
@@ -50,9 +49,9 @@ Review and commit the generated SQL and Drizzle metadata.
 
 [`neon.ts`](../../neon.ts) declares two `public_read` buckets:
 
-| Bucket | Contents |
-| --- | --- |
-| `team-logos` | Team logos |
+| Bucket         | Contents      |
+| -------------- | ------------- |
+| `team-logos`   | Team logos    |
 | `user-avatars` | Coach avatars |
 
 `@lane4hq/storage` uses the AWS S3 SDK from server actions. Uploads accept JPEG, PNG, WebP, AVIF, and SVG files up to 2 MiB. Each upload receives a UUID-based object key.
@@ -76,23 +75,23 @@ Neon isolates database and object-storage writes. External email, calendar, and 
 
 ## Routes
 
-| Route | Purpose |
-| --- | --- |
-| `/sign-in`, `/sign-up` | Coach authentication |
+| Route                                         | Purpose                                        |
+| --------------------------------------------- | ---------------------------------------------- |
+| `/sign-in`, `/sign-up`                        | Coach authentication                           |
 | `/forgot-password`, `/reset-password`, `/2fa` | Account recovery and two-factor authentication |
-| `/onboarding` | Create the first team |
-| `/team/[teamId]` | Team dashboard |
-| `/team/[teamId]/roster` | Swimmer roster |
-| `/team/[teamId]/meets` | Meets, entries, and results |
-| `/team/[teamId]/workouts` | Workouts |
-| `/team/[teamId]/attendance` | Practice attendance |
-| `/team/[teamId]/calendar` | Team calendar |
-| `/team/[teamId]/progression` | Time trends and meet history |
-| `/team/[teamId]/analytics` | Team volume, attendance, and top times |
-| `/team/[teamId]/settings` | Team settings and logo |
-| `/team/[teamId]/settings/account` | Account settings and avatar |
-| `/team/[teamId]/settings/billing` | Subscription management |
-| `/team/[teamId]/settings/usa-swimming` | SWIMS integration |
+| `/onboarding`                                 | Create the first team                          |
+| `/team/[teamId]`                              | Team dashboard                                 |
+| `/team/[teamId]/roster`                       | Swimmer roster                                 |
+| `/team/[teamId]/meets`                        | Meets, entries, and results                    |
+| `/team/[teamId]/workouts`                     | Workouts                                       |
+| `/team/[teamId]/attendance`                   | Practice attendance                            |
+| `/team/[teamId]/calendar`                     | Team calendar                                  |
+| `/team/[teamId]/progression`                  | Time trends and meet history                   |
+| `/team/[teamId]/analytics`                    | Team volume, attendance, and top times         |
+| `/team/[teamId]/settings`                     | Team settings and logo                         |
+| `/team/[teamId]/settings/account`             | Account settings and avatar                    |
+| `/team/[teamId]/settings/billing`             | Subscription management                        |
+| `/team/[teamId]/settings/usa-swimming`        | SWIMS integration                              |
 
 ## Verify
 

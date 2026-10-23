@@ -3,7 +3,6 @@
 Local-first desktop app for macOS and Windows, built with [Tauri v2](https://tauri.app) (Rust core + system webview) and a Vite/React UI that uses the shared `@lane4hq/ui` design system.
 
 It is Lane4's meet manager: it runs a swim meet on the pool deck, fully offline.
-
 1. **Setup:** create a meet from the host's event file (EV3/HYV/ZIP), then import each team's entry pack (HY3/CL2/SD3/ZIP).
 2. **Heat sheet:** seed heats, scratch swimmers, and move lanes. Once prelims are verified, build A/B/C finals from them. Draw the dive order for diving events. Print the heat sheet.
 3. **Run meet:** connect a Colorado Time Systems console (System 6, System 5, 4000A, Gen7). Each finished race is pulled automatically and matched to its heat. An official checks pad, backup, and button times, fixes DQs and missed touches, and verifies. Diving is scored by hand on a scoresheet (dive code, DD, one award per judge).
@@ -25,7 +24,6 @@ Choose **Simulated CTS console** in the Run meet connection bar. It speaks the s
 ### Where data lives
 
 The app data directory (`~/Library/Application Support/com.lane4hq.desktop/meets` on macOS, `%APPDATA%\com.lane4hq.desktop\meets` on Windows) holds:
-
 - `<id>.json` for the meet, plus `<id>.json.bak` (the previous save; deleting a meet moves both into `trash/`);
 - `<id>.captures.jsonl`, the raw timing journal;
 - a `trash/` folder for deleted meets.
@@ -59,15 +57,15 @@ cargo --version
 
 Run from the repo root:
 
-| Command | What it does |
-|---|---|
-| `pnpm dev:desktop` | Launch the Tauri app with hot reload (`tauri dev`) |
-| `pnpm --filter @lane4hq/desktop dev:web` | UI only, in a browser at http://localhost:1420 (native file APIs unavailable) |
-| `pnpm bundle:desktop` | Release installer for the current OS (`tauri build`) |
-| `pnpm --filter @lane4hq/desktop build` | Web assets only (`dist/`). This is what root `pnpm build` / Turbo runs, so it never needs Rust |
-| `pnpm --filter @lane4hq/desktop test` | Vitest (TS) |
-| `cargo test --manifest-path apps/desktop/src-tauri/Cargo.toml` | Rust unit tests |
-| `pnpm --filter @lane4hq/desktop check:types` | TypeScript |
+| Command                                                        | What it does                                                                                   |
+| -------------------------------------------------------------- | ---------------------------------------------------------------------------------------------- |
+| `pnpm dev:desktop`                                             | Launch the Tauri app with hot reload (`tauri dev`)                                             |
+| `pnpm --filter @lane4hq/desktop dev:web`                       | UI only, in a browser at http://localhost:1420 (native file APIs unavailable)                  |
+| `pnpm bundle:desktop`                                          | Release installer for the current OS (`tauri build`)                                           |
+| `pnpm --filter @lane4hq/desktop build`                         | Web assets only (`dist/`). This is what root `pnpm build` / Turbo runs, so it never needs Rust |
+| `pnpm --filter @lane4hq/desktop test`                          | Vitest (TS)                                                                                    |
+| `cargo test --manifest-path apps/desktop/src-tauri/Cargo.toml` | Rust unit tests                                                                                |
+| `pnpm --filter @lane4hq/desktop check:types`                   | TypeScript                                                                                     |
 
 Bundles land in `src-tauri/target/release/bundle/`: `.app`/`.dmg` on macOS, and `.msi`/NSIS `.exe` on Windows. For a universal macOS build, run `pnpm --filter @lane4hq/desktop bundle --target universal-apple-darwin`.
 
@@ -104,7 +102,6 @@ Bundles land in `src-tauri/target/release/bundle/`: `.app`/`.dmg` on macOS, and 
 CI (`.github/workflows/desktop.yml`) builds unsigned macOS and Windows bundles on PRs. Those builds have no updater key and never update.
 
 To ship an update (`.github/workflows/desktop-release.yml`):
-
 1. One time: run `pnpm --filter @lane4hq/desktop tauri signer generate -w ~/.tauri/lane4.key`. Save the private key and its password as repo secrets `TAURI_SIGNING_PRIVATE_KEY` and `TAURI_SIGNING_PRIVATE_KEY_PASSWORD`, and the public key as the repo variable `LANE4_UPDATER_PUBKEY`. Keep a backup of the private key: losing it means existing installs can't update.
 2. Bump `version` in `src-tauri/tauri.conf.json`, merge, then push the tag `desktop-v<version>`.
 3. The workflow builds signed updater bundles into a draft release. Publish the draft to ship it; within 5 minutes `GET /v1/desktop/update` offers it.

@@ -338,7 +338,7 @@ export default function OnboardingPage() {
       try {
         await authClient.checkout({
           slug: values.plan,
-          referenceId: teamId,
+          reference_id: teamId,
         });
         return;
       } catch {

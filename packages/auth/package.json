@@ -20,14 +20,14 @@
     "test:watch": "vitest"
   },
   "dependencies": {
-    "@polar-sh/better-auth": "^1.8.4",
-    "@polar-sh/sdk": "catalog:",
+    "@better-auth/drizzle-adapter": "catalog:",
     "@lane4hq/db": "workspace:*",
     "@lane4hq/emails": "workspace:*",
     "@lane4hq/swim-core": "workspace:*",
+    "@polar-sh/better-auth": "^2.1.0",
+    "@polar-sh/sdk": "^1.0.2",
     "@t3-oss/env-nextjs": "catalog:",
     "better-auth": "catalog:",
-    "@better-auth/drizzle-adapter": "catalog:",
     "drizzle-orm": "catalog:",
     "zod": "catalog:"
   },

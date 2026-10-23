@@ -30,7 +30,7 @@ import {
   usage,
   webhooks,
 } from "@polar-sh/better-auth";
-import { Polar } from "@polar-sh/sdk";
+import { createPolarCore, type PolarCore } from "@polar-sh/sdk/2026-10";
 import { betterAuth } from "better-auth";
 import {
   APIError,
@@ -82,6 +82,38 @@ const polarProducts = [
     : null,
 ].filter(Boolean) as Array<{ productId: string; slug: "pro" | "enterprise" }>;
 
+function metadataString(
+  metadata: Record<string, string | number | boolean> | undefined,
+  key: string,
+): string | undefined {
+  const value = metadata?.[key];
+  return typeof value === "string" && value.length > 0 ? value : undefined;
+}
+
+function planFromPolar(input: {
+  metadata?: Record<string, string | number | boolean>;
+  productId?: string | null;
+}): PlanTier {
+  const explicit = asPlan(metadataString(input.metadata, "plan"));
+  if (explicit) return explicit;
+  const slug = metadataString(input.metadata, "slug");
+  if (slug === "pro" || slug === "enterprise") return slug;
+  const product = polarProducts.find(
+    (entry) => entry.productId === input.productId,
+  );
+  return product?.slug ?? "pro";
+}
+
+/** Checkout stores the team id as metadata.referenceId. The customer external id is the user. */
+function organizationIdFromPolar(
+  metadata: Record<string, string | number | boolean> | undefined,
+): string | undefined {
+  return (
+    metadataString(metadata, "organizationId") ??
+    metadataString(metadata, "referenceId")
+  );
+}
+
 async function syncOrgPlanFromPolar(input: {
   organizationId?: string;
   plan?: PlanTier;
@@ -107,14 +139,14 @@ async function syncOrgPlanFromPolar(input: {
 }
 
 const globalForAuth = globalThis as unknown as {
-  polarClient: Polar | undefined;
+  polarClient: PolarCore | undefined;
   auth: ReturnType<typeof createAuth> | undefined;
 };
 
 function createPolarClient() {
-  return new Polar({
+  return createPolarCore({
     accessToken: polarAccessToken,
-    server: env.POLAR_SERVER === "production" ? "production" : "sandbox",
+    environment: env.POLAR_SERVER === "production" ? "production" : "sandbox",
   });
 }
 
@@ -147,7 +179,7 @@ const authSchema = {
   invitationRelations: schema.invitationRelations,
 };
 
-function createAuth(polarClient: Polar) {
+function createAuth(polarClient: PolarCore) {
   const trustedOriginsFromEnv = env.BETTER_AUTH_TRUSTED_ORIGINS?.split(",")
     .map((origin) => origin.trim())
     .filter(Boolean);
@@ -451,47 +483,34 @@ function createAuth(polarClient: Polar) {
           webhooks({
             secret: env.POLAR_WEBHOOK_SECRET ?? "",
             onOrderPaid: async (payload) => {
-              const data = payload.data as Record<string, unknown>;
-              const metadata = (data.metadata ?? {}) as Record<string, string>;
-              const organizationId =
-                metadata.organizationId ??
-                metadata.referenceId ??
-                (data.externalCustomerId as string | undefined);
-              const plan =
-                asPlan(metadata.plan) ??
-                (metadata.slug === "enterprise" ? "enterprise" : "pro");
+              const data = payload.data;
               await syncOrgPlanFromPolar({
-                organizationId,
-                plan,
+                organizationId: organizationIdFromPolar(data.metadata),
+                plan: planFromPolar({
+                  metadata: data.metadata,
+                  productId: data.product_id,
+                }),
                 status: "active",
-                polarCustomerId: data.customerId as string | undefined,
-                polarSubscriptionId: data.id as string | undefined,
+                polarCustomerId: data.customer_id,
+                polarSubscriptionId: data.subscription_id ?? undefined,
               });
             },
             onSubscriptionActive: async (payload) => {
-              const data = payload.data as Record<string, unknown>;
-              const metadata = (data.metadata ?? {}) as Record<string, string>;
-              const organizationId =
-                metadata.organizationId ??
-                metadata.referenceId ??
-                (data.externalCustomerId as string | undefined);
+              const data = payload.data;
               await syncOrgPlanFromPolar({
-                organizationId,
-                plan: asPlan(metadata.plan) ?? "pro",
+                organizationId: organizationIdFromPolar(data.metadata),
+                plan: planFromPolar({
+                  metadata: data.metadata,
+                  productId: data.product_id,
+                }),
                 status: "active",
-                polarCustomerId: data.customerId as string | undefined,
-                polarSubscriptionId: data.id as string | undefined,
+                polarCustomerId: data.customer_id,
+                polarSubscriptionId: data.id,
               });
             },
             onSubscriptionCanceled: async (payload) => {
-              const data = payload.data as Record<string, unknown>;
-              const metadata = (data.metadata ?? {}) as Record<string, string>;
-              const organizationId =
-                metadata.organizationId ??
-                metadata.referenceId ??
-                (data.externalCustomerId as string | undefined);
               await syncOrgPlanFromPolar({
-                organizationId,
+                organizationId: organizationIdFromPolar(payload.data.metadata),
                 plan: "free",
                 status: "canceled",
               });

@@ -17,8 +17,8 @@
     "test:watch": "vitest"
   },
   "dependencies": {
-    "posthog-js": "^1.364.0",
-    "posthog-node": "^5.21.2"
+    "posthog-js": "^1.438.13",
+    "posthog-node": "^5.56.4"
   },
   "devDependencies": {
     "@lane4hq/typescript-config": "workspace:*",

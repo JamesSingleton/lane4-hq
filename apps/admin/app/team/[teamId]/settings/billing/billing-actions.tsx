@@ -19,7 +19,7 @@ export function BillingActions({
     try {
       await authClient.checkout({
         slug: plan,
-        referenceId: teamId,
+        reference_id: teamId,
       });
     } catch (error) {
       console.error(error);

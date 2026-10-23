@@ -20,7 +20,7 @@
     "@opentelemetry/resources": "^3.0.0",
     "@opentelemetry/sdk-logs": "^3.0.0",
     "@posthog/nextjs-config": "^1.11.5",
-    "geist": "^1.8.1",
+    "geist": "^1.8.2",
     "lucide-react": "catalog:",
     "next": "catalog:",
     "next-themes": "catalog:",

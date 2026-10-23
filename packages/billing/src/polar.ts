@@ -1,4 +1,4 @@
-import { Polar } from "@polar-sh/sdk";
+import { createPolar, type Polar } from "@polar-sh/sdk/2026-10";
 
 let polarClient: Polar | null = null;
 
@@ -7,9 +7,9 @@ export function getPolar(): Polar | null {
   const accessToken = process.env.POLAR_ACCESS_TOKEN;
   if (!accessToken) return null;
   if (!polarClient) {
-    polarClient = new Polar({
+    polarClient = createPolar({
       accessToken,
-      server:
+      environment:
         process.env.POLAR_SERVER === "production" ? "production" : "sandbox",
     });
   }
@@ -35,7 +35,7 @@ export async function ingestAiGenerationEvent(input: {
       events: [
         {
           name: "ai_generation",
-          externalCustomerId: input.externalCustomerId,
+          external_customer_id: input.externalCustomerId,
           metadata: {
             kind: input.kind,
             organizationId: input.organizationId,
