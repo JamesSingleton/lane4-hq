@@ -8,6 +8,11 @@ describe("getCallbackURL", () => {
     expect(getCallbackURL(params, "/onboarding")).toBe("/onboarding");
   });
 
+  it("allows the home path", () => {
+    const params = new URLSearchParams({ callbackUrl: "/" });
+    expect(getCallbackURL(params)).toBe("/");
+  });
+
   it("allows safe in-app paths", () => {
     const params = new URLSearchParams({
       callbackUrl: "/accept-invite?id=abc",

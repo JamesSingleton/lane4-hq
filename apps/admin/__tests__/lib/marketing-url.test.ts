@@ -15,4 +15,15 @@ describe("getMarketingUrl", () => {
     expect(getMarketingUrl()).toBe("http://localhost:3000");
     process.env.NEXT_PUBLIC_MARKETING_URL = original;
   });
+
+  it("uses the production site when no marketing URL is configured", () => {
+    const url = process.env.NEXT_PUBLIC_MARKETING_URL;
+    const env = process.env.NODE_ENV;
+    delete process.env.NEXT_PUBLIC_MARKETING_URL;
+    process.env.NODE_ENV = "production";
+    expect(getMarketingUrl()).toBe("https://www.lane4hq.com");
+    process.env.NODE_ENV = env;
+    if (url === undefined) delete process.env.NEXT_PUBLIC_MARKETING_URL;
+    else process.env.NEXT_PUBLIC_MARKETING_URL = url;
+  });
 });

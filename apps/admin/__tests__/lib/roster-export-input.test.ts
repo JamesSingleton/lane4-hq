@@ -1,5 +1,8 @@
 import { describe, expect, it } from "vitest";
-import { rosterSearchFiltersToExportInput } from "../../lib/roster-export-input";
+import {
+  rosterExportInputFromTableState,
+  rosterSearchFiltersToExportInput,
+} from "../../lib/roster-export-input";
 
 describe("rosterSearchFiltersToExportInput", () => {
   it("maps roster URL filters to RosterPageInput", () => {
@@ -32,5 +35,37 @@ describe("rosterSearchFiltersToExportInput", () => {
         status: [],
       }),
     ).toEqual({ seasonId: "season-1" });
+  });
+});
+
+describe("rosterExportInputFromTableState", () => {
+  it("reads column filters and sorting", () => {
+    expect(
+      rosterExportInputFromTableState({
+        seasonId: "season-1",
+        columnFilters: [
+          { id: "firstName", value: "Ada" },
+          { id: "status", value: ["active"] },
+          { id: "gender", value: undefined },
+          { id: "groupId", value: "" },
+          { id: "ignored", value: "nope" },
+        ],
+        sorting: [{ id: "lastName", desc: false }],
+      }),
+    ).toEqual({
+      seasonId: "season-1",
+      q: "Ada",
+      status: ["active"],
+      sort: [{ id: "lastName", desc: false }],
+    });
+  });
+
+  it("omits sorting and season when the table has neither", () => {
+    expect(
+      rosterExportInputFromTableState({
+        columnFilters: [],
+        sorting: [],
+      }),
+    ).toEqual({});
   });
 });

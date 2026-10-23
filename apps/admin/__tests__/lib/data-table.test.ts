@@ -1,7 +1,10 @@
 import type { Column } from "@tanstack/react-table";
 import { describe, expect, it, vi } from "vitest";
 import { getColumnPinningStyle } from "../../lib/data-table";
-import type { DataTableFeatures } from "../../lib/data-table-features";
+import {
+  type DataTableFeatures,
+  dataTableFeatures,
+} from "../../lib/data-table-features";
 
 function mockColumn(partial: {
   pinned?: false | "start" | "end";
@@ -35,6 +38,12 @@ function mockColumn(partial: {
   } as unknown as Column<DataTableFeatures, unknown>;
 }
 
+describe("data table features", () => {
+  it("loads the shared table feature set", () => {
+    expect(dataTableFeatures).toBeTruthy();
+  });
+});
+
 describe("getColumnPinningStyle", () => {
   it("styles unpinned columns", () => {
     expect(getColumnPinningStyle({ column: mockColumn({}) })).toMatchObject({
@@ -61,6 +70,15 @@ describe("getColumnPinningStyle", () => {
     });
     expect(style.insetInlineEnd).toBe("16px");
     expect(style.boxShadow).toContain("inset");
+  });
+
+  it("uses no pinned ids when the border is on and the column is not pinned", () => {
+    const style = getColumnPinningStyle({
+      column: mockColumn({ pinned: false }),
+      withBorder: true,
+    });
+    expect(style.boxShadow).toBeUndefined();
+    expect(style.position).toBe("relative");
   });
 
   it("omits border shadow when withBorder is false", () => {
