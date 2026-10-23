@@ -461,9 +461,16 @@ describe("browser", () => {
       replay: true,
     });
     expect(masked.autocapture).toBe(false);
+    expect(masked.advanced_disable_decide).toBeUndefined();
+    expect(masked.disable_scroll_properties).toBe(true);
     expect(masked.session_recording).toEqual({
       maskAllInputs: true,
       maskTextSelector: "*",
+      captureCanvas: {
+        recordCanvas: false,
+        canvasFps: 4,
+        canvasQuality: 0.4,
+      },
     });
     const send = masked.before_send as (
       event: { properties?: Record<string, unknown> } | null,

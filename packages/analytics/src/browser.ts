@@ -61,11 +61,21 @@ export function browserInitOptions(input: {
     autocapture: false,
     disable_session_recording: !input.replay,
     session_recording: input.replay
-      ? { maskAllInputs: true, maskTextSelector: "*" }
+      ? {
+          maskAllInputs: true,
+          maskTextSelector: "*",
+          // Remote canvas quality can arrive above 1 and the SDK warns while clamping it.
+          captureCanvas: {
+            recordCanvas: false,
+            canvasFps: 4,
+            canvasQuality: 0.4,
+          },
+        }
       : undefined,
     person_profiles: "identified_only",
     persistence: "localStorage",
-    advanced_disable_decide: false,
+    // Scroll ratios above 1 make the SDK warn on the next pageview. We do not use scroll depth.
+    disable_scroll_properties: true,
     // React error boundaries and our window listeners call captureException.
     // Leaving this on would also send the original error message.
     capture_exceptions: false,
