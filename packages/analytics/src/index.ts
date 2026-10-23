@@ -32,3 +32,9 @@ export {
   sanitizeException,
   sanitizeProperties,
 } from "./privacy";
+export {
+  EXCEPTION_REASONS,
+  type ExceptionReason,
+  exceptionReason,
+  tagException,
+} from "./reason";

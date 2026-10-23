@@ -31,12 +31,12 @@ describe("SwimsClient", () => {
     delete process.env.USA_SWIMMING_VENDOR_THUMBPRINT;
     const unset = await loadClient();
     await expect(unset.createSwimsClient().getVendorClubs()).rejects.toThrow(
-      /THUMBPRINT/,
+      "USA Swimming sync is not available right now.",
     );
     vi.stubEnv("USA_SWIMMING_VENDOR_THUMBPRINT", "");
     const blank = await loadClient();
     await expect(blank.createSwimsClient().getVendorClubs()).rejects.toThrow(
-      /THUMBPRINT/,
+      "USA Swimming sync is not available right now.",
     );
     expect(fetchMock).not.toHaveBeenCalled();
   });
@@ -90,7 +90,7 @@ describe("SwimsClient", () => {
     vi.stubGlobal("fetch", fetchMock);
     const { createSwimsClient } = await loadClient();
     await expect(createSwimsClient().getVendorClubs()).rejects.toThrow(
-      /503 Unavailable/,
+      "USA Swimming could not be reached.",
     );
     expect(String(fetchMock.mock.calls[0]?.[0])).toBe(
       "https://swims.test/swims/getVendorClubs/vendor",

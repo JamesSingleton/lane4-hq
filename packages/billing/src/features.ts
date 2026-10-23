@@ -1,3 +1,4 @@
+import { tagException } from "@lane4hq/analytics";
 import {
   getOwnerEmail,
   getTeamPlan,
@@ -6,7 +7,6 @@ import {
 import {
   getPlanLimits,
   type PlanFeature,
-  type PlanTier,
   planHasFeature,
 } from "@lane4hq/swim-core/plans";
 
@@ -23,7 +23,10 @@ export async function assertFeature(
 ): Promise<void> {
   const plan = await getTeamPlan(organizationId);
   if (!planHasFeature(plan, feature)) {
-    throw new Error(`Feature "${feature}" not available on ${plan} plan`);
+    throw tagException(
+      new Error("That is not included on this plan."),
+      "plan_feature",
+    );
   }
 }
 

@@ -5,6 +5,7 @@ import {
   type EventName,
   FILE_FORMATS,
 } from "./catalog";
+import { EXCEPTION_REASONS } from "./reason";
 
 const FORMAT_SET = new Set<string>(FILE_FORMATS);
 const ERROR_SET = new Set<string>(ERROR_CODES);
@@ -39,7 +40,10 @@ const EXCEPTION_FIELDS = new Set([
   "file",
   "line",
   "code",
+  "reason",
 ]);
+
+const EXCEPTION_REASON_SET = new Set<string>(EXCEPTION_REASONS);
 
 const EXCEPTION_SOURCES = new Set(["panic", "command", "client", "server"]);
 
@@ -162,6 +166,10 @@ export function sanitizeException(
     }
     if (key === "code") {
       if (COMMAND_CODES.has(value)) out[key] = value;
+      continue;
+    }
+    if (key === "reason") {
+      if (EXCEPTION_REASON_SET.has(value)) out[key] = value;
       continue;
     }
     if (key === "source" && EXCEPTION_SOURCES.has(value)) {

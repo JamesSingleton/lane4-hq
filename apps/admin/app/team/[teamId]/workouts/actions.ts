@@ -1,6 +1,7 @@
 "use server";
 
 import { openai } from "@ai-sdk/openai";
+import { tagException } from "@lane4hq/analytics";
 import { getSession } from "@lane4hq/auth/session";
 import { ingestAiGenerationEvent } from "@lane4hq/billing/polar";
 import { requireTeamRole } from "@lane4hq/db/authz";
@@ -94,8 +95,9 @@ export async function suggestWorkoutAction(
   ]);
 
   if (!process.env.OPENAI_API_KEY) {
-    throw new Error(
-      "Practice drafts aren't configured. Add OPENAI_API_KEY to apps/admin/.env.",
+    throw tagException(
+      new Error("Practice drafts are not available right now."),
+      "openai_unconfigured",
     );
   }
 
