@@ -101,7 +101,8 @@ function parseSwimsEventBody(
   }
 
   const swimsEvent = raw as unknown as SwimsEvent;
-  const event = mapSwimsEventType(swimsEvent.eventType ?? undefined);
+  const eventType = swimsEvent.eventType ?? undefined;
+  const event = mapSwimsEventType(eventType);
   if (!event) return null;
 
   const clubId = clubIdFromSwimsEvent(event, swimsEvent);
@@ -115,7 +116,7 @@ function parseSwimsEventBody(
     recordId: swimsEvent.eventData?.vendorRecordId?.trim() || undefined,
     eventSequence: swimsEvent.eventSequence,
     modifiedDatetime: String(swimsEvent.modifiedDatetime),
-    eventType: swimsEvent.eventType ?? undefined,
+    eventType,
   };
 }
 

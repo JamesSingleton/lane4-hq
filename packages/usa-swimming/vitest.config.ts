@@ -7,8 +7,14 @@ export default defineConfig({
     coverage: {
       provider: "v8",
       reporter: ["text", "html", "lcov"],
-      include: ["src/webhooks.ts"],
+      include: ["src/webhooks.ts", "src/client.ts"],
       exclude: ["src/index.ts"],
+      thresholds: {
+        lines: 100,
+        functions: 100,
+        branches: 100,
+        statements: 100,
+      },
     },
   },
 });
