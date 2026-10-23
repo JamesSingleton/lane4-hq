@@ -9,6 +9,7 @@ import {
   exportEv3,
   exportHy3,
   exportHyv,
+  hy3FileDate,
   hytekByte,
 } from "../../src/export/meet";
 import { parseHy3 } from "../../src/hy3/parser";
@@ -190,11 +191,24 @@ const oracles: OracleCase[] = [
   },
 ];
 
+/** A1 columns 59–75 and the checksum. Export always stamps the current moment. */
+function withoutA1Stamp(text: string): string {
+  return text.replace(
+    /^(A1.{56}).{17}(.{53}).{2}/m,
+    (_match, head: string, licensee: string) =>
+      `${head}${" ".repeat(17)}${licensee}00`,
+  );
+}
+
 describe("Hy-Tek entry HY3 files", () => {
   for (const file of ["mari-sonoran-2026.hy3", "mari-charger-2024.hy3"]) {
-    it(`${file} re-exports byte-for-byte`, () => {
+    it(`${file} re-exports every column except the new creation stamp`, () => {
       const original = readFixture(file);
-      expect(exportHy3(parseHy3(original))).toBe(original);
+      const exported = exportHy3(parseHy3(original));
+      expect(withoutA1Stamp(exported)).toBe(withoutA1Stamp(original));
+      const a1 = exported.split(/\r?\n/).find((line) => line.startsWith("A1"));
+      expect(a1?.slice(58, 66)).toBe(hy3FileDate());
+      expect(a1?.slice(66, 75)).toMatch(/^ {1,2}\d{1,2}:\d{2} [AP]M$/);
     });
   }
 });

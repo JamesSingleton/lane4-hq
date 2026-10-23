@@ -97,6 +97,7 @@ import { createMeetSchema } from "@lane4hq/swim-core/validators";
 import {
   exportCl2,
   exportMeetZip,
+  meetHy3DownloadFilename,
   meetZipDownloadFilename,
   type ParsedMeet,
   type ParsedRelayEntry,
@@ -1709,14 +1710,14 @@ export async function exportMeetAction(
   teamId: string,
   meetId: string,
   format: MeetExportFormat,
-): Promise<string> {
+): Promise<{ content: string; filename: string | null }> {
   const session = await getSession();
   await requireTeamRole(session?.user?.id, teamId, ["owner", "head_coach"]);
   await assertFeature(teamId, "meet_import");
 
   try {
     const payload = await loadHostPackMeet(teamId, meetId);
-    const body =
+    const content =
       format === "hy3"
         ? exportHy3(payload)
         : format === "cl2"
@@ -1734,7 +1735,10 @@ export async function exportMeetAction(
               ).toString("base64")
             : exportSdif(payload);
     trackAdmin("entries_exported", session?.user?.id, teamId, { format });
-    return body;
+    return {
+      content,
+      filename: format === "hy3" ? meetHy3DownloadFilename(payload) : null,
+    };
   } catch (error) {
     trackAdmin("export_failed", session?.user?.id, teamId, {
       format,

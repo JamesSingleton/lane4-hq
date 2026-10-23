@@ -180,11 +180,15 @@ export function MeetExportButtons({
     try {
       await confirmMeetEntriesViewOnExport(teamId);
       if (job.kind === "text") {
-        const content = await exportMeetAction(teamId, meetId, job.format);
+        const { content, filename } = await exportMeetAction(
+          teamId,
+          meetId,
+          job.format,
+        );
         const { extension } = TEXT_FORMAT_META[job.format];
         downloadBlob(
           new Blob([content], { type: "text/plain" }),
-          `${baseName}.${extension}`,
+          filename ?? `${baseName}.${extension}`,
         );
       } else if (job.kind === "csv") {
         const content = await exportMeetEntriesCsvAction(teamId, meetId);

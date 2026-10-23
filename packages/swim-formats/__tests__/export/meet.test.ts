@@ -13,8 +13,11 @@ import {
   exportHyv,
   exportMeetZip,
   exportSdif,
+  hy3FileClock,
+  hy3FileDate,
   hytekByte,
   meetEntryPackBaseName,
+  meetHy3DownloadFilename,
   meetZipDownloadFilename,
 } from "../../src/export/meet";
 import { parseHy3 } from "../../src/hy3/parser";
@@ -439,7 +442,16 @@ describe("exportHy3", () => {
     expect(a1?.slice(44, 58)).toBe("Lane4 1.0".padEnd(14, " "));
     expect(a1).not.toContain("Hy-Tek");
     expect(a1).not.toContain("Win-TM");
-    expect(a1?.slice(58, 66)).toBe("10242026");
+    expect(a1?.slice(58, 66)).toBe(hy3FileDate());
+    expect(hy3FileDate(new Date(2026, 9, 21))).toBe("10212026");
+    expect(a1?.slice(66, 75)).toMatch(/^ {1,2}\d{1,2}:\d{2} [AP]M$/);
+    expect(a1?.slice(75, 128).trim()).toBe("");
+    const named = exportHy3({ ...meet, teamName: "Crosby High School" });
+    const namedA1 = named.split(/\r?\n/).find((line) => line.startsWith("A1"));
+    expect(namedA1?.slice(75, 128).trim()).toBe("Crosby High School");
+    expect(hy3FileClock(new Date(2026, 9, 29, 16, 27))).toBe("  4:27 PM");
+    expect(hy3FileClock(new Date(2026, 9, 29, 0, 5))).toBe(" 12:05 AM");
+    expect(hy3FileClock(new Date(2026, 9, 29, 22, 5))).toBe(" 10:05 PM");
     const rows = text.split(/\r?\n/);
     const genders = rows
       .filter((line) => line.startsWith("F1"))
@@ -526,8 +538,8 @@ describe("exportHy3", () => {
     const a1 = rows.find((row) => row.startsWith("A1"))!;
     expect(a1.slice(29, 44)).toBe("Hy-Tek, Ltd".padEnd(15, " "));
     expect(a1.slice(44, 58)).toBe("Win-TM 8.0De".padEnd(14, " "));
-    expect(a1.slice(58, 66)).toBe("10212026");
-    expect(a1.slice(66, 75)).toBe("  4:27 PM");
+    expect(a1.slice(58, 66)).toBe(hy3FileDate());
+    expect(a1.slice(66, 75)).toBe(hy3FileClock());
     expect(a1.slice(75, 94)).toBe("Example High School");
     const d1 = rows.find((row) => row.startsWith("D1"))!;
     expect(d1.slice(28, 31)).toBe("Ada");
@@ -2126,6 +2138,7 @@ describe("exportMeetZip", () => {
     const zip = exportMeetZip(meet, "entries");
     const bundle = extractAllMeetFilesFromZip(zip);
     const folder = "MARI-AZ-Entries-2026 Croswhite Invite-12Sep2026-001";
+    expect(meetHy3DownloadFilename(meet)).toBe(`${folder}.hy3`);
     expect(meetZipDownloadFilename(meet, "entries")).toBe(`${folder}.zip`);
     expect(meetZipDownloadFilename(meet, "results")).toBe(
       "2026-croswhite-invite_results.zip",

@@ -36,9 +36,9 @@ left.
 | 5–29 | Description, space-padded to 25. Entries: `Meet Entries`. | yes |
 | 30–44 | Software publisher, 15 characters. Team Manager files say `Hy-Tek, Ltd`. Meet Manager rejects other publisher strings. A file Lane4 creates says `Lane4 HQ, Ltd`. Re-export writes the publisher from the file. | yes |
 | 45–58 | Software name and version, 14 characters. Entry files use `Win-TM 8.0Gf` or `Win-TM 8.0De`. A file Lane4 creates says `Lane4 1.0`. Re-export writes the token from the file. | yes |
-| 59–66 | Creation date `MMDDYYYY`. Team Manager writes the file date. Lane4 keeps that date on re-export and uses the meet start date for a new file. | yes |
-| 67–75 | Creation time, such as `  4:27 PM`. | present. Not required for the import that succeeded. |
-| 76–128 | Licensee text. | present. Not required for the import that succeeded. |
+| 59–66 | Creation date `MMDDYYYY`. Team Manager writes the day the file was made, which can differ from the meet date on `B1`. Lane4 writes the export date, including on re-export. | yes |
+| 67–75 | Creation time, 9 characters, such as `  4:27 PM`. Team Manager writes the file clock. Lane4 writes the export clock, including on re-export. | yes |
+| 76–128 | Licensee, 53 characters. Team Manager writes the school or club name. Lane4 keeps that text on re-export and writes the organization name on a new file. | yes |
 
 ## `B1` meet
 

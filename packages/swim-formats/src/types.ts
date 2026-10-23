@@ -87,11 +87,22 @@ export interface ParsedMeet {
    * creates says `Lane4 1.0`. Preserved on re-export.
    */
   hy3Software?: string;
-  /** HY3 A1 columns 59–66 when the file date is not the meet start. */
+  /**
+   * HY3 A1 columns 59–66, parsed from an imported file. The day that file
+   * was written, which can differ from the meet start on B1. Export always
+   * writes the current date instead of this value.
+   */
   hy3CreatedOn?: string;
-  /** HY3 A1 columns 67–75, including the leading spaces Team Manager writes. */
+  /**
+   * HY3 A1 columns 67–75, parsed from an imported file, including the
+   * leading spaces Team Manager writes. Export always writes the current
+   * clock, such as `  4:27 PM`.
+   */
   hy3CreatedTime?: string;
-  /** HY3 A1 columns 76–128 licensee text. */
+  /**
+   * HY3 A1 columns 76–128. A new file uses the organization name.
+   * Preserved on re-export.
+   */
   hy3Licensee?: string;
   /**
    * HY3 B2 columns 103–108. Entry files use `0.00YO` or `0.00YL`.

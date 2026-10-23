@@ -467,9 +467,9 @@ export function exportHy3(meet: ParsedMeet): string {
         .set(5, 25, title)
         .set(30, 15, meet.hy3Publisher?.trim() || LANE4_PUBLISHER)
         .set(45, 14, meet.hy3Software?.trim() || LANE4_HY3_SOFTWARE)
-        .set(59, 8, toMmDdYyyy(meet.hy3CreatedOn) || startDigits)
-        .set(67, 9, meet.hy3CreatedTime)
-        .set(76, 53, meet.hy3Licensee),
+        .set(59, 8, hy3FileDate())
+        .set(67, 9, hy3FileClock())
+        .set(76, 53, meet.hy3Licensee?.trim() || meet.teamName),
     ),
   );
 
@@ -969,6 +969,22 @@ function cl2NameParts(swimmerName: string): {
     firstName: parts.slice(0, -1).join(" "),
     lastName: parts[parts.length - 1]!,
   };
+}
+
+/** A1 creation date `MMDDYYYY`. This is the day the file is written. */
+export function hy3FileDate(date = new Date()): string {
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${month}${day}${date.getFullYear()}`;
+}
+
+/** Team Manager's A1 clock, 9 columns: `  4:27 PM` or ` 10:05 AM`. */
+export function hy3FileClock(date = new Date()): string {
+  const hour24 = date.getHours();
+  const hour = hour24 % 12 || 12;
+  const minute = String(date.getMinutes()).padStart(2, "0");
+  const suffix = hour24 < 12 ? "AM" : "PM";
+  return `${hour}:${minute} ${suffix}`.padStart(9, " ");
 }
 
 const LANE4_PUBLISHER = "Lane4 HQ, Ltd";
@@ -1532,6 +1548,11 @@ export function meetEntryPackBaseName(meet: ParsedMeet): string {
     .trim();
   const stem = `${prefix}-Entries-${meetName || "Meet"}`;
   return date ? `${stem}-${date}-001` : `${stem}-001`;
+}
+
+/** Single HY3 file. Same stem as the entries zip, with the team code first. */
+export function meetHy3DownloadFilename(meet: ParsedMeet): string {
+  return `${meetEntryPackBaseName(meet)}.hy3`;
 }
 
 /** Browser download name for a zip pack (entries use the TM folder stem). */
