@@ -32,8 +32,7 @@ export async function sendSupportMessage(
   const to = process.env.SUPPORT_TO_EMAIL;
   if (!apiKey || !to) {
     return {
-      error:
-        "Email sending is not configured here. Open a GitHub issue instead.",
+      error: "The message could not be sent. Try again later.",
     };
   }
 
