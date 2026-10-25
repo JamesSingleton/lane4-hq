@@ -128,6 +128,10 @@ function formatBytes(size: number) {
   return `${(size / (1024 * 1024)).toFixed(1)} MB`;
 }
 
+function isExistingMeetTarget(target: string): boolean {
+  return target !== "" && target !== "auto" && target !== "new";
+}
+
 function optionalLimit(raw: string): number | null {
   const trimmed = raw.trim();
   if (!trimmed) return null;
@@ -186,6 +190,7 @@ export function MeetImportButton({
   const [review, setReview] = useState<ReviewState | null>(null);
   const [resultMessage, setResultMessage] = useState<string | null>(null);
   const [resultMeetId, setResultMeetId] = useState<string | null>(null);
+  const [resultIsResults, setResultIsResults] = useState(false);
   const [target, setTarget] = useState<string>(
     defaultMeetId ? defaultMeetId : "auto",
   );
@@ -206,6 +211,7 @@ export function MeetImportButton({
     setReview(null);
     setResultMessage(null);
     setResultMeetId(null);
+    setResultIsResults(false);
     setAddNewAthletes(false);
     setAthleteMaps({});
     setEventConflictResolutions({});
@@ -331,6 +337,11 @@ export function MeetImportButton({
       });
       setAddNewAthletes(false);
       setAthleteMaps({});
+      if (parsed.resultsFile && target === "auto") {
+        if (parsed.suggestedMeetId) setTarget(parsed.suggestedMeetId);
+        else if (meets.length === 0) setTarget("new");
+        else setTarget("");
+      }
       void setImportStep("review");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to parse file");
@@ -344,8 +355,11 @@ export function MeetImportButton({
     setBusy(true);
     setError(null);
     try {
-      const options =
-        target === "auto"
+      const attachingResults =
+        preview?.resultsFile === true && isExistingMeetTarget(target);
+      const options = attachingResults
+        ? { target: "existing" as const, meetId: target }
+        : target === "auto"
           ? { target: "auto" as const }
           : target === "new"
             ? { target: "new" as const }
@@ -376,6 +390,7 @@ export function MeetImportButton({
         result.events ? `${result.events} events` : null,
         result.entries ? `${result.entries} entries` : null,
         result.results ? `${result.results} results` : null,
+        result.relays ? `${result.relays} relays` : null,
         result.swimmersCreated
           ? `${result.swimmersCreated} swimmers added`
           : null,
@@ -388,6 +403,7 @@ export function MeetImportButton({
       ].filter(Boolean);
 
       setResultMeetId(result.meetId);
+      setResultIsResults(preview?.resultsFile === true);
       setResultMessage(
         result.warning
           ? result.warning
@@ -476,14 +492,18 @@ export function MeetImportButton({
         <DialogHeader>
           <DialogTitle>
             {step === "review"
-              ? "Review import"
+              ? preview?.resultsFile && target !== "new"
+                ? "Add results"
+                : "Review import"
               : step === "done"
                 ? "Import complete"
                 : "Import meet file"}
           </DialogTitle>
           <DialogDescription>
             {step === "review"
-              ? "Confirm meet details and entry limits before adding."
+              ? preview?.resultsFile && target !== "new"
+                ? "Choose the meet these results belong to."
+                : "Confirm meet details and entry limits before adding."
               : step === "done"
                 ? "Your file has been imported."
                 : "Meet Events: EV3 or EV3+HYV zip. Results: CL2/HY3/SD3 or zip (including CL2-only). Entries: CL2+HY3 zip. Roster-only zips go under Roster import."}
@@ -621,6 +641,52 @@ export function MeetImportButton({
                   : ""}
               </p>
 
+              {preview.resultsFile ? (
+                <Field>
+                  <FieldLabel htmlFor={`${inputId}-results-meet`}>
+                    Meet
+                  </FieldLabel>
+                  <Select
+                    items={[
+                      ...meets.map((meet) => ({
+                        value: meet.id,
+                        label: `${meet.name} · ${meet.startDateLabel}`,
+                      })),
+                      { value: "new", label: "Create a new meet" },
+                    ]}
+                    value={
+                      isExistingMeetTarget(target) || target === "new"
+                        ? target
+                        : null
+                    }
+                    onValueChange={(value) => {
+                      if (value != null) setTarget(value);
+                    }}
+                  >
+                    <SelectTrigger
+                      id={`${inputId}-results-meet`}
+                      className="w-full"
+                    >
+                      <SelectValue placeholder="Choose a meet" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectGroup>
+                        {meets.map((meet) => (
+                          <SelectItem key={meet.id} value={meet.id}>
+                            {meet.name} · {meet.startDateLabel}
+                          </SelectItem>
+                        ))}
+                        <SelectItem value="new">Create a new meet</SelectItem>
+                      </SelectGroup>
+                    </SelectContent>
+                  </Select>
+                  <FieldDescription>
+                    Individual and relay results for your roster are added to
+                    this meet.
+                  </FieldDescription>
+                </Field>
+              ) : null}
+
               {preview.skippedDiveEvents != null &&
               preview.skippedDiveEvents > 0 ? (
                 <Alert>
@@ -636,7 +702,8 @@ export function MeetImportButton({
                 </Alert>
               ) : null}
 
-              {isEntriesOnlyIncompleteSchedule(
+              {!preview.resultsFile &&
+              isEntriesOnlyIncompleteSchedule(
                 preview.format,
                 preview.sourceFiles,
               ) ? (
@@ -851,266 +918,284 @@ export function MeetImportButton({
                 </div>
               ) : null}
 
-              <div className="grid gap-3 sm:grid-cols-2">
-                <div className="space-y-2 sm:col-span-2">
-                  <Label htmlFor={`${inputId}-name`}>Meet name</Label>
-                  <Input
-                    id={`${inputId}-name`}
-                    value={review.name}
-                    onChange={(e) =>
-                      setReview((prev) =>
-                        prev ? { ...prev, name: e.target.value } : prev,
-                      )
-                    }
-                  />
-                </div>
-                <Field>
-                  <FieldLabel htmlFor={`${inputId}-start`}>
-                    Start date
-                  </FieldLabel>
-                  <DatePickerField
-                    id={`${inputId}-start`}
-                    value={review.startDate}
-                    onChange={(startDate) =>
-                      setReview((prev) =>
-                        prev ? { ...prev, startDate } : prev,
-                      )
-                    }
-                  />
-                </Field>
-                <Field>
-                  <FieldLabel htmlFor={`${inputId}-end`}>End date</FieldLabel>
-                  <DatePickerField
-                    id={`${inputId}-end`}
-                    value={review.endDate}
-                    onChange={(endDate) =>
-                      setReview((prev) => (prev ? { ...prev, endDate } : prev))
-                    }
-                    placeholder="Same as start (optional)"
-                    allowClear
-                  />
-                  <FieldDescription>
-                    Clear if the Hy-Tek file lists an extra day you don’t want.
-                  </FieldDescription>
-                </Field>
-                <Field>
-                  <FieldLabel htmlFor={`${inputId}-deadline`}>
-                    Entry deadline
-                  </FieldLabel>
-                  <DatePickerField
-                    id={`${inputId}-deadline`}
-                    value={review.entryDeadline}
-                    onChange={(entryDeadline) =>
-                      setReview((prev) =>
-                        prev ? { ...prev, entryDeadline } : prev,
-                      )
-                    }
-                    placeholder="Required"
-                  />
-                  <FieldDescription>
-                    Required: when entries are due to the meet host.
-                  </FieldDescription>
-                </Field>
-                <Field>
-                  <FieldLabel htmlFor={`${inputId}-course`}>Course</FieldLabel>
-                  <Select
-                    value={review.course}
-                    onValueChange={(v) => {
-                      if (v == null) return;
-                      const course = v as Course;
-                      setReview((prev) => {
-                        if (!prev) return prev;
-                        return {
-                          ...prev,
-                          course,
-                          events: prev.events.map((event) => ({
-                            ...event,
-                            eventKey: rebuildEventKey(
-                              event,
-                              course,
-                              parseEventGender(event.gender),
-                            ),
-                          })),
-                        };
-                      });
-                    }}
-                  >
-                    <SelectTrigger id={`${inputId}-course`} className="w-full">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectGroup>
-                        <SelectItem value="SCY">SCY</SelectItem>
-                        <SelectItem value="SCM">SCM</SelectItem>
-                        <SelectItem value="LCM">LCM</SelectItem>
-                      </SelectGroup>
-                    </SelectContent>
-                  </Select>
-                </Field>
-                <div className="space-y-2">
-                  <Label htmlFor={`${inputId}-location`}>Venue</Label>
-                  <Input
-                    id={`${inputId}-location`}
-                    value={review.location}
-                    onChange={(e) =>
-                      setReview((prev) =>
-                        prev ? { ...prev, location: e.target.value } : prev,
-                      )
-                    }
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor={`${inputId}-address`}>Address</Label>
-                  <Input
-                    id={`${inputId}-address`}
-                    value={review.address}
-                    onChange={(e) =>
-                      setReview((prev) =>
-                        prev ? { ...prev, address: e.target.value } : prev,
-                      )
-                    }
-                  />
-                </div>
-                <div className="space-y-2 sm:col-span-2">
-                  <Label htmlFor={`${inputId}-opponents`}>Opponents</Label>
-                  <Input
-                    id={`${inputId}-opponents`}
-                    maxLength={500}
-                    placeholder="Optional"
-                    value={review.opponents}
-                    onChange={(e) =>
-                      setReview((prev) =>
-                        prev ? { ...prev, opponents: e.target.value } : prev,
-                      )
-                    }
-                  />
-                </div>
-              </div>
-
-              <div className="grid gap-3 sm:grid-cols-3">
-                <div className="space-y-2">
-                  <Label htmlFor={`${inputId}-max-ind`}>Max individual</Label>
-                  <Input
-                    id={`${inputId}-max-ind`}
-                    inputMode="numeric"
-                    placeholder="—"
-                    value={review.maxIndividualEntries}
-                    onChange={(e) =>
-                      setReview((prev) =>
-                        prev
-                          ? {
-                              ...prev,
-                              maxIndividualEntries: e.target.value,
-                            }
-                          : prev,
-                      )
-                    }
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor={`${inputId}-max-relay`}>Max relay</Label>
-                  <Input
-                    id={`${inputId}-max-relay`}
-                    inputMode="numeric"
-                    placeholder="—"
-                    value={review.maxRelayEntries}
-                    onChange={(e) =>
-                      setReview((prev) =>
-                        prev
-                          ? { ...prev, maxRelayEntries: e.target.value }
-                          : prev,
-                      )
-                    }
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor={`${inputId}-max-combined`}>
-                    Max combined
-                  </Label>
-                  <Input
-                    id={`${inputId}-max-combined`}
-                    inputMode="numeric"
-                    placeholder="—"
-                    value={review.maxCombinedEntries}
-                    onChange={(e) =>
-                      setReview((prev) =>
-                        prev
-                          ? {
-                              ...prev,
-                              maxCombinedEntries: e.target.value,
-                            }
-                          : prev,
-                      )
-                    }
-                  />
-                </div>
-              </div>
-
-              {review.events.length > 0 ? (
-                <div className="flex max-h-48 min-w-0 flex-col gap-2 overflow-y-auto rounded-md border p-2">
-                  <p className="text-muted-foreground text-xs tracking-wide uppercase">
-                    Events ({review.events.length})
-                  </p>
-                  {review.events.map((event, index) => (
-                    <div
-                      key={`${event.eventKey}-${index}`}
-                      className={cn(
-                        "grid items-center gap-2 text-sm",
-                        reviewHasAgeGroups
-                          ? "grid-cols-[auto_1fr_auto_auto]"
-                          : "grid-cols-[auto_1fr_auto]",
-                      )}
-                    >
-                      <span className="text-muted-foreground tabular-nums">
-                        #{event.eventNumber ?? "—"}
-                        {event.eventSuffix ?? ""}
-                      </span>
-                      <span className="truncate">
-                        {formatEventName(event.distance, event.stroke)}
-                        {event.qualifyingTimeMs != null &&
-                        event.qualifyingTimeMs > 0 ? (
-                          <span className="text-muted-foreground ml-1.5 tabular-nums">
-                            QT {formatTime(event.qualifyingTimeMs)}
-                          </span>
-                        ) : null}
-                      </span>
+              {!preview.resultsFile || target === "new" ? (
+                <>
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    <div className="space-y-2 sm:col-span-2">
+                      <Label htmlFor={`${inputId}-name`}>Meet name</Label>
+                      <Input
+                        id={`${inputId}-name`}
+                        value={review.name}
+                        onChange={(e) =>
+                          setReview((prev) =>
+                            prev ? { ...prev, name: e.target.value } : prev,
+                          )
+                        }
+                      />
+                    </div>
+                    <Field>
+                      <FieldLabel htmlFor={`${inputId}-start`}>
+                        Start date
+                      </FieldLabel>
+                      <DatePickerField
+                        id={`${inputId}-start`}
+                        value={review.startDate}
+                        onChange={(startDate) =>
+                          setReview((prev) =>
+                            prev ? { ...prev, startDate } : prev,
+                          )
+                        }
+                      />
+                    </Field>
+                    <Field>
+                      <FieldLabel htmlFor={`${inputId}-end`}>
+                        End date
+                      </FieldLabel>
+                      <DatePickerField
+                        id={`${inputId}-end`}
+                        value={review.endDate}
+                        onChange={(endDate) =>
+                          setReview((prev) =>
+                            prev ? { ...prev, endDate } : prev,
+                          )
+                        }
+                        placeholder="Same as start (optional)"
+                        allowClear
+                      />
+                      <FieldDescription>
+                        Clear if the Hy-Tek file lists an extra day you don’t
+                        want.
+                      </FieldDescription>
+                    </Field>
+                    <Field>
+                      <FieldLabel htmlFor={`${inputId}-deadline`}>
+                        Entry deadline
+                      </FieldLabel>
+                      <DatePickerField
+                        id={`${inputId}-deadline`}
+                        value={review.entryDeadline}
+                        onChange={(entryDeadline) =>
+                          setReview((prev) =>
+                            prev ? { ...prev, entryDeadline } : prev,
+                          )
+                        }
+                        placeholder="Required"
+                      />
+                      <FieldDescription>
+                        Required: when entries are due to the meet host.
+                      </FieldDescription>
+                    </Field>
+                    <Field>
+                      <FieldLabel htmlFor={`${inputId}-course`}>
+                        Course
+                      </FieldLabel>
                       <Select
-                        items={GENDER_OPTIONS}
-                        value={parseEventGender(event.gender)}
+                        value={review.course}
                         onValueChange={(v) => {
-                          if (v != null) updateEventGender(index, v);
+                          if (v == null) return;
+                          const course = v as Course;
+                          setReview((prev) => {
+                            if (!prev) return prev;
+                            return {
+                              ...prev,
+                              course,
+                              events: prev.events.map((event) => ({
+                                ...event,
+                                eventKey: rebuildEventKey(
+                                  event,
+                                  course,
+                                  parseEventGender(event.gender),
+                                ),
+                              })),
+                            };
+                          });
                         }}
                       >
-                        <SelectTrigger className="h-8 w-24">
+                        <SelectTrigger
+                          id={`${inputId}-course`}
+                          className="w-full"
+                        >
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
                           <SelectGroup>
-                            <SelectItem value="female">Female</SelectItem>
-                            <SelectItem value="male">Male</SelectItem>
-                            <SelectItem value="mixed">Mixed</SelectItem>
+                            <SelectItem value="SCY">SCY</SelectItem>
+                            <SelectItem value="SCM">SCM</SelectItem>
+                            <SelectItem value="LCM">LCM</SelectItem>
                           </SelectGroup>
                         </SelectContent>
                       </Select>
-                      {reviewHasAgeGroups ? (
-                        <Input
-                          className="h-8 w-20"
-                          aria-label={`Age group for event ${event.eventNumber ?? index + 1}`}
-                          placeholder="Age"
-                          value={event.ageGroup ?? ""}
-                          onChange={(e) =>
-                            updateEventAgeGroup(index, e.target.value)
-                          }
-                        />
-                      ) : null}
+                    </Field>
+                    <div className="space-y-2">
+                      <Label htmlFor={`${inputId}-location`}>Venue</Label>
+                      <Input
+                        id={`${inputId}-location`}
+                        value={review.location}
+                        onChange={(e) =>
+                          setReview((prev) =>
+                            prev ? { ...prev, location: e.target.value } : prev,
+                          )
+                        }
+                      />
                     </div>
-                  ))}
-                </div>
-              ) : (
-                <p className="text-muted-foreground text-sm">
-                  No events in this file (entries/results only).
-                </p>
-              )}
+                    <div className="space-y-2">
+                      <Label htmlFor={`${inputId}-address`}>Address</Label>
+                      <Input
+                        id={`${inputId}-address`}
+                        value={review.address}
+                        onChange={(e) =>
+                          setReview((prev) =>
+                            prev ? { ...prev, address: e.target.value } : prev,
+                          )
+                        }
+                      />
+                    </div>
+                    <div className="space-y-2 sm:col-span-2">
+                      <Label htmlFor={`${inputId}-opponents`}>Opponents</Label>
+                      <Input
+                        id={`${inputId}-opponents`}
+                        maxLength={500}
+                        placeholder="Optional"
+                        value={review.opponents}
+                        onChange={(e) =>
+                          setReview((prev) =>
+                            prev
+                              ? { ...prev, opponents: e.target.value }
+                              : prev,
+                          )
+                        }
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid gap-3 sm:grid-cols-3">
+                    <div className="space-y-2">
+                      <Label htmlFor={`${inputId}-max-ind`}>
+                        Max individual
+                      </Label>
+                      <Input
+                        id={`${inputId}-max-ind`}
+                        inputMode="numeric"
+                        placeholder="—"
+                        value={review.maxIndividualEntries}
+                        onChange={(e) =>
+                          setReview((prev) =>
+                            prev
+                              ? {
+                                  ...prev,
+                                  maxIndividualEntries: e.target.value,
+                                }
+                              : prev,
+                          )
+                        }
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor={`${inputId}-max-relay`}>Max relay</Label>
+                      <Input
+                        id={`${inputId}-max-relay`}
+                        inputMode="numeric"
+                        placeholder="—"
+                        value={review.maxRelayEntries}
+                        onChange={(e) =>
+                          setReview((prev) =>
+                            prev
+                              ? { ...prev, maxRelayEntries: e.target.value }
+                              : prev,
+                          )
+                        }
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor={`${inputId}-max-combined`}>
+                        Max combined
+                      </Label>
+                      <Input
+                        id={`${inputId}-max-combined`}
+                        inputMode="numeric"
+                        placeholder="—"
+                        value={review.maxCombinedEntries}
+                        onChange={(e) =>
+                          setReview((prev) =>
+                            prev
+                              ? {
+                                  ...prev,
+                                  maxCombinedEntries: e.target.value,
+                                }
+                              : prev,
+                          )
+                        }
+                      />
+                    </div>
+                  </div>
+
+                  {review.events.length > 0 ? (
+                    <div className="flex max-h-48 min-w-0 flex-col gap-2 overflow-y-auto rounded-md border p-2">
+                      <p className="text-muted-foreground text-xs tracking-wide uppercase">
+                        Events ({review.events.length})
+                      </p>
+                      {review.events.map((event, index) => (
+                        <div
+                          key={`${event.eventKey}-${index}`}
+                          className={cn(
+                            "grid items-center gap-2 text-sm",
+                            reviewHasAgeGroups
+                              ? "grid-cols-[auto_1fr_auto_auto]"
+                              : "grid-cols-[auto_1fr_auto]",
+                          )}
+                        >
+                          <span className="text-muted-foreground tabular-nums">
+                            #{event.eventNumber ?? "—"}
+                            {event.eventSuffix ?? ""}
+                          </span>
+                          <span className="truncate">
+                            {formatEventName(event.distance, event.stroke)}
+                            {event.qualifyingTimeMs != null &&
+                            event.qualifyingTimeMs > 0 ? (
+                              <span className="text-muted-foreground ml-1.5 tabular-nums">
+                                QT {formatTime(event.qualifyingTimeMs)}
+                              </span>
+                            ) : null}
+                          </span>
+                          <Select
+                            items={GENDER_OPTIONS}
+                            value={parseEventGender(event.gender)}
+                            onValueChange={(v) => {
+                              if (v != null) updateEventGender(index, v);
+                            }}
+                          >
+                            <SelectTrigger className="h-8 w-24">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectGroup>
+                                <SelectItem value="female">Female</SelectItem>
+                                <SelectItem value="male">Male</SelectItem>
+                                <SelectItem value="mixed">Mixed</SelectItem>
+                              </SelectGroup>
+                            </SelectContent>
+                          </Select>
+                          {reviewHasAgeGroups ? (
+                            <Input
+                              className="h-8 w-20"
+                              aria-label={`Age group for event ${event.eventNumber ?? index + 1}`}
+                              placeholder="Age"
+                              value={event.ageGroup ?? ""}
+                              onChange={(e) =>
+                                updateEventAgeGroup(index, e.target.value)
+                              }
+                            />
+                          ) : null}
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-muted-foreground text-sm">
+                      No events in this file (entries/results only).
+                    </p>
+                  )}
+                </>
+              ) : null}
 
               <div className="flex flex-wrap gap-2">
                 <Button
@@ -1118,6 +1203,7 @@ export function MeetImportButton({
                   variant="outline"
                   disabled={busy}
                   onClick={() => {
+                    if (target === "") setTarget(defaultMeetId ?? "auto");
                     void setImportStep("upload");
                     setPreview(null);
                     setReview(null);
@@ -1129,11 +1215,18 @@ export function MeetImportButton({
                 <Button
                   type="button"
                   disabled={
-                    busy || !review.name.trim() || !review.entryDeadline.trim()
+                    busy ||
+                    (preview.resultsFile && target !== "new"
+                      ? !isExistingMeetTarget(target)
+                      : !review.name.trim() || !review.entryDeadline.trim())
                   }
                   onClick={() => void commitImport()}
                 >
-                  {busy ? "Importing…" : "Confirm import"}
+                  {busy
+                    ? "Importing…"
+                    : preview.resultsFile && target !== "new"
+                      ? "Add results"
+                      : "Confirm import"}
                 </Button>
               </div>
             </>
@@ -1148,10 +1241,14 @@ export function MeetImportButton({
                     type="button"
                     onClick={() => {
                       setOpen(false);
-                      router.push(`/team/${teamId}/meets/${resultMeetId}`);
+                      router.push(
+                        resultIsResults
+                          ? `/team/${teamId}/meets/${resultMeetId}/results`
+                          : `/team/${teamId}/meets/${resultMeetId}`,
+                      );
                     }}
                   >
-                    Open meet
+                    {resultIsResults ? "View results" : "Open meet"}
                   </Button>
                 ) : null}
                 <Button

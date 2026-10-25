@@ -1,10 +1,7 @@
 "use client";
 
 import { swimmerAgeOnDate } from "@lane4hq/swim-core/age";
-import {
-  type AssociationEventCaps,
-  canAddScoringEntry,
-} from "@lane4hq/swim-core/association-event-caps";
+import type { AssociationEventCaps } from "@lane4hq/swim-core/association-event-caps";
 import { consecutivePairsForMember } from "@lane4hq/swim-core/consecutive-events";
 import {
   canAddMeetEntry,
@@ -21,6 +18,10 @@ import {
   formatGenderLabel,
   isSwimmerEligibleForEvent,
 } from "@lane4hq/swim-core/events";
+import {
+  admitClearExhibition,
+  admitNewIndividualEntry,
+} from "@lane4hq/swim-core/individual-entry-admission";
 import {
   MEET_ATTENDANCE_UI_LABELS,
   type MeetAttendanceUiStatus,
@@ -40,7 +41,11 @@ import {
   ELIGIBILITY_STATUS_LABELS,
   type EligibilityStatus,
 } from "@lane4hq/swim-core/team-types";
-import { formatTime, parseTime } from "@lane4hq/swim-core/times";
+import {
+  formatTime,
+  formatTypedSwimTime,
+  parseTime,
+} from "@lane4hq/swim-core/times";
 import {
   Alert,
   AlertDescription,
@@ -556,6 +561,42 @@ export function RegistrationBoard({
     [relayLegs, membershipId],
   );
 
+  const hasRelayEvents = useMemo(
+    () => events.some((event) => isRelayStroke(event.stroke, event.eventKey)),
+    [events],
+  );
+
+  const enteredRows = useMemo(() => {
+    const rows: Array<
+      | { kind: "relay"; eventNumber: number | null; leg: RelayLegRow }
+      | { kind: "entry"; eventNumber: number | null; entry: EntryRow }
+    > = [];
+    for (const leg of swimmerRelayLegs) {
+      const meetEvent = events.find((event) => event.id === leg.meetEventId);
+      if (!meetEvent) continue;
+      rows.push({
+        kind: "relay",
+        eventNumber: meetEvent.eventNumber,
+        leg,
+      });
+    }
+    for (const entry of swimmerEntries) {
+      rows.push({
+        kind: "entry",
+        eventNumber: entry.eventNumber,
+        entry,
+      });
+    }
+    rows.sort((a, b) => {
+      const aNumber = a.eventNumber ?? Number.MAX_SAFE_INTEGER;
+      const bNumber = b.eventNumber ?? Number.MAX_SAFE_INTEGER;
+      if (aNumber !== bNumber) return aNumber - bNumber;
+      if (a.kind === b.kind) return 0;
+      return a.kind === "relay" ? -1 : 1;
+    });
+    return rows;
+  }, [events, swimmerEntries, swimmerRelayLegs]);
+
   const enteredEventIds = useMemo(
     () => new Set(swimmerEntries.map((e) => e.meetEventId)),
     [swimmerEntries],
@@ -686,10 +727,14 @@ export function RegistrationBoard({
       setPendingAction(`seed:${entry.id}`);
       startTransition(async () => {
         try {
-          await updateMeetEntryAction(teamId, meetId, entry.id, {
+          const result = await updateMeetEntryAction(teamId, meetId, entry.id, {
             seedTimeMs: null,
             seedTimeSource: "no_time",
           });
+          if (!result.ok) {
+            setActionError(result.message);
+            return;
+          }
           refresh();
         } finally {
           setPendingAction(null);
@@ -703,10 +748,14 @@ export function RegistrationBoard({
     setPendingAction(`seed:${entry.id}`);
     startTransition(async () => {
       try {
-        await updateMeetEntryAction(teamId, meetId, entry.id, {
+        const result = await updateMeetEntryAction(teamId, meetId, entry.id, {
           seedTimeMs: parsed,
           seedTimeSource: "manual",
         });
+        if (!result.ok) {
+          setActionError(result.message);
+          return;
+        }
         refresh();
       } finally {
         setPendingAction(null);
@@ -782,27 +831,25 @@ export function RegistrationBoard({
     const resolved = resolveSeed(event.id, event.eventKey);
     if (!resolved) return;
 
-    const candidateIsRelay = isRelayStroke(event.stroke, event.eventKey);
-    if (candidateIsRelay) return;
-    const limitCheck = canAddMeetEntry(limits, entryCounts, candidateIsRelay);
-    if (!limitCheck.ok) return;
-
-    if (associationCaps && exhibitionDrafts[event.id] !== true) {
-      const scoringCount = entries.filter(
-        (row) =>
-          row.meetEventId === event.id &&
-          row.status !== "scratched" &&
-          !row.exhibition,
-      ).length;
-      const capCheck = canAddScoringEntry({
-        cap: associationCaps.maxScoringEntriesPerIndividualEvent,
-        currentScoringCount: scoringCount,
-        candidateIsExhibition: false,
-      });
-      if (!capCheck.ok) {
-        setActionError(capCheck.reason);
-        return;
-      }
+    if (!selectedSwimmer) return;
+    const admission = admitNewIndividualEntry({
+      commitments: attendance.map((row) => ({
+        membershipId: row.membershipId,
+        status: row.status,
+      })),
+      membershipId,
+      eligibilityStatus: selectedSwimmer.eligibilityStatus,
+      swimmerGender: selectedSwimmer.gender,
+      event,
+      limits,
+      entries,
+      relayLegs,
+      scoringCap: associationCaps?.maxScoringEntriesPerIndividualEvent,
+      exhibition: exhibitionDrafts[event.id] === true,
+    });
+    if (!admission.ok) {
+      setActionError(admission.reason);
+      return;
     }
 
     const qtCheck = checkQualifyingTime(
@@ -818,7 +865,7 @@ export function RegistrationBoard({
     setPendingAction(`add:${event.id}`);
     startTransition(async () => {
       try {
-        await addMeetEntryAction(teamId, meetId, {
+        const result = await addMeetEntryAction(teamId, meetId, {
           meetEventId: event.id,
           membershipId,
           seedTimeMs: resolved.seedTimeMs,
@@ -827,6 +874,10 @@ export function RegistrationBoard({
           exhibition: exhibitionDrafts[event.id] === true,
           entryNotes: notesDrafts[event.id]?.trim() || undefined,
         });
+        if (!result.ok) {
+          setActionError(result.message);
+          return;
+        }
         setSeedDrafts((prev) => {
           const next = { ...prev };
           delete next[event.id];
@@ -1351,9 +1402,19 @@ export function RegistrationBoard({
 
               {!isBlocked ? (
                 <div className="space-y-2">
-                  <h3 className="text-muted-foreground text-xs font-medium tracking-wider uppercase">
-                    Entered
-                  </h3>
+                  <div className="flex items-center justify-between gap-2">
+                    <h3 className="text-muted-foreground text-xs font-medium tracking-wider uppercase">
+                      Entered
+                    </h3>
+                    {hasRelayEvents ? (
+                      <a
+                        href="#relay-lineup"
+                        className="text-muted-foreground text-xs underline underline-offset-2"
+                      >
+                        Assign relays
+                      </a>
+                    ) : null}
+                  </div>
                   {swimmerEntries.length === 0 &&
                   swimmerRelayLegs.length === 0 ? (
                     <p className="text-muted-foreground text-sm">
@@ -1362,60 +1423,62 @@ export function RegistrationBoard({
                     </p>
                   ) : (
                     <ul className="divide-border divide-y rounded-md border">
-                      {swimmerRelayLegs.map((leg) => {
-                        const meetEvent = events.find(
-                          (e) => e.id === leg.meetEventId,
-                        );
-                        if (!meetEvent) return null;
-                        const letter = deriveRelayLetter(
-                          leg.relayLetter,
-                          leg.legOrder,
-                        );
-                        const slotId = `relay:${leg.meetEventId}:${letter}:${leg.legOrder}`;
-                        const line = `${formatEventLine(meetEvent)} · ${letter} · ${relayLegRoleLabel(meetEvent.stroke, leg.legOrder)}`;
-                        return (
-                          <li
-                            key={slotId}
-                            className="flex flex-wrap items-center gap-2 px-3 py-2.5 sm:flex-nowrap"
-                          >
-                            <span className="min-w-0 flex-1 truncate text-sm">
-                              {line}
-                            </span>
-                            <Button
-                              type="button"
-                              variant="ghost"
-                              size="icon-sm"
-                              disabled={pending}
-                              aria-label={`Remove ${line}`}
-                              onClick={() => {
-                                setPendingAction(`remove:${slotId}`);
-                                startTransition(async () => {
-                                  try {
-                                    await removeMeetRelaySlotAction(
-                                      teamId,
-                                      meetId,
-                                      leg.meetEventId,
-                                      letter,
-                                      leg.legOrder,
-                                    );
-                                    refresh();
-                                  } finally {
-                                    setPendingAction(null);
-                                  }
-                                });
-                              }}
+                      {enteredRows.map((row) => {
+                        if (row.kind === "relay") {
+                          const leg = row.leg;
+                          const meetEvent = events.find(
+                            (e) => e.id === leg.meetEventId,
+                          );
+                          if (!meetEvent) return null;
+                          const letter = deriveRelayLetter(
+                            leg.relayLetter,
+                            leg.legOrder,
+                          );
+                          const slotId = `relay:${leg.meetEventId}:${letter}:${leg.legOrder}`;
+                          const line = `${formatEventLine(meetEvent)} · ${letter} · ${relayLegRoleLabel(meetEvent.stroke, leg.legOrder)}`;
+                          return (
+                            <li
+                              key={slotId}
+                              className="flex flex-wrap items-center gap-2 px-3 py-2.5 sm:flex-nowrap"
                             >
-                              {pendingAction === `remove:${slotId}` ? (
-                                <Spinner aria-hidden />
-                              ) : (
-                                <Minus aria-hidden />
-                              )}
-                              <span className="sr-only">Remove {line}</span>
-                            </Button>
-                          </li>
-                        );
-                      })}
-                      {swimmerEntries.map((entry) => {
+                              <span className="min-w-0 flex-1 truncate text-sm">
+                                {line}
+                              </span>
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="icon-sm"
+                                disabled={pending}
+                                aria-label={`Remove ${line}`}
+                                onClick={() => {
+                                  setPendingAction(`remove:${slotId}`);
+                                  startTransition(async () => {
+                                    try {
+                                      await removeMeetRelaySlotAction(
+                                        teamId,
+                                        meetId,
+                                        leg.meetEventId,
+                                        letter,
+                                        leg.legOrder,
+                                      );
+                                      refresh();
+                                    } finally {
+                                      setPendingAction(null);
+                                    }
+                                  });
+                                }}
+                              >
+                                {pendingAction === `remove:${slotId}` ? (
+                                  <Spinner aria-hidden />
+                                ) : (
+                                  <Minus aria-hidden />
+                                )}
+                                <span className="sr-only">Remove {line}</span>
+                              </Button>
+                            </li>
+                          );
+                        }
+                        const entry = row.entry;
                         const meetEvent = events.find(
                           (e) => e.id === entry.meetEventId,
                         );
@@ -1445,7 +1508,9 @@ export function RegistrationBoard({
                               onChange={(e) =>
                                 setSeedDrafts((prev) => ({
                                   ...prev,
-                                  [entry.id]: e.target.value,
+                                  [entry.id]: formatTypedSwimTime(
+                                    e.target.value,
+                                  ),
                                 }))
                               }
                               onBlur={(e) => {
@@ -1467,15 +1532,35 @@ export function RegistrationBoard({
                                 checked={entry.exhibition === true}
                                 disabled={pending}
                                 onCheckedChange={(checked) => {
+                                  const nextExhibition = checked === true;
+                                  if (entry.exhibition && !nextExhibition) {
+                                    const admission = admitClearExhibition({
+                                      entries,
+                                      meetEventId: entry.meetEventId,
+                                      entryId: entry.id,
+                                      scoringCap:
+                                        associationCaps?.maxScoringEntriesPerIndividualEvent,
+                                    });
+                                    if (!admission.ok) {
+                                      setActionError(admission.reason);
+                                      return;
+                                    }
+                                  }
                                   setPendingAction(`exh:${entry.id}`);
                                   startTransition(async () => {
                                     try {
-                                      await updateMeetEntryAction(
-                                        teamId,
-                                        meetId,
-                                        entry.id,
-                                        { exhibition: checked === true },
-                                      );
+                                      const result =
+                                        await updateMeetEntryAction(
+                                          teamId,
+                                          meetId,
+                                          entry.id,
+                                          { exhibition: checked === true },
+                                        );
+                                      if (!result.ok) {
+                                        setActionError(result.message);
+                                        return;
+                                      }
+                                      setActionError(null);
                                       refresh();
                                     } finally {
                                       setPendingAction(null);
@@ -1498,12 +1583,16 @@ export function RegistrationBoard({
                                 setPendingAction(`notes:${entry.id}`);
                                 startTransition(async () => {
                                   try {
-                                    await updateMeetEntryAction(
+                                    const result = await updateMeetEntryAction(
                                       teamId,
                                       meetId,
                                       entry.id,
                                       { entryNotes: next || null },
                                     );
+                                    if (!result.ok) {
+                                      setActionError(result.message);
+                                      return;
+                                    }
                                     refresh();
                                   } finally {
                                     setPendingAction(null);
@@ -1611,7 +1700,9 @@ export function RegistrationBoard({
                               onChange={(e) =>
                                 setSeedDrafts((prev) => ({
                                   ...prev,
-                                  [event.id]: e.target.value,
+                                  [event.id]: formatTypedSwimTime(
+                                    e.target.value,
+                                  ),
                                 }))
                               }
                               aria-label={`Seed time for ${formatEventName(event.distance, event.stroke)}`}

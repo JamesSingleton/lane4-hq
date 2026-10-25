@@ -7,6 +7,7 @@ import {
   RELAY_TEAM_LETTERS,
   relayLegRoleLabel,
 } from "@lane4hq/swim-core/relay-legs";
+import { formatTypedSwimTime } from "@lane4hq/swim-core/times";
 import { Button } from "@lane4hq/ui/components/button";
 import {
   Card,
@@ -336,6 +337,16 @@ export function AddResultForm({
                     placeholder="1:42.10"
                     aria-invalid={!!errors.time}
                     {...register("time")}
+                    onChange={(event) =>
+                      setValue(
+                        "time",
+                        formatTypedSwimTime(event.target.value),
+                        {
+                          shouldDirty: true,
+                          shouldValidate: true,
+                        },
+                      )
+                    }
                   />
                   <FieldError errors={[errors.time]} />
                 </Field>
@@ -399,6 +410,13 @@ export function AddResultForm({
                     placeholder={membershipId ? "24.19" : "—"}
                     aria-invalid={!!errors.splitTime}
                     {...register("splitTime")}
+                    onChange={(event) =>
+                      setValue(
+                        "splitTime",
+                        formatTypedSwimTime(event.target.value),
+                        { shouldDirty: true, shouldValidate: true },
+                      )
+                    }
                   />
                   <FieldError errors={[errors.splitTime]} />
                 </Field>
@@ -434,6 +452,16 @@ export function AddResultForm({
                     placeholder="1:02.45"
                     aria-invalid={!!errors.time}
                     {...register("time")}
+                    onChange={(event) =>
+                      setValue(
+                        "time",
+                        formatTypedSwimTime(event.target.value),
+                        {
+                          shouldDirty: true,
+                          shouldValidate: true,
+                        },
+                      )
+                    }
                   />
                   <FieldError errors={[errors.time]} />
                 </Field>

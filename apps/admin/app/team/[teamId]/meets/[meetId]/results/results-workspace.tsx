@@ -4,7 +4,7 @@ import { swimmerAgeOnDate } from "@lane4hq/swim-core/age";
 import { formatDateOnlyLabel } from "@lane4hq/swim-core/calendar-date";
 import { isRelayStroke } from "@lane4hq/swim-core/entry-limits";
 import { formatEventName, formatGenderShort } from "@lane4hq/swim-core/events";
-import { formatTime } from "@lane4hq/swim-core/times";
+import { formatTime, formatTypedSwimTime } from "@lane4hq/swim-core/times";
 import { Badge } from "@lane4hq/ui/components/badge";
 import { Button } from "@lane4hq/ui/components/button";
 import { Input } from "@lane4hq/ui/components/input";
@@ -374,7 +374,9 @@ function RelaySplitCell({
         <Input
           name={`relay-split-${member.id}`}
           value={value}
-          onChange={(event) => setValue(event.target.value)}
+          onChange={(event) =>
+            setValue(formatTypedSwimTime(event.target.value))
+          }
           onBlur={save}
           onKeyDown={(event) => {
             if (event.key === "Enter") {

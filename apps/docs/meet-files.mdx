@@ -34,7 +34,7 @@ Lane4 HQ uses the files meet software already exchanges. Open Meets and choose I
 
 ## Verify course and deadline
 
-The import review shows the host’s meet course and entry deadline. Confirm both before completing the import.
+For an event file or an entries file, the import review shows the host’s meet course and entry deadline. Confirm both before completing the import. A results file you add to a meet already in Lane4 does not ask for that deadline, and it does not change the meet name, dates, or events you already built.
 
 On a CL2 file the meet course is the single letter at the end of the meet
 line (`Y` yards, `S` short-course meters, `L` long course). Words in the
@@ -64,7 +64,20 @@ actual competition pool in the review when needed.
 
 The host entry deadline must be a real deadline supplied by the host. Do not
 assume that a same-day date is correct. Confirm it with the meet announcement
-or the host before importing.
+or the host before importing an event file, an entries file, or a results file
+that should create a new meet.
+
+## Add results to a meet you already have
+
+After the meet, import the results file and choose the meet those times belong to. Select Add results. Lane4 keeps the name, dates, and events you already built.
+
+Each time lands on the event with the same number. A letter after the number stays with that event, such as 42A. If that number is already a different event on your meet, Lane4 skips those times and says so. If the number is not on the meet yet, Lane4 adds that event from the file.
+
+When a swimmer on your roster has no entry in that event, Lane4 creates one from the result. An entry that is already there stays as you saved it. Only the time is stored. This is how a meet that was swum somewhere else comes in from a results file alone.
+
+A relay result needs all four racing legs. If a racing leg is missing, that relay is not imported. If that relay letter already has all four swimmers, the time is saved on that lineup and the lineup is left as it is. A letter with only some of the four is skipped. An alternate Lane4 cannot match is left off. The four racing legs still count.
+
+Choose Create a new meet only when the results file should start a meet that is not in Lane4 yet. That path still asks for the host entry deadline.
 
 ## Entries packs vs event files
 

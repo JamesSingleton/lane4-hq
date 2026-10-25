@@ -9,7 +9,13 @@ The entries tab is where you decide who is swimming. Results is where those swim
 
 ## Build entries
 
-Start from the roster and the event list. Lane4 can use a swimmer's best time as the seed. You can still change the seed for this meet. The program lists each event and how many athletes are in it. The cap for the meet, such as two individual events and two relays, stays above the list.
+Start from the roster and the event list. By swimmer is the usual view. That swimmer's relay legs sit in the same list as their individual events, in program order. Assign relays opens the lineup editor, where you set A, B, and C.
+
+Lane4 can use a swimmer's best time as the seed. You can still type a seed for this meet. Type the digits and Lane4 fills hundredths from the right: 23752 becomes 2:37.52, and 5234 becomes 52.34. Result times fill the same way.
+
+The program lists each event and how many athletes are in it. The cap for the meet, such as two individual events and two relays, stays above the list. Exhibition is on only when you check it. If the event is already full of scoring entries, Lane4 refuses another scoring entry. It does not turn that swim into exhibition.
+
+A swimmer already placed on a relay letter does not appear again on the other legs or alternates of that same letter. They can still be chosen on another letter.
 
 <Frame>
   <img
@@ -18,7 +24,7 @@ Start from the roster and the event list. Lane4 can use a swimmer's best time as
   />
 </Frame>
 
-For relays, pick the swimmers and check the order before you export. Lineup and relay tools depend on the team's plan.
+For relays, pick the swimmers and check the order before you export. Saving or suggesting one relay leaves the others available. Lineup and relay tools depend on the team's plan.
 
 ## Review and export
 
@@ -38,7 +44,13 @@ Before you send a file to the host:
 
 ## Bring results back
 
-Import HY3, CL2, SDIF, or a ZIP of results after the meet. You can also add a single time by hand, including an exhibition swim. Filters on the results page limit the list to personal bests or compare each swim with a time standard.
+Import HY3, CL2, SDIF, or a ZIP of results after the meet, then choose the meet those times belong to. Lane4 adds the times and does not change the meet name, dates, or events you already built. You can also add a single time by hand, including an exhibition swim.
+
+If a swimmer has no entry in that event, Lane4 creates one from the result. Use that when the meet has results but no entries yet. An entry you already saved is left alone.
+
+A relay time is shown only when all four racing legs are known. A relay with a racing leg missing is not saved. Filters on the results page limit the list to personal bests or compare each swim with a time standard.
+
+Best times update after the file is saved. Open progression again if a new best is not there yet.
 
 <Frame>
   <img
@@ -47,4 +59,4 @@ Import HY3, CL2, SDIF, or a ZIP of results after the meet. You can also add a si
   />
 </Frame>
 
-Watch unmatched rows. A result that Lane4 cannot tie to a swimmer will not update a best time.
+Watch unmatched rows. A result that Lane4 cannot tie to a swimmer will not update a best time. A relay Lane4 cannot fill out to four racing legs is reported and left out. See [Meet files](/meet-files) for how event numbers and relay letters are matched.

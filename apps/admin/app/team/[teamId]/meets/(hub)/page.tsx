@@ -10,6 +10,8 @@ import type { MeetTableRow } from "@/components/meets/meets-columns";
 import { MeetsTable } from "@/components/meets/meets-table";
 import { MeetImportButton } from "../meet-import-button";
 
+export const maxDuration = 60;
+
 export async function generateMetadata({
   params,
 }: {

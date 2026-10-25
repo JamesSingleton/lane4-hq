@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { formatTime, isFasterTime, parseTime } from "../src/times";
+import {
+  formatTime,
+  formatTypedSwimTime,
+  isFasterTime,
+  parseTime,
+} from "../src/times";
 
 describe("parseTime", () => {
   it("returns 0 for empty input", () => {
@@ -25,6 +30,23 @@ describe("parseTime", () => {
   it("parses hh:mm:ss and bare minutes", () => {
     expect(parseTime("1:02:03.50")).toBe(3723500);
     expect(parseTime("2:03.50")).toBe(123500);
+  });
+});
+
+describe("formatTypedSwimTime", () => {
+  it("fills hundredths from the right", () => {
+    expect(formatTypedSwimTime("")).toBe("");
+    expect(formatTypedSwimTime("abc")).toBe("");
+    expect(formatTypedSwimTime("2")).toBe("2");
+    expect(formatTypedSwimTime("23")).toBe("23");
+    expect(formatTypedSwimTime("237")).toBe("2.37");
+    expect(formatTypedSwimTime("2375")).toBe("23.75");
+    expect(formatTypedSwimTime("23752")).toBe("2:37.52");
+    expect(formatTypedSwimTime("5234")).toBe("52.34");
+    expect(formatTypedSwimTime("123456")).toBe("12:34.56");
+    expect(formatTypedSwimTime("1234567")).toBe("1:23:45.67");
+    expect(formatTypedSwimTime("2:37.52")).toBe("2:37.52");
+    expect(formatTypedSwimTime("12a3b45678")).toBe("1:23:45.67");
   });
 });
 

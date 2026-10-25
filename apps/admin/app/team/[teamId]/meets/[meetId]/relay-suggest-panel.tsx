@@ -15,7 +15,11 @@ import {
   relaySlotLabel,
   strokeForRelayLeg,
 } from "@lane4hq/swim-core/relay-legs";
-import { formatTime, parseTime } from "@lane4hq/swim-core/times";
+import {
+  formatTime,
+  formatTypedSwimTime,
+  parseTime,
+} from "@lane4hq/swim-core/times";
 import { Button } from "@lane4hq/ui/components/button";
 import {
   Card,
@@ -114,7 +118,8 @@ export function RelaySuggestPanel({
   draftQuota: SharedDraftQuota;
 }) {
   const router = useRouter();
-  const [pending, startTransition] = useTransition();
+  const [, startTransition] = useTransition();
+  const [busyEventId, setBusyEventId] = useState<string | null>(null);
   const [draftQuota, setDraftQuota] = useState(initialDraftQuota);
   const suggestBlocked = isDraftQuotaBlocked(draftQuota);
   const [numberOfRelays, setNumberOfRelays] = useState<1 | 2 | 3>(() =>
@@ -236,10 +241,21 @@ export function RelaySuggestPanel({
     )?.membershipId;
   }
 
+  function startEventWork(meetEventId: string, work: () => Promise<void>) {
+    setBusyEventId(meetEventId);
+    startTransition(async () => {
+      try {
+        await work();
+      } finally {
+        setBusyEventId(null);
+      }
+    });
+  }
+
   function regenerate(meetEventId: string) {
     if (lockedByEvent[meetEventId]) return;
     setError(null);
-    startTransition(async () => {
+    startEventWork(meetEventId, async () => {
       try {
         const result = await suggestRelayOrderAction(teamId, {
           meetId,
@@ -357,7 +373,7 @@ export function RelaySuggestPanel({
 
     if (!wasDirty && shouldPersist) {
       setError(null);
-      startTransition(async () => {
+      startEventWork(meetEventId, async () => {
         try {
           await removeMeetRelayTeamAction(
             teamId,
@@ -382,7 +398,7 @@ export function RelaySuggestPanel({
     const visible = new Set(visibleLetters);
     const keptLegs = legs.filter((leg) => visible.has(leg.teamLetter));
     setError(null);
-    startTransition(async () => {
+    startEventWork(meetEventId, async () => {
       try {
         await saveMeetRelayLegsAction(
           teamId,
@@ -570,6 +586,7 @@ export function RelaySuggestPanel({
           const nextLetter = RELAY_TEAM_LETTERS.find(
             (letter) => !letters.includes(letter),
           );
+          const eventPending = busyEventId === event.id;
           const eligibleCandidates = candidates.filter((candidate) =>
             isSwimmerEligibleForEvent(candidate.gender, event.gender),
           );
@@ -608,15 +625,15 @@ export function RelaySuggestPanel({
                   <Button
                     type="button"
                     variant="outline"
-                    disabled={pending || locked || suggestBlocked}
+                    disabled={eventPending || locked || suggestBlocked}
                     onClick={() => regenerate(event.id)}
                   >
                     <RefreshCw data-icon="inline-start" />
-                    {pending ? "Working…" : "Suggest 1–4"}
+                    {eventPending ? "Working…" : "Suggest 1–4"}
                   </Button>
                   <Button
                     type="button"
-                    disabled={pending || locked || !dirty}
+                    disabled={eventPending || locked || !dirty}
                     onClick={() => saveEvent(event.id)}
                   >
                     <Save data-icon="inline-start" />
@@ -633,7 +650,7 @@ export function RelaySuggestPanel({
                       event={event}
                       legs={legs}
                       seedValue={seedByEvent[event.id]?.[letter] ?? ""}
-                      pending={pending}
+                      pending={eventPending}
                       locked={locked}
                       canRemove={letters.indexOf(letter) > 0}
                       eligibleCandidates={eligibleCandidates}
@@ -676,7 +693,7 @@ export function RelaySuggestPanel({
                     variant="outline"
                     size="sm"
                     className="self-start"
-                    disabled={pending || locked}
+                    disabled={eventPending || locked}
                     onClick={() => {
                       setHiddenByEvent((prev) => ({
                         ...prev,
@@ -752,7 +769,7 @@ function RelayTeamCard({
             placeholder="NT"
             disabled={pending || locked}
             value={seedValue}
-            onChange={(e) => onSeedChange(e.target.value)}
+            onChange={(e) => onSeedChange(formatTypedSwimTime(e.target.value))}
             aria-label={`Team ${letter} seed time`}
           />
           {canRemove ? (
@@ -787,18 +804,29 @@ function RelayTeamCard({
                 value={assigned?.membershipId ?? ""}
                 displayValue={assigned?.name ?? ""}
                 disabled={pending || locked}
-                options={eligibleCandidates.map((candidate) => {
-                  return {
-                    membershipId: candidate.membershipId,
-                    label: candidate.name,
-                    blocked: assignBlockedReason(
-                      event.id,
-                      letter,
-                      slot,
-                      candidate.membershipId,
-                    ),
-                  };
-                })}
+                options={eligibleCandidates
+                  .filter((candidate) => {
+                    if (candidate.membershipId === assigned?.membershipId) {
+                      return true;
+                    }
+                    return !legs.some(
+                      (leg) =>
+                        leg.teamLetter === letter &&
+                        leg.membershipId === candidate.membershipId,
+                    );
+                  })
+                  .map((candidate) => {
+                    return {
+                      membershipId: candidate.membershipId,
+                      label: candidate.name,
+                      blocked: assignBlockedReason(
+                        event.id,
+                        letter,
+                        slot,
+                        candidate.membershipId,
+                      ),
+                    };
+                  })}
                 onChange={(membershipId) => onAssign(slot, membershipId)}
               />
             </li>

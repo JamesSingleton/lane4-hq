@@ -9,6 +9,11 @@ void env;
 
 const nextConfig: NextConfig = {
   devIndicators: false,
+  // Next.js prints each Server Function call and its arguments in development.
+  // Meet import passes the file text (names, birth dates, contact lines).
+  logging: {
+    serverFunctions: false,
+  },
   // Inlined into the browser bundle so instrumentation-client.ts can tag
   // events. VERCEL_ENV itself is not visible in client code.
   env: {

@@ -3,16 +3,22 @@
 import {
   type AssociationEventCaps,
   canAddRelayTeam,
-  canAddScoringEntry,
   formatAssociationCapLine,
 } from "@lane4hq/swim-core/association-event-caps";
 import { previousSameGenderEvent } from "@lane4hq/swim-core/consecutive-events";
-import { isRelayStroke } from "@lane4hq/swim-core/entry-limits";
+import {
+  isRelayStroke,
+  type MeetEntryLimits,
+} from "@lane4hq/swim-core/entry-limits";
 import {
   formatEventName,
   formatGenderLabel,
   isSwimmerEligibleForEvent,
 } from "@lane4hq/swim-core/events";
+import {
+  admitClearExhibition,
+  admitNewIndividualEntry,
+} from "@lane4hq/swim-core/individual-entry-admission";
 import {
   deriveRelayLetter,
   RELAY_MAX_LEGS,
@@ -25,7 +31,11 @@ import {
   blocksMeetEntries,
   type EligibilityStatus,
 } from "@lane4hq/swim-core/team-types";
-import { formatTime, parseTime } from "@lane4hq/swim-core/times";
+import {
+  formatTime,
+  formatTypedSwimTime,
+  parseTime,
+} from "@lane4hq/swim-core/times";
 import { Button } from "@lane4hq/ui/components/button";
 import { Checkbox } from "@lane4hq/ui/components/checkbox";
 import {
@@ -88,6 +98,8 @@ type EntryRow = {
   firstName: string;
   lastName: string;
   status: string;
+  stroke?: string;
+  eventKey?: string;
   exhibition?: boolean;
   seedTimeMs?: number | null;
 };
@@ -158,7 +170,7 @@ function ConsecutiveHint({ prevEvent }: { prevEvent: EventRow }) {
       </TooltipTrigger>
       <TooltipContent>
         Also in {label}. Consecutive for {formatGenderLabel(prevEvent.gender)}{" "}
-        in this program.
+        in this program. This is a warning only.
       </TooltipContent>
     </Tooltip>
   );
@@ -168,6 +180,7 @@ export function ProgramEntriesBoard({
   teamId,
   meetId,
   caps,
+  limits,
   roster,
   events,
   entries,
@@ -179,6 +192,7 @@ export function ProgramEntriesBoard({
   teamId: string;
   meetId: string;
   caps: AssociationEventCaps;
+  limits: MeetEntryLimits | null;
   roster: RosterRow[];
   events: EventRow[];
   entries: EntryRow[];
@@ -508,6 +522,7 @@ export function ProgramEntriesBoard({
             prevMembers={prevMembers}
             busyKeys={busyKeys}
             seedDrafts={seedDrafts}
+            error={error}
             onSeedDraft={(entryId, value) => {
               setSeedDrafts((current) => ({ ...current, [entryId]: value }));
               const existing = seedTimersRef.current.get(entryId);
@@ -530,31 +545,44 @@ export function ProgramEntriesBoard({
                     ),
                   );
                   runInBackground(async () => {
-                    await updateMeetEntryAction(teamId, meetId, entryId, {
-                      seedTimeMs: parsed.seedTimeMs,
-                      seedTimeSource: parsed.seedTimeSource,
-                    });
+                    const result = await updateMeetEntryAction(
+                      teamId,
+                      meetId,
+                      entryId,
+                      {
+                        seedTimeMs: parsed.seedTimeMs,
+                        seedTimeSource: parsed.seedTimeSource,
+                      },
+                    );
+                    if (!result.ok) setError(result.message);
                   });
                 }, SEED_AUTOSAVE_MS),
               );
             }}
-            onAdd={(membershipId) => {
+            onAdd={(membershipId, exhibition) => {
               const row = roster.find(
                 (item) => item.membershipId === membershipId,
               );
               if (!row) return;
-              const scoringCount = localEntries.filter(
-                (entry) =>
-                  entry.meetEventId === selected.id &&
-                  entry.status !== "scratched" &&
-                  !entry.exhibition,
-              ).length;
-              const asExhibition =
-                canAddScoringEntry({
-                  cap: caps.maxScoringEntriesPerIndividualEvent,
-                  currentScoringCount: scoringCount,
-                  candidateIsExhibition: false,
-                }).ok === false;
+              const admission = admitNewIndividualEntry({
+                commitments: notGoingMembershipIds.map((id) => ({
+                  membershipId: id,
+                  status: "not_going",
+                })),
+                membershipId,
+                eligibilityStatus: row.eligibilityStatus,
+                swimmerGender: row.gender,
+                event: selected,
+                limits,
+                entries: localEntries,
+                relayLegs,
+                scoringCap: caps.maxScoringEntriesPerIndividualEvent,
+                exhibition,
+              });
+              if (!admission.ok) {
+                setError(admission.reason);
+                return;
+              }
               const bestSeed = bestSeedFor(membershipId, selected.eventKey);
               const seedTimeMs =
                 bestSeed != null && bestSeed > 0 ? bestSeed : null;
@@ -570,22 +598,30 @@ export function ProgramEntriesBoard({
                   firstName: row.firstName,
                   lastName: row.lastName,
                   status: "approved",
-                  exhibition: asExhibition,
+                  exhibition,
                   seedTimeMs,
                 },
               ]);
               markBusy(membershipId, true);
               runInBackground(async () => {
                 try {
-                  const savedId = await addMeetEntryAction(teamId, meetId, {
+                  const saved = await addMeetEntryAction(teamId, meetId, {
                     meetEventId: selected.id,
                     membershipId,
                     status: "approved",
-                    exhibition: asExhibition,
+                    exhibition,
                     ...(seedTimeMs != null
                       ? { seedTimeMs, seedTimeSource: "personal_best" as const }
                       : {}),
                   });
+                  if (!saved.ok) {
+                    setLocalEntries((current) =>
+                      current.filter((entry) => entry.id !== tempId),
+                    );
+                    setError(saved.message);
+                    return;
+                  }
+                  const savedId = saved.id;
                   if (cancelledAddsRef.current.has(tempId)) {
                     cancelledAddsRef.current.delete(tempId);
                     await deleteMeetEntryAction(teamId, meetId, savedId);
@@ -611,10 +647,23 @@ export function ProgramEntriesBoard({
                   const live = localEntriesRef.current.find(
                     (entry) => entry.id === tempId || entry.id === savedId,
                   );
-                  if (live && live.exhibition !== asExhibition) {
-                    await updateMeetEntryAction(teamId, meetId, savedId, {
-                      exhibition: live.exhibition,
-                    });
+                  if (live && live.exhibition !== exhibition) {
+                    const updated = await updateMeetEntryAction(
+                      teamId,
+                      meetId,
+                      savedId,
+                      { exhibition: live.exhibition },
+                    );
+                    if (!updated.ok) {
+                      setError(updated.message);
+                      setLocalEntries((current) =>
+                        current.map((entry) =>
+                          entry.id === savedId || entry.id === tempId
+                            ? { ...entry, id: savedId, exhibition }
+                            : entry,
+                        ),
+                      );
+                    }
                   }
                   const draft =
                     seedDraftsRef.current[savedId] ??
@@ -622,17 +671,27 @@ export function ProgramEntriesBoard({
                   if (draft !== undefined) {
                     const parsed = parseSeedInput(draft);
                     if (parsed.ok) {
-                      await updateMeetEntryAction(teamId, meetId, savedId, {
-                        seedTimeMs: parsed.seedTimeMs,
-                        seedTimeSource: parsed.seedTimeSource,
-                      });
+                      const updated = await updateMeetEntryAction(
+                        teamId,
+                        meetId,
+                        savedId,
+                        {
+                          seedTimeMs: parsed.seedTimeMs,
+                          seedTimeSource: parsed.seedTimeSource,
+                        },
+                      );
+                      if (!updated.ok) setError(updated.message);
                     }
                   }
                 } catch (err) {
                   setLocalEntries((current) =>
                     current.filter((entry) => entry.id !== tempId),
                   );
-                  throw err;
+                  setError(
+                    err instanceof Error
+                      ? err.message
+                      : "Couldn't add this entry.",
+                  );
                 } finally {
                   markBusy(membershipId, false);
                 }
@@ -665,6 +724,21 @@ export function ProgramEntriesBoard({
               });
             }}
             onExhibition={(entryId, exhibition) => {
+              const previous = localEntries.find(
+                (entry) => entry.id === entryId,
+              );
+              if (previous?.exhibition && !exhibition) {
+                const admission = admitClearExhibition({
+                  entries: localEntries,
+                  meetEventId: previous.meetEventId,
+                  entryId,
+                  scoringCap: caps.maxScoringEntriesPerIndividualEvent,
+                });
+                if (!admission.ok) {
+                  setError(admission.reason);
+                  return;
+                }
+              }
               setError(null);
               setLocalEntries((current) =>
                 current.map((entry) =>
@@ -673,9 +747,24 @@ export function ProgramEntriesBoard({
               );
               if (entryId.startsWith("optimistic:")) return;
               runInBackground(async () => {
-                await updateMeetEntryAction(teamId, meetId, entryId, {
-                  exhibition,
-                });
+                const result = await updateMeetEntryAction(
+                  teamId,
+                  meetId,
+                  entryId,
+                  { exhibition },
+                );
+                if (!result.ok) {
+                  setError(result.message);
+                  if (previous) {
+                    setLocalEntries((current) =>
+                      current.map((entry) =>
+                        entry.id === entryId
+                          ? { ...entry, exhibition: previous.exhibition }
+                          : entry,
+                      ),
+                    );
+                  }
+                }
               });
             }}
             onSeedCommit={(entryId, raw) => {
@@ -699,10 +788,16 @@ export function ProgramEntriesBoard({
               );
               if (entryId.startsWith("optimistic:")) return;
               runInBackground(async () => {
-                await updateMeetEntryAction(teamId, meetId, entryId, {
-                  seedTimeMs: parsed.seedTimeMs,
-                  seedTimeSource: parsed.seedTimeSource,
-                });
+                const result = await updateMeetEntryAction(
+                  teamId,
+                  meetId,
+                  entryId,
+                  {
+                    seedTimeMs: parsed.seedTimeMs,
+                    seedTimeSource: parsed.seedTimeSource,
+                  },
+                );
+                if (!result.ok) setError(result.message);
               });
             }}
           />
@@ -723,6 +818,7 @@ function IndividualProgramEvent({
   prevMembers,
   busyKeys,
   seedDrafts,
+  error,
   onSeedDraft,
   onAdd,
   onRemove,
@@ -739,13 +835,17 @@ function IndividualProgramEvent({
   prevMembers: Set<string>;
   busyKeys: Set<string>;
   seedDrafts: Record<string, string>;
+  error: string | null;
   onSeedDraft: (entryId: string, value: string) => void;
-  onAdd: (membershipId: string) => void;
+  onAdd: (membershipId: string, exhibition: boolean) => void;
   onRemove: (entryId: string) => void;
   onExhibition: (entryId: string, exhibition: boolean) => void;
   onSeedCommit: (entryId: string, raw: string) => void;
 }) {
   const [search, setSearch] = useState("");
+  const [exhibitionAdds, setExhibitionAdds] = useState<Record<string, boolean>>(
+    {},
+  );
   const scoring = eventEntries.filter((entry) => !entry.exhibition);
   const exhibition = eventEntries.filter((entry) => entry.exhibition);
   const scoringCap = caps.maxScoringEntriesPerIndividualEvent;
@@ -828,6 +928,9 @@ function IndividualProgramEvent({
                 <ul className="divide-border mr-3 divide-y rounded-md border">
                   {available.map((row) => {
                     const busy = busyKeys.has(row.membershipId);
+                    const exhibition =
+                      exhibitionAdds[row.membershipId] === true;
+                    const exhId = `add-exh-${row.membershipId}`;
                     return (
                       <li
                         key={row.membershipId}
@@ -836,13 +939,36 @@ function IndividualProgramEvent({
                         <span className="min-w-0 flex-1 truncate text-sm">
                           {row.firstName} {row.lastName}
                         </span>
+                        {scoringFull ? (
+                          <Field
+                            orientation="horizontal"
+                            className="w-auto shrink-0"
+                          >
+                            <Checkbox
+                              id={exhId}
+                              checked={exhibition}
+                              onCheckedChange={(next) =>
+                                setExhibitionAdds((current) => ({
+                                  ...current,
+                                  [row.membershipId]: next === true,
+                                }))
+                              }
+                            />
+                            <FieldLabel
+                              htmlFor={exhId}
+                              className="text-muted-foreground font-normal"
+                            >
+                              Exh
+                            </FieldLabel>
+                          </Field>
+                        ) : null}
                         <Button
                           type="button"
                           variant="ghost"
                           size="icon-sm"
                           disabled={busy}
                           aria-label={`Enter ${row.firstName} ${row.lastName}`}
-                          onClick={() => onAdd(row.membershipId)}
+                          onClick={() => onAdd(row.membershipId, exhibition)}
                         >
                           {busy ? (
                             <Spinner aria-hidden />
@@ -861,8 +987,13 @@ function IndividualProgramEvent({
             <FieldLegend variant="label">In this event</FieldLegend>
             {scoringFull ? (
               <FieldDescription>
-                Scoring is full. Adding more swimmers marks them as exhibition.
+                Scoring is full. Check Exh to add a swimmer who will not score.
               </FieldDescription>
+            ) : null}
+            {error ? (
+              <p className="text-destructive text-sm" role="alert">
+                {error}
+              </p>
             ) : null}
             {enteredRows.length === 0 ? (
               <FieldDescription>
@@ -901,7 +1032,10 @@ function IndividualProgramEvent({
                           value={seedValue}
                           placeholder="NT"
                           onChange={(e) =>
-                            onSeedDraft(entry.id, e.target.value)
+                            onSeedDraft(
+                              entry.id,
+                              formatTypedSwimTime(e.target.value),
+                            )
                           }
                           onBlur={() => onSeedCommit(entry.id, seedValue)}
                         />
@@ -1074,7 +1208,9 @@ function RelayProgramEvent({
                     className="font-timing h-8 w-28 tabular-nums"
                     value={seedValue}
                     placeholder="NT"
-                    onChange={(e) => onSeedDraft(letter, e.target.value)}
+                    onChange={(e) =>
+                      onSeedDraft(letter, formatTypedSwimTime(e.target.value))
+                    }
                     onBlur={() => onSeedCommit(letter, seedValue)}
                   />
                   {letters.indexOf(letter) > 0 ? (

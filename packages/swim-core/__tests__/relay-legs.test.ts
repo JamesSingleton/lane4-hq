@@ -13,11 +13,47 @@ import {
   relayLegTimeKey,
   relayLetterFromIndex,
   relaySlotLabel,
+  resolveImportedRelayLineup,
   shouldCreditRelayLeadOff,
   strokeForRelayLeg,
 } from "../src/relay-legs";
 
 describe("relay slots", () => {
+  it("imports a relay when the four racing legs match and an alternate does not", () => {
+    const names = [
+      "Orion Chaturvedi",
+      "Dante Flores",
+      "Hudson Gerhke",
+      "Hayden Meyers",
+      "Ruben Anguiano",
+      "Bennett Munkirs",
+      "Cash Hotton",
+    ];
+    const roster = new Set(names.slice(0, 5));
+    const lineup = resolveImportedRelayLineup(names, (name) =>
+      roster.has(name) ? name : null,
+    );
+    expect(lineup).toEqual([
+      { legOrder: 1, resolved: "Orion Chaturvedi" },
+      { legOrder: 2, resolved: "Dante Flores" },
+      { legOrder: 3, resolved: "Hudson Gerhke" },
+      { legOrder: 4, resolved: "Hayden Meyers" },
+      { legOrder: 5, resolved: "Ruben Anguiano" },
+    ]);
+  });
+
+  it("rejects a relay when a racing leg is unmatched", () => {
+    expect(
+      resolveImportedRelayLineup(
+        ["A One", "B Two", "C Three", "D Four", "E Alt"],
+        (name) => (name === "D Four" ? null : name),
+      ),
+    ).toBeNull();
+    expect(
+      resolveImportedRelayLineup(["A One", "B Two", "C Three"], () => "x"),
+    ).toBeNull();
+  });
+
   it("labels primary legs and alternates #5–#8", () => {
     expect(isRelayAlternateSlot(4)).toBe(false);
     expect(isRelayAlternateSlot(5)).toBe(true);

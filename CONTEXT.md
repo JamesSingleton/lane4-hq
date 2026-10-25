@@ -28,6 +28,10 @@ _Avoid_: matrix, by-name board
 Max scoring (non-exhibition) names per individual event, and max relay teams (A/B/C) per relay event, from the team’s high-school association. Not the per-athlete EV3 entry limits, and not a governing-body lookup table.
 _Avoid_: AIA table, CIF table, max entries per athlete
 
+**Individual entry admission**:
+Whether a coach may add, restore, or mark scoring one swimmer in one individual event. Exhibition is admitted only when the coach marked it. A full association event cap refuses the scoring entry. It does not turn the entry into exhibition.
+_Avoid_: auto exhibition, cap exception
+
 **Competition course**:
 The physical pool course for a meet: SCY, SCM, or LCM. It identifies event keys, results, and personal bests.
 

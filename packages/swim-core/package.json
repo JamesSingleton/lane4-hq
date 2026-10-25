@@ -31,7 +31,9 @@
     "./meet-attendance": "./src/meet-attendance.ts",
     "./split-capture": "./src/split-capture.ts",
     "./meet-results-csv": "./src/meet-results-csv.ts",
+    "./individual-entry-admission": "./src/individual-entry-admission.ts",
     "./meet-import-merge": "./src/meet-import-merge.ts",
+    "./meet-import-plan": "./src/meet-import-plan.ts",
     "./roster-import": "./src/roster-import.ts"
   },
   "scripts": {
