@@ -16,6 +16,8 @@ import { MeetExportButtons } from "./meet-export-buttons";
 import { MeetHeaderLinks } from "./meet-header-links";
 import { MeetMasthead } from "./meet-masthead";
 
+export const maxDuration = 60;
+
 export default async function MeetDetailLayout({
   children,
   params,

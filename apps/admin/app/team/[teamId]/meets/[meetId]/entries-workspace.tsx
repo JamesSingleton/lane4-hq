@@ -181,6 +181,8 @@ function programPropsFromShared(
         firstName,
         lastName,
         status,
+        stroke,
+        eventKey,
         exhibition,
         seedTimeMs,
       }) => ({
@@ -190,10 +192,13 @@ function programPropsFromShared(
         firstName,
         lastName,
         status,
+        stroke,
+        eventKey,
         exhibition,
         seedTimeMs,
       }),
     ),
+    limits: shared.limits,
     relayLegs: shared.relayLegs.map(
       ({ meetEventId, membershipId, legOrder, relayLetter }) => ({
         meetEventId,

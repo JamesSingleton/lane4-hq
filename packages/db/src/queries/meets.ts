@@ -814,6 +814,88 @@ export async function addMeetResult(
   return id;
 }
 
+/** Import path: one row per swimmer, event, and round. A second upload updates it. */
+export async function upsertImportedMeetResult(
+  meetId: string,
+  meetEventId: string,
+  swimmerId: string,
+  timeMs: number,
+  options?: {
+    place?: number;
+    isDq?: boolean;
+    previousBestTimeMs?: number | null;
+    splitTimes?: number[] | null;
+    round?: MeetResultRound | null;
+    heat?: number | null;
+    lane?: number | null;
+    exhibition?: boolean;
+    dqCode?: string | null;
+  },
+) {
+  const round = options?.round ?? null;
+  const [existing] = await db
+    .select({ id: meetResults.id })
+    .from(meetResults)
+    .where(
+      and(
+        eq(meetResults.meetId, meetId),
+        eq(meetResults.meetEventId, meetEventId),
+        eq(meetResults.swimmerId, swimmerId),
+        round == null
+          ? isNull(meetResults.round)
+          : eq(meetResults.round, round),
+      ),
+    )
+    .limit(1);
+
+  if (!existing) {
+    return addMeetResult(meetId, meetEventId, swimmerId, timeMs, options);
+  }
+
+  const [meet] = await db
+    .select({ startDate: meets.startDate, course: meets.course })
+    .from(meets)
+    .where(eq(meets.id, meetId))
+    .limit(1);
+  const [event] = await db
+    .select({
+      eventKey: meetEvents.eventKey,
+      stroke: meetEvents.stroke,
+      course: swimEvents.course,
+    })
+    .from(meetEvents)
+    .leftJoin(swimEvents, eq(swimEvents.eventKey, meetEvents.eventKey))
+    .where(eq(meetEvents.id, meetEventId))
+    .limit(1);
+
+  await db
+    .update(meetResults)
+    .set({
+      timeMs,
+      place: options?.place ?? null,
+      isDq: options?.isDq ?? false,
+      splitTimes: options?.splitTimes ?? null,
+      heat: options?.heat ?? null,
+      lane: options?.lane ?? null,
+      exhibition: options?.exhibition ?? false,
+      dqCode: options?.dqCode ?? null,
+    })
+    .where(eq(meetResults.id, existing.id));
+
+  if (event && !options?.isDq && !isRelayStroke(event.stroke, event.eventKey)) {
+    await upsertBestTime({
+      swimmerId,
+      eventKey: event.eventKey,
+      course: event.course ?? meet?.course ?? "SCY",
+      timeMs,
+      achievedAt: meet?.startDate ?? new Date(),
+      meetId,
+    });
+  }
+
+  return existing.id;
+}
+
 export type ResolvedMeetResultInput = {
   meetEventId: string;
   swimmerId: string;

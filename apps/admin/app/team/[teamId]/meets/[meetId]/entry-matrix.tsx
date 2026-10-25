@@ -409,11 +409,16 @@ export function EntryMatrix({
     setError("");
     startTransition(async () => {
       try {
-        await Promise.all(
+        const results = await Promise.all(
           draftEntries.map((entry) =>
             updateMeetEntryStatusAction(teamId, meetId, entry.id, "approved"),
           ),
         );
+        const failed = results.find((result) => !result.ok);
+        if (failed && !failed.ok) {
+          setError(failed.message);
+          return;
+        }
         router.refresh();
       } catch (err) {
         setError(

@@ -20,6 +20,39 @@ export function isRelayAlternateSlot(legOrder: number): boolean {
   return legOrder >= 5 && legOrder <= RELAY_MAX_LEGS;
 }
 
+export type ResolvedRelayLeg<T> = {
+  legOrder: number;
+  resolved: T;
+};
+
+/**
+ * Meet Manager lists racing legs 1–4, then alternates 5–8, on one relay.
+ * The result imports when every racing leg resolves. An unmatched alternate
+ * is left off the lineup.
+ */
+export function resolveImportedRelayLineup<T>(
+  swimmerNames: readonly string[],
+  resolve: (swimmerName: string, legOrder: number) => T | null,
+): ResolvedRelayLeg<T>[] | null {
+  const named = swimmerNames
+    .slice(0, RELAY_MAX_LEGS)
+    .map((name, index) => ({ name: name.trim(), legOrder: index + 1 }))
+    .filter((leg) => leg.name.length > 0);
+  const racing = named.filter((leg) => leg.legOrder <= RELAY_PRIMARY_LEG_COUNT);
+  if (racing.length !== RELAY_PRIMARY_LEG_COUNT) return null;
+
+  const legs: ResolvedRelayLeg<T>[] = [];
+  for (const leg of named) {
+    const resolved = resolve(leg.name, leg.legOrder);
+    if (resolved == null) {
+      if (leg.legOrder <= RELAY_PRIMARY_LEG_COUNT) return null;
+      continue;
+    }
+    legs.push({ legOrder: leg.legOrder, resolved });
+  }
+  return legs;
+}
+
 export function relaySlotLabel(legOrder: number): string {
   if (isRelayAlternateSlot(legOrder)) return `Alt ${legOrder}`;
   return `Leg ${legOrder}`;

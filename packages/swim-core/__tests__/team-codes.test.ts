@@ -26,6 +26,11 @@ describe("team codes", () => {
     expect(matchesTeamCode("MARI", "MARI", "AZ")).toBe(true);
     expect(matchesTeamCode("MARI-AZ", "MARI", "AZ")).toBe(true);
     expect(matchesTeamCode("MARIAZ", "MARI", "AZ")).toBe(true);
+    expect(matchesTeamCode("AZMARI", "MARI", "AZ")).toBe(true);
+    expect(matchesTeamCode("AZMARI", "MARI", null)).toBe(true);
+    expect(matchesTeamCode("AZMARI", "MARI", "GA")).toBe(false);
+    expect(matchesTeamCode("AZWFHS", "MARI", "AZ")).toBe(false);
+    expect(matchesTeamCode("MARI1A", "MARI", "AZ")).toBe(false);
     expect(matchesTeamCode("WFHS", "MARI", "AZ")).toBe(false);
     expect(matchesTeamCode(undefined, "MARI", "AZ")).toBe(false);
     expect(matchesTeamCode("WFHS", null, "AZ")).toBe(true);

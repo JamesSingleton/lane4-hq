@@ -27,7 +27,7 @@ export function normalizeLscCode(
   return code;
 }
 
-/** Whether a result-file team code identifies this team, with an optional LSC suffix. */
+/** Whether a result-file team code identifies this team, including an LSC before or after the code (`AZMARI`, `MARIAZ`). */
 export function matchesTeamCode(
   fileTeamCode: string | null | undefined,
   teamCode: string | null | undefined,
@@ -44,7 +44,17 @@ export function matchesTeamCode(
   if (actual === expectedCode) return true;
 
   const lsc = normalizeLscCode(lscCode);
-  return lsc != null && actual === `${expectedCode}${lsc}`;
+  const prefixed =
+    actual.length === expectedCode.length + LSC_CODE_LENGTH &&
+    (actual.startsWith(expectedCode) || actual.endsWith(expectedCode));
+  if (!prefixed) {
+    return false;
+  }
+  const extra = actual.startsWith(expectedCode)
+    ? actual.slice(expectedCode.length)
+    : actual.slice(0, LSC_CODE_LENGTH);
+  if (normalizeLscCode(extra) == null) return false;
+  return lsc == null || extra === lsc;
 }
 
 /** Folder/file stem like `MARI-AZ-Entries-…`. */

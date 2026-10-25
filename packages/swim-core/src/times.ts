@@ -23,6 +23,28 @@ export function parseTime(time: string): number {
   return Math.round(Number.parseFloat(trimmed) * 1000);
 }
 
+/**
+ * Fill a time from the right as hundredths while the coach types.
+ * `23752` becomes `2:37.52`. `5234` becomes `52.34`.
+ * At most seven digits: hours, minutes, seconds, and hundredths.
+ */
+export function formatTypedSwimTime(raw: string): string {
+  const digits = raw.replace(/\D/g, "").slice(0, 7);
+  if (digits.length <= 2) return digits;
+
+  const hundredths = digits.slice(-2);
+  const head = digits.slice(0, -2);
+  if (head.length <= 2) return `${head}.${hundredths}`;
+
+  const seconds = head.slice(-2);
+  const minutes = head.slice(0, -2);
+  if (minutes.length <= 2) return `${minutes}:${seconds}.${hundredths}`;
+
+  const mm = minutes.slice(-2);
+  const hours = minutes.slice(0, -2);
+  return `${hours}:${mm}:${seconds}.${hundredths}`;
+}
+
 /** Format milliseconds to swim time string */
 export function formatTime(ms: number): string {
   if (ms <= 0) return "NT";

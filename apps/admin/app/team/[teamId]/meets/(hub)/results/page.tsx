@@ -5,6 +5,8 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { MeetImportButton } from "../../meet-import-button";
 
+export const maxDuration = 60;
+
 export async function generateMetadata({
   params,
 }: {
