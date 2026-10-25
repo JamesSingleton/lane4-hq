@@ -24,7 +24,7 @@
     "@polar-sh/sdk": "^1.0.2",
     "@t3-oss/env-nextjs": "catalog:",
     "drizzle-orm": "catalog:",
-    "stripe": "^23.0.0",
+    "stripe": "^23.0.1",
     "zod": "catalog:"
   },
   "devDependencies": {

@@ -2,7 +2,7 @@
   "name": "lane4hq",
   "private": true,
   "license": "AGPL-3.0-only",
-  "packageManager": "pnpm@12.4.2",
+  "packageManager": "pnpm@12.15.0",
   "engines": {
     "node": ">=24"
   },
@@ -38,7 +38,7 @@
     "email:dev": "turbo email:dev"
   },
   "devDependencies": {
-    "@biomejs/biome": "^2.6.2",
+    "@biomejs/biome": "^2.6.3",
     "@lane4hq/typescript-config": "workspace:*",
     "@neon/config": "^1.9.3",
     "@types/node": "catalog:",
