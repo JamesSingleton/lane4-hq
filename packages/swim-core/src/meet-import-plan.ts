@@ -330,11 +330,20 @@ export function planImportedIndividualEntries(
   return { accepted, entriesSkipped, unmatched, warnings, counts: next };
 }
 
+/** CL2 `NS` or HY3 time code R. A no-swim is not a disqualification. */
+export function isImportedNoSwim(
+  time: string | undefined,
+  noSwim?: boolean,
+): boolean {
+  return noSwim === true || (time ?? "").trim().toUpperCase() === "NS";
+}
+
 /** A file time that can be stored, or a quiet skip that does not count. */
 export function planImportedTime(
   time: string | undefined,
   isDq: boolean,
 ): { ok: true; timeMs: number } | { ok: false } {
+  if (isImportedNoSwim(time)) return { ok: true, timeMs: 0 };
   const parsedMs = parseTime(time ?? "");
   if (Number.isFinite(parsedMs) && parsedMs > 0) {
     return { ok: true, timeMs: parsedMs };

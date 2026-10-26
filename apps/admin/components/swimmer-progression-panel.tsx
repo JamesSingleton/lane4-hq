@@ -1,6 +1,6 @@
 import { formatDateOnlyLabel } from "@lane4hq/swim-core/calendar-date";
 import { formatBestTimeEventLabel } from "@lane4hq/swim-core/team-types";
-import { formatTime } from "@lane4hq/swim-core/times";
+import { formatResultMark } from "@lane4hq/swim-core/times";
 import {
   Card,
   CardContent,
@@ -30,6 +30,7 @@ export type SwimmerTimeHistoryRow = {
   timeMs: number;
   place: number | null;
   isDq: boolean;
+  dqCode?: string | null;
   label: string;
   achievedAt: Date;
   course: string;
@@ -128,7 +129,11 @@ export function SwimmerProgressionPanel({
                       )}
                     </TableCell>
                     <TableCell className="font-mono font-timing">
-                      {formatTime(result.timeMs)}
+                      {formatResultMark(
+                        result.timeMs,
+                        result.isDq,
+                        result.dqCode,
+                      )}
                     </TableCell>
                     <TableCell>{result.place ?? "—"}</TableCell>
                     <TableCell>{result.isDq ? "Yes" : "No"}</TableCell>

@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   decideImportedAthlete,
   importedEventSlot,
+  isImportedNoSwim,
   meetImportSummaryWarning,
   planImportedEventWrites,
   planImportedIndividualEntries,
@@ -353,6 +354,10 @@ describe("planImportedTime and results", () => {
       ok: true,
       timeMs: 62000,
     });
+    expect(planImportedTime("NS", false)).toEqual({ ok: true, timeMs: 0 });
+    expect(planImportedTime(" ns ", true)).toEqual({ ok: true, timeMs: 0 });
+    expect(isImportedNoSwim("1:00.00", true)).toBe(true);
+    expect(isImportedNoSwim(undefined, false)).toBe(false);
     expect(planImportedTime("", true)).toEqual({ ok: true, timeMs: 0 });
     expect(planImportedTime("1:02.00", true).ok).toBe(true);
     expect(planImportedTime("nope", false)).toEqual({ ok: false });
@@ -422,6 +427,16 @@ describe("planImportedTime and results", () => {
         isDq: false,
       }),
     ).toEqual({ outcome: "import", timeMs: 59500 });
+    expect(
+      planImportedIndividualResult({
+        isTeamAthlete: true,
+        resolved: true,
+        meetEventId: "e",
+        isRelayEvent: false,
+        time: "NS",
+        isDq: false,
+      }),
+    ).toEqual({ outcome: "import", timeMs: 0 });
   });
 });
 

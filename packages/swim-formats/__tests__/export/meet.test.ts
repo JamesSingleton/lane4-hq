@@ -1085,6 +1085,52 @@ describe("exportHy3", () => {
     expect(b?.results?.some((r) => r.isDq)).toBe(true);
   });
 
+  it("writes a no-swim as HY3 time code R", () => {
+    const meet: ParsedMeet = {
+      ...baseMeet,
+      entries: baseMeet.entries,
+      results: [
+        {
+          eventNumber: 1,
+          swimmerName: "Ada Lovelace",
+          time: "NS",
+          noSwim: true,
+          resultType: "finals",
+        },
+        {
+          eventNumber: 2,
+          swimmerName: "Bob Baker",
+          time: "NS",
+          resultType: "finals",
+        },
+      ],
+      relays: [
+        {
+          eventNumber: 10,
+          swimmerNames: ["A One", "B Two", "C Three", "D Four"],
+          seedTime: "1:40.00",
+          results: [{ time: "NS", noSwim: true, resultType: "finals" }],
+        },
+      ],
+    };
+    const text = exportHy3(meet);
+    const e2 = text.split(/\r?\n/).filter((row) => row.startsWith("E2"));
+    expect(e2[0]?.slice(12, 13)).toBe("R");
+    expect(e2[1]?.slice(12, 13)).toBe("R");
+    const parsed = parseHy3(text);
+    expect(
+      parsed.results.find((result) => result.swimmerName === "Ada Lovelace"),
+    ).toMatchObject({ time: "NS", isDq: false, noSwim: true });
+    expect(
+      parsed.results.find((result) => result.swimmerName === "Bob Baker"),
+    ).toMatchObject({ time: "NS", isDq: false, noSwim: true });
+    expect(parsed.relays?.[0]?.results?.[0]).toMatchObject({
+      time: "NS",
+      isDq: false,
+      noSwim: true,
+    });
+  });
+
   it("derives the A1 title from importKind for results/roster/entries", () => {
     const base = { ...baseMeet, entries: [], results: [] };
     expect(
@@ -1721,6 +1767,20 @@ describe("exportCl2", () => {
     const finals = parsed.results.find((r) => r.resultType === "finals");
     expect(prelim?.time).toBe("28.00");
     expect(finals?.time).toBe("27.50");
+  });
+
+  it("writes a CL2 G0 when only heat or only lane is present", () => {
+    const text = exportCl2({
+      ...baseMeet,
+      entries: [],
+      results: [
+        { swimmerName: "Heat Only", time: "30.00", heat: 2 },
+        { swimmerName: "Lane Only", time: "31.00", lane: 4 },
+      ],
+      relays: [],
+    });
+    expect(text).toContain("H02 L00");
+    expect(text).toContain("H00 L04");
   });
 
   it("re-exports azsi-results.cl2 with comparable result counts", () => {

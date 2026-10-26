@@ -481,6 +481,84 @@ describe("parseHy3", () => {
     expect(meet.results[0]).toMatchObject({ time: "DQ", isDq: true });
   });
 
+  it("reads HY3 time code R as a no-swim, not a DQ", () => {
+    function put(line: string[], oneBased: number, s: string) {
+      for (let i = 0; i < s.length; i++) line[oneBased - 1 + i] = s[i]!;
+    }
+    function blank(len = 130): string[] {
+      return Array.from({ length: len }, () => " ");
+    }
+    function individual(eventNumber: string): string[] {
+      const e1 = blank();
+      put(e1, 1, "E1");
+      put(e1, 3, "F");
+      put(e1, 4, "    1");
+      put(e1, 14, "F");
+      put(e1, 16, "    50");
+      put(e1, 22, "A");
+      put(e1, 39, eventNumber.padStart(4));
+      return e1;
+    }
+    function round(tag: "E2" | "F2", code: string, kind = "F"): string[] {
+      const row = blank();
+      put(row, 1, tag);
+      put(row, 3, kind);
+      put(row, 4, "    0.00");
+      if (code) put(row, 13, code);
+      return row;
+    }
+
+    const d1 = blank();
+    put(d1, 1, "D1");
+    put(d1, 3, "F");
+    put(d1, 4, "    1");
+    put(d1, 9, "Lane");
+    put(d1, 29, "Nia");
+
+    const f1 = blank();
+    put(f1, 1, "F1");
+    put(f1, 3, "TEAM");
+    put(f1, 8, "A");
+    put(f1, 14, "F");
+    put(f1, 16, "   200");
+    put(f1, 22, "A");
+    put(f1, 39, "   8");
+
+    const meet = parseHy3(
+      [
+        "A102Meet Results             Hy-Tek",
+        d1.join(""),
+        individual("   4").join(""),
+        round("E2", "R").join(""),
+        individual("   5").join(""),
+        round("E2", "").join(""),
+        individual("   6").join(""),
+        round("E2", "Q").join(""),
+        f1.join(""),
+        round("F2", "", "P").join(""),
+        round("F2", "R").join(""),
+      ].join("\n"),
+    );
+
+    const nia = meet.results.find((result) => result.eventNumber === 4);
+    expect(nia).toMatchObject({
+      time: "NS",
+      isDq: false,
+      noSwim: true,
+      resultType: "finals",
+    });
+    expect(meet.results.some((result) => result.eventNumber === 5)).toBe(false);
+    expect(
+      meet.results.find((result) => result.eventNumber === 6),
+    ).toMatchObject({ time: "DQ", isDq: true });
+    expect(meet.relays?.[0]?.results?.[0]).toMatchObject({
+      time: "NS",
+      isDq: false,
+      noSwim: true,
+      resultType: "finals",
+    });
+  });
+
   it("reads team identity, age-up date, class year, swimmer id, and C4 text", () => {
     const line = (width = 130) => Array.from({ length: width }, () => " ");
     const put = (chars: string[], col: number, value: string) => {

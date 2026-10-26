@@ -759,6 +759,7 @@ export type SwimmerTimeHistoryRow = {
   timeMs: number;
   place: number | null;
   isDq: boolean;
+  dqCode: string | null;
   meetId: string | null;
   label: string;
   achievedAt: Date;
@@ -813,6 +814,7 @@ export async function getSwimmerTimeHistory(
         timeMs: meetResults.timeMs,
         place: meetResults.place,
         isDq: meetResults.isDq,
+        dqCode: meetResults.dqCode,
         meetId: meets.id,
         label: meets.name,
         achievedAt: meets.startDate,
@@ -908,6 +910,7 @@ export async function getSwimmerTimeHistory(
       timeMs: row.timeMs,
       place: null,
       isDq: false,
+      dqCode: null,
       meetId: row.meetId,
       label: `Lead-off · ${row.meetName}`,
       achievedAt: row.achievedAt,
@@ -930,6 +933,7 @@ export async function getSwimmerTimeHistory(
         timeMs: row.timeMs,
         place: row.place,
         isDq: row.isDq,
+        dqCode: row.dqCode,
         meetId: row.meetId,
         label: row.label,
         achievedAt: row.achievedAt,
@@ -948,6 +952,7 @@ export async function getSwimmerTimeHistory(
       timeMs: row.timeMs,
       place: null,
       isDq: false,
+      dqCode: null,
       meetId: null,
       label: row.label?.trim() || "Manual",
       achievedAt: row.achievedAt,

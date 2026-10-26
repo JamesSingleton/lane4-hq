@@ -86,6 +86,7 @@ import {
 import {
   decideImportedAthlete,
   importedEventSlot,
+  isImportedNoSwim,
   meetImportSummaryWarning,
   type PreparedFileEntry,
   planImportedEventWrites,
@@ -919,6 +920,91 @@ async function applyFileOwnedMeetFields(
   });
 }
 
+function relaySplitSwimmers(
+  roster: Awaited<ReturnType<typeof getRoster>>,
+  resolvedLegs: Array<{
+    legOrder: number;
+    resolved: { membershipId: string };
+  }>,
+  saved: {
+    requireSavedMatch: boolean;
+    savedLegs: Array<{ membershipId: string; legOrder: number }>;
+  },
+):
+  | Array<{
+      legOrder: number;
+      membershipId: string;
+      swimmerId: string;
+      swimmerGender: "male" | "female";
+    }>
+  | undefined {
+  const swimmers: Array<{
+    legOrder: number;
+    membershipId: string;
+    swimmerId: string;
+    swimmerGender: "male" | "female";
+  }> = [];
+  for (const leg of resolvedLegs) {
+    if (leg.legOrder > 4) continue;
+    if (
+      saved.requireSavedMatch &&
+      !saved.savedLegs.some(
+        (row) =>
+          row.legOrder === leg.legOrder &&
+          row.membershipId === leg.resolved.membershipId,
+      )
+    ) {
+      continue;
+    }
+    const member = roster.find(
+      (row) => row.membershipId === leg.resolved.membershipId,
+    );
+    if (!member) continue;
+    swimmers.push({
+      legOrder: leg.legOrder,
+      membershipId: member.membershipId,
+      swimmerId: member.swimmerId,
+      swimmerGender: member.gender,
+    });
+  }
+  return swimmers.length > 0 ? swimmers : undefined;
+}
+
+function relayAttemptSplits(
+  attempt: { legSplits?: Array<{ legOrder: number; time: string }> },
+  swimmers:
+    | Array<{
+        legOrder: number;
+        membershipId: string;
+        swimmerId: string;
+        swimmerGender: "male" | "female";
+      }>
+    | undefined,
+): Array<{
+  membershipId: string;
+  swimmerId: string;
+  swimmerGender: "male" | "female";
+  legOrder: number;
+  timeMs: number;
+}> {
+  if (!swimmers || !attempt.legSplits) return [];
+  const splits = [];
+  for (const leg of attempt.legSplits) {
+    const swimmer = swimmers.find((row) => row.legOrder === leg.legOrder);
+    if (!swimmer) continue;
+    const timeMs = parseTime(leg.time);
+    if (!Number.isFinite(timeMs) || timeMs <= 0) continue;
+    splits.push({
+      membershipId: swimmer.membershipId,
+      swimmerId: swimmer.swimmerId,
+      swimmerGender: swimmer.swimmerGender,
+      legOrder: swimmer.legOrder,
+      timeMs,
+    });
+  }
+  return splits;
+}
+
 export async function importMeetFileAction(
   teamId: string,
   files: MeetImportFilePayload[],
@@ -1442,6 +1528,7 @@ export async function importMeetFileAction(
         continue;
       }
 
+      const noSwim = isImportedNoSwim(result.time, result.noSwim);
       await upsertImportedMeetResult(
         meetId,
         meetEventId,
@@ -1449,13 +1536,13 @@ export async function importMeetFileAction(
         plannedResult.timeMs,
         {
           place: result.place,
-          isDq: result.isDq,
+          isDq: noSwim ? false : result.isDq,
           splitTimes: result.splitsMs,
           round: result.resultType,
           heat: result.heat,
           lane: result.lane,
           exhibition: result.exhibition,
-          dqCode: result.dqCode,
+          dqCode: noSwim ? "NS" : result.dqCode,
         },
       );
       resultSwimmerIds.add(resolved.swimmerId);
@@ -1501,6 +1588,12 @@ export async function importMeetFileAction(
       meetEventId: string;
       relayLetter: string;
       attempts: NonNullable<ParsedRelayEntry["results"]>;
+      splitSwimmers?: Array<{
+        legOrder: number;
+        membershipId: string;
+        swimmerId: string;
+        swimmerGender: "male" | "female";
+      }>;
     }> = [];
     const persistedRelayLegs = attachingResults
       ? await getMeetRelayLegs(meetId)
@@ -1572,6 +1665,16 @@ export async function importMeetFileAction(
               .map((leg) => leg.legOrder),
           )
         : { action: "write" as const };
+      const splitSwimmers = resolvedLegs
+        ? relaySplitSwimmers(roster, resolvedLegs, {
+            requireSavedMatch: lineupPlan.action === "keep",
+            savedLegs: persistedRelayLegs.filter(
+              (leg) =>
+                leg.meetEventId === meetEventId &&
+                leg.relayLetter.toUpperCase() === letter,
+            ),
+          })
+        : undefined;
       if (lineupPlan.action === "skip" || !resolvedLegs) {
         if (lineupPlan.action === "keep" && relay.results?.length) {
           relayResultsToImport.push({
@@ -1629,6 +1732,7 @@ export async function importMeetFileAction(
           meetEventId,
           relayLetter: letter,
           attempts: relay.results,
+          splitSwimmers,
         });
         if (lineupPlan.action === "keep") relaysAdded++;
       }
@@ -1676,20 +1780,31 @@ export async function importMeetFileAction(
         continue;
       }
       for (const attempt of relay.attempts) {
+        const noSwim = isImportedNoSwim(attempt.time, attempt.noSwim);
         const timed = planImportedTime(attempt.time, attempt.isDq ?? false);
         if (!timed.ok) continue;
-        await upsertMeetRelayResult({
-          meetId,
-          meetEventId: relay.meetEventId,
-          relayLetter: relay.relayLetter,
-          round: attempt.resultType ?? null,
-          timeMs: timed.timeMs,
-          heat: attempt.heat ?? null,
-          lane: attempt.lane ?? null,
-          exhibition: attempt.exhibition ?? false,
-          isDq: attempt.isDq ?? false,
-          dqCode: attempt.dqCode ?? null,
-        });
+        const splits = noSwim
+          ? []
+          : relayAttemptSplits(attempt, relay.splitSwimmers);
+        const payloads = splits.length > 0 ? splits : [null];
+        for (const split of payloads) {
+          const saved = await upsertMeetRelayResult({
+            meetId,
+            meetEventId: relay.meetEventId,
+            relayLetter: relay.relayLetter,
+            round: attempt.resultType ?? null,
+            timeMs: timed.timeMs,
+            heat: attempt.heat ?? null,
+            lane: attempt.lane ?? null,
+            exhibition: attempt.exhibition ?? false,
+            isDq: noSwim ? false : (attempt.isDq ?? false),
+            dqCode: noSwim ? "NS" : (attempt.dqCode ?? null),
+            split,
+          });
+          for (const swimmerId of saved.creditedSwimmerIds) {
+            resultSwimmerIds.add(swimmerId);
+          }
+        }
         resultsAdded++;
       }
     }

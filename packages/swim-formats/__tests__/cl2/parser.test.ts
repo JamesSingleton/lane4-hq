@@ -319,8 +319,75 @@ describe("parseCl2Meet", () => {
     expect(
       meet.results.find((r) => r.swimmerName.includes("Pat")),
     ).toMatchObject({
-      isDq: true,
+      time: "NS",
+      isDq: false,
+      noSwim: true,
     });
+  });
+
+  it("keeps a D0 no-swim out of the DQ column", () => {
+    const legacy = parseCl2Meet(
+      [
+        "A01V3      02Meet Results                  Hy-Tek",
+        cl2AthleteLine("D0", {
+          eventNumber: 4,
+          last: "No",
+          first: "Swim",
+          time: "NS",
+        }),
+      ].join("\n"),
+    );
+    expect(legacy.results[0]).toMatchObject({
+      time: "NS",
+      isDq: false,
+      noSwim: true,
+    });
+
+    const line = (tag: string) => `${tag}${" ".repeat(158)}`.slice(0, 160);
+    const put = (raw: string, col: number, value: string) => {
+      const chars = raw.split("");
+      for (let i = 0; i < value.length; i++) chars[col - 1 + i] = value[i]!;
+      return chars.join("");
+    };
+    let finals = line("D0");
+    finals = put(finals, 12, "Lane, Nia");
+    finals = put(finals, 116, "      NS");
+    let split = line("G0");
+    split = put(split, 12, "Lane, Nia");
+    split = put(split, 56, "1 2  50C");
+    const withSplits = parseCl2Meet(
+      ["A01V3      02Meet Results                  Hy-Tek", finals, split].join(
+        "\n",
+      ),
+    );
+    expect(withSplits.results).toEqual([
+      expect.objectContaining({
+        swimmerName: "Nia Lane",
+        time: "NS",
+        isDq: false,
+        noSwim: true,
+        resultType: "finals",
+      }),
+    ]);
+
+    let second = line("D0");
+    second = put(second, 12, "Lane, Nia");
+    second = put(second, 69, "1001 12");
+    second = put(second, 116, "      NS");
+    finals = put(finals, 69, "2001  4");
+    const both = parseCl2Meet(
+      [
+        "A01V3      02Meet Results                  Hy-Tek",
+        finals,
+        second,
+        split,
+      ].join("\n"),
+    );
+    expect(
+      both.results
+        .filter((result) => result.noSwim)
+        .map((result) => result.eventNumber),
+    ).toEqual([4, 12]);
   });
 
   it("marks DQ/NS/SCR on result lines", () => {
@@ -907,5 +974,378 @@ describe("parseCl2Meet", () => {
     );
     expect(meet.teamCode).toBe("AZX");
     expect(meet.entries[0]?.usaMemberId).toBeUndefined();
+  });
+
+  it("keeps relay splits off individual results and stores the lead-off", () => {
+    const blank = (tag: string) => `${tag}${" ".repeat(159)}`.slice(0, 160);
+    const put = (raw: string, col: number, value: string) => {
+      const chars = raw.split("");
+      for (let i = 0; i < value.length; i++) chars[col - 1 + i] = value[i]!;
+      return chars.join("");
+    };
+    const e0 = (() => {
+      let line = blank("E0");
+      line = put(line, 12, "A");
+      line = put(line, 13, "AZMARI");
+      line = put(line, 21, "M");
+      line = put(line, 23, "4006");
+      line = put(line, 27, "  21");
+      line = put(line, 73, " 3:46.22");
+      return line;
+    })();
+    const leg = (name: string, order: string) => {
+      let line = blank("F0");
+      line = put(line, 16, "AZMARI");
+      line = put(line, 22, "A");
+      line = put(line, 23, name);
+      line = put(line, 78, order);
+      return line;
+    };
+    const split = (times: string) => {
+      let line = blank("G0");
+      line = put(line, 56, `1 8  50C ${times}`);
+      line = put(line, 160, "F");
+      return line;
+    };
+    let individual = blank("D0");
+    individual = put(individual, 12, "Park, Eve");
+    individual = put(individual, 69, "1004  9");
+    individual = put(individual, 116, " 1:10.19");
+    let individualSplit = blank("G0");
+    individualSplit = put(individualSplit, 12, "Park, Eve");
+    individualSplit = put(individualSplit, 56, "1 2  50C 31.93 1:10.19");
+    individualSplit = put(individualSplit, 160, "F");
+
+    const meet = parseCl2Meet(
+      [
+        "A01V3      02Meet Results                  Hy-Tek",
+        e0,
+        leg("Lane, Ada", " 1"),
+        split("28.78 1:00.22"),
+        leg("Lane, Bea", " 2"),
+        split("1:27.59 1:56.58"),
+        leg("Lane, Cleo", " 3"),
+        split("2:24.42 3:00.48"),
+        leg("Lane, Dot", " 4"),
+        split("3:19.52 3:46.22"),
+        individual,
+        "D3",
+        individualSplit,
+      ].join("\n"),
+    );
+
+    expect(meet.results.map((result) => result.time)).toEqual(["1:10.19"]);
+    expect(meet.results[0]).toMatchObject({
+      swimmerName: "Eve Park",
+      eventNumber: 9,
+      resultType: "finals",
+      splitsMs: [31_930, 70_190],
+    });
+    expect(meet.results.some((result) => result.time === "2:24.42")).toBe(
+      false,
+    );
+    expect(meet.events.some((event) => event.eventNumber === 3)).toBe(false);
+    expect(meet.relays?.[0]?.results?.[0]).toMatchObject({
+      time: "3:46.22",
+      resultType: "finals",
+      legSplits: [{ legOrder: 1, time: "1:00.22" }],
+    });
+  });
+
+  it("does not read a split time fragment as the meet event number", () => {
+    const blank = (tag: string) => `${tag}${" ".repeat(159)}`.slice(0, 160);
+    const put = (raw: string, col: number, value: string) => {
+      const chars = raw.split("");
+      for (let i = 0; i < value.length; i++) chars[col - 1 + i] = value[i]!;
+      return chars.join("");
+    };
+    let dotted = blank("G0");
+    dotted = put(dotted, 12, "Lane, Dot");
+    dotted = put(dotted, 69, ".42   3");
+    dotted = put(dotted, 80, "30.00");
+    let timed = blank("G0");
+    timed = put(timed, 12, "Lane, Tim");
+    timed = put(timed, 69, "10013:00");
+    timed = put(timed, 80, "31.00");
+    const meet = parseCl2Meet(
+      ["A01V3      02Meet Results                  Hy-Tek", dotted, timed].join(
+        "\n",
+      ),
+    );
+    expect(meet.results.map((result) => result.eventNumber)).toEqual([
+      undefined,
+      undefined,
+    ]);
+  });
+
+  it("matches relay and individual checkpoints to the round that owns them", () => {
+    const blank = (tag: string) => `${tag}${" ".repeat(159)}`.slice(0, 160);
+    const put = (raw: string, col: number, value: string) => {
+      const chars = raw.split("");
+      for (let i = 0; i < value.length; i++) chars[col - 1 + i] = value[i]!;
+      return chars.join("");
+    };
+    const relayShell = (finals: string, prelim?: string) => {
+      let line = blank("E0");
+      line = put(line, 12, "A");
+      line = put(line, 13, "AZMARI");
+      line = put(line, 21, "M");
+      line = put(line, 23, "2006");
+      line = put(line, 27, "  15");
+      if (prelim) line = put(line, 55, prelim);
+      line = put(line, 73, finals);
+      return line;
+    };
+    const leg = (name: string, order: string) => {
+      let line = blank("F0");
+      line = put(line, 16, "AZMARI");
+      line = put(line, 22, "A");
+      line = put(line, 23, name);
+      if (order) line = put(line, 78, order);
+      return line;
+    };
+    const relaySplit = (times: string, round: string) => {
+      let line = blank("G0");
+      line = put(line, 56, `1 4  50C ${times}`.trimEnd());
+      if (round) line = put(line, 160, round);
+      return line;
+    };
+
+    const rounds = parseCl2Meet(
+      [
+        "A01V3      02Meet Results                  Hy-Tek",
+        relayShell(" 1:48.00", " 1:50.00"),
+        leg("Lane, Ada", " 1"),
+        relaySplit("25.00", "P"),
+        relaySplit("26.00", "F"),
+        leg("Lane, Bea", " 2"),
+        relaySplit("55.00", "P"),
+        relaySplit("54.00", "F"),
+      ].join("\n"),
+    );
+    const relayResults = rounds.relays?.[0]?.results ?? [];
+    expect(
+      relayResults.find((result) => result.resultType === "prelim")?.legSplits,
+    ).toEqual([{ legOrder: 1, time: "25.00" }]);
+    expect(
+      relayResults.find((result) => result.resultType === "finals")?.legSplits,
+    ).toEqual([{ legOrder: 1, time: "26.00" }]);
+
+    const unmarked = parseCl2Meet(
+      [
+        "A01V3      02Meet Results                  Hy-Tek",
+        relayShell(" 1:40.00"),
+        leg("Lane, Ada", " 1"),
+        relaySplit("40.00", ""),
+      ].join("\n"),
+    );
+    expect(unmarked.relays?.[0]?.results?.[0]?.legSplits).toEqual([
+      { legOrder: 1, time: "40.00" },
+    ]);
+
+    const unmarkedPair = parseCl2Meet(
+      [
+        "A01V3      02Meet Results                  Hy-Tek",
+        relayShell(" 1:40.00", " 1:42.00"),
+        leg("Lane, Ada", " 1"),
+        relaySplit("40.00", ""),
+      ].join("\n"),
+    );
+    expect(
+      unmarkedPair.relays?.[0]?.results?.every(
+        (result) => result.legSplits == null,
+      ),
+    ).toBe(true);
+
+    const stopped = parseCl2Meet(
+      [
+        "A01V3      02Meet Results                  Hy-Tek",
+        relayShell(" 2:00.00"),
+        leg("Lane, Ada", " 1"),
+        relaySplit("0.00 30.00", "F"),
+        relaySplit("20.00", "F"),
+        leg("Lane, Bea", " 3"),
+        relaySplit("1:10.00", "F"),
+        leg("Lane, Cam", " 5"),
+        relaySplit("1:40.00", "F"),
+      ].join("\n"),
+    );
+    expect(stopped.relays?.[0]?.results?.[0]?.legSplits).toEqual([
+      { legOrder: 1, time: "20.00" },
+    ]);
+
+    const noLeadOff = parseCl2Meet(
+      [
+        "A01V3      02Meet Results                  Hy-Tek",
+        relayShell(" 2:00.00"),
+        leg("Lane, Bea", " 2"),
+        relaySplit("55.00", "F"),
+      ].join("\n"),
+    );
+    expect(noLeadOff.relays?.[0]?.results?.[0]?.legSplits).toBeUndefined();
+
+    const disqualified = parseCl2Meet(
+      [
+        "A01V3      02Meet Results                  Hy-Tek",
+        relayShell("      DQ", " 1:50.00"),
+        leg("Lane, Ada", " 1"),
+        relaySplit("25.00", "P"),
+        relaySplit("26.00", "F"),
+      ].join("\n"),
+    );
+    const dqResults = disqualified.relays?.[0]?.results ?? [];
+    expect(
+      dqResults.find((result) => result.resultType === "prelim")?.legSplits,
+    ).toEqual([{ legOrder: 1, time: "25.00" }]);
+    expect(
+      dqResults.find((result) => result.resultType === "finals"),
+    ).toMatchObject({ time: "DQ", isDq: true });
+    expect(
+      dqResults.find((result) => result.resultType === "finals")?.legSplits,
+    ).toBeUndefined();
+
+    const noSwimRelay = parseCl2Meet(
+      [
+        "A01V3      02Meet Results                  Hy-Tek",
+        relayShell("      NS"),
+        leg("Lane, Ada", " 1"),
+        relaySplit("25.00", "F"),
+      ].join("\n"),
+    );
+    expect(noSwimRelay.relays?.[0]?.results?.[0]).toMatchObject({
+      time: "NS",
+      isDq: false,
+      noSwim: true,
+      resultType: "finals",
+    });
+    expect(noSwimRelay.relays?.[0]?.results?.[0]?.legSplits).toBeUndefined();
+
+    let bare = blank("E0");
+    bare = put(bare, 12, "A");
+    bare = put(bare, 13, "AZMARI");
+    bare = put(bare, 23, "2006");
+    bare = put(bare, 27, "  15");
+    const noTeamTime = parseCl2Meet(
+      [
+        "A01V3      02Meet Results                  Hy-Tek",
+        bare,
+        leg("Lane, Ada", " 1"),
+        relaySplit("30.00", "F"),
+      ].join("\n"),
+    );
+    expect(noTeamTime.relays?.[0]?.results).toBeUndefined();
+    expect(noTeamTime.results).toEqual([]);
+
+    const noSplits = parseCl2Meet(
+      [
+        "A01V3      02Meet Results                  Hy-Tek",
+        relayShell(" 1:40.00"),
+        leg("Lane, Ada", " 1"),
+      ].join("\n"),
+    );
+    expect(noSplits.relays?.[0]?.results?.[0]?.legSplits).toBeUndefined();
+
+    const fallbackOrder = parseCl2Meet(
+      [
+        "A01V3      02Meet Results                  Hy-Tek",
+        relayShell(" 1:10.00"),
+        leg("Lane, Ada", ""),
+        relaySplit("32.50", "F"),
+        relayShell(" 1:11.00"),
+        leg("Lane, Bea", " 9"),
+        relaySplit("33.25", "F"),
+      ].join("\n"),
+    );
+    expect(fallbackOrder.relays?.[0]?.results?.[0]?.legSplits).toEqual([
+      { legOrder: 1, time: "32.50" },
+    ]);
+    expect(fallbackOrder.relays?.[1]?.results?.[0]?.legSplits).toEqual([
+      { legOrder: 1, time: "33.25" },
+    ]);
+
+    const emptyRelaySplit = parseCl2Meet(
+      [
+        "A01V3      02Meet Results                  Hy-Tek",
+        relayShell(" 1:10.00"),
+        leg("Lane, Ada", " 1"),
+        relaySplit("", "F"),
+      ].join("\n"),
+    );
+    expect(
+      emptyRelaySplit.relays?.[0]?.results?.[0]?.legSplits,
+    ).toBeUndefined();
+    expect(emptyRelaySplit.results).toEqual([]);
+
+    let bothRounds = blank("D0");
+    bothRounds = put(bothRounds, 12, "Park, Eve");
+    bothRounds = put(bothRounds, 69, "1004  9");
+    bothRounds = put(bothRounds, 98, " 1:12.00");
+    bothRounds = put(bothRounds, 116, " 1:10.19");
+    let unmarkedSplit = blank("G0");
+    unmarkedSplit = put(unmarkedSplit, 56, "1 2  50C 32.00 1:11.00");
+    let finalsOnly = blank("G0");
+    finalsOnly = put(finalsOnly, 56, "1 2  50C 31.93 1:10.19");
+    finalsOnly = put(finalsOnly, 160, "F");
+    let oneRound = blank("D0");
+    oneRound = put(oneRound, 12, "Park, Ida");
+    oneRound = put(oneRound, 69, "1004 10");
+    oneRound = put(oneRound, 116, " 1:11.00");
+    let ned = blank("D0");
+    ned = put(ned, 12, "Park, Ned");
+    ned = put(ned, 69, "1001 11");
+    ned = put(ned, 116, "   59.00");
+    let emptySplit = blank("G0");
+    emptySplit = put(emptySplit, 56, "1 2  50C");
+    let rio = blank("D0");
+    rio = put(rio, 12, "Park, Rio");
+    rio = put(rio, 69, "1001 12");
+    rio = put(rio, 116, "   58.00");
+    let swimoff = blank("G0");
+    swimoff = put(swimoff, 56, "1 2  50C 40.00");
+    swimoff = put(swimoff, 160, "S");
+    const withMarker = put(blank("G0"), 56, "1 2  50C 22.00");
+
+    const individual = parseCl2Meet(
+      [
+        "A01V3      02Meet Results                  Hy-Tek",
+        withMarker,
+        bothRounds,
+        unmarkedSplit,
+        finalsOnly,
+        oneRound,
+        unmarkedSplit,
+        ned,
+        emptySplit,
+        rio,
+        swimoff,
+      ].join("\n"),
+    );
+    const eve = individual.results.filter((result) =>
+      result.swimmerName.includes("Eve"),
+    );
+    expect(
+      eve.find((result) => result.resultType === "prelim")?.splitsMs,
+    ).toBeUndefined();
+    expect(
+      eve.find((result) => result.resultType === "finals")?.splitsMs,
+    ).toEqual([31_930, 70_190]);
+    expect(
+      individual.results.find((result) => result.swimmerName.includes("Ida"))
+        ?.splitsMs,
+    ).toEqual([32_000, 71_000]);
+    expect(
+      individual.results.find((result) => result.swimmerName.includes("Ned"))
+        ?.splitsMs,
+    ).toBeUndefined();
+    expect(
+      individual.results.find((result) => result.swimmerName.includes("Rio"))
+        ?.splitsMs,
+    ).toBeUndefined();
+    expect(individual.results.some((result) => result.time === "22.00")).toBe(
+      false,
+    );
+    expect(individual.results.some((result) => result.time === "40.00")).toBe(
+      false,
+    );
   });
 });

@@ -260,6 +260,26 @@ function toHy3Seconds(time: string | undefined): string {
   return (ms / 1000).toFixed(2);
 }
 
+/** E2/F2 time, time code, and DQ reason. Code R is a no-swim. */
+function hy3ResultFields(result: {
+  time: string;
+  isDq?: boolean;
+  noSwim?: boolean;
+  dqCode?: string;
+}): { seconds: string; code: string; reason: string } {
+  if (result.noSwim || result.time.trim().toUpperCase() === "NS") {
+    return { seconds: "0.00", code: "R", reason: "" };
+  }
+  if (result.isDq) {
+    return {
+      seconds: "",
+      code: "D",
+      reason: (result.dqCode ?? "DQ").slice(0, 2),
+    };
+  }
+  return { seconds: toHy3Seconds(result.time), code: "", reason: "" };
+}
+
 function splitName(name: string): { firstName: string; lastName: string } {
   const parts = name.trim().split(/\s+/).filter(Boolean);
   if (parts.length === 0) return { firstName: "", lastName: "" };
@@ -879,18 +899,15 @@ export function exportHy3(meet: ParsedMeet): string {
             : result.resultType === "swimoff"
               ? "S"
               : "F";
+        const fields = hy3ResultFields(result);
         lines.push(
           hy3Line(
             new FixedLine()
               .set(1, 2, "E2")
               .set(3, 1, kindCode)
-              .set(4, 8, result.isDq ? "" : toHy3Seconds(result.time))
-              .set(13, 1, result.isDq ? "D" : "")
-              .set(
-                14,
-                2,
-                result.isDq ? (result.dqCode ?? "DQ").slice(0, 2) : "",
-              )
+              .set(4, 8, fields.seconds)
+              .set(13, 1, fields.code)
+              .set(14, 2, fields.reason)
               .set(21, 3, result.heat != null ? String(result.heat) : "")
               .set(24, 3, result.lane != null ? String(result.lane) : "")
               .set(30, 4, result.place != null ? String(result.place) : ""),
@@ -941,14 +958,15 @@ export function exportHy3(meet: ParsedMeet): string {
           : result.resultType === "swimoff"
             ? "S"
             : "F";
+      const fields = hy3ResultFields(result);
       lines.push(
         hy3Line(
           new FixedLine()
             .set(1, 2, "F2")
             .set(3, 1, kindCode)
-            .set(4, 8, result.isDq ? "" : toHy3Seconds(result.time))
-            .set(13, 1, result.isDq ? "D" : "")
-            .set(14, 2, result.isDq ? (result.dqCode ?? "DQ").slice(0, 2) : "")
+            .set(4, 8, fields.seconds)
+            .set(13, 1, fields.code)
+            .set(14, 2, fields.reason)
             .set(21, 3, result.heat != null ? String(result.heat) : "")
             .set(24, 3, result.lane != null ? String(result.lane) : "")
             .set(30, 4, result.place != null ? String(result.place) : ""),

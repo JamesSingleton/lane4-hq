@@ -219,6 +219,8 @@ export interface ParsedResult {
   time: string;
   place?: number;
   isDq?: boolean;
+  /** Entered and did not swim (CL2 `NS`, HY3 time code `R`). Not a DQ. */
+  noSwim?: boolean;
   usaMemberId?: string;
   /** When present (e.g. Hy-Tek D0), used to match/create roster athletes. */
   dateOfBirth?: string;
@@ -260,15 +262,25 @@ export interface ParsedRelayEntry {
   cl2LegExtras?: string[];
 }
 
+export interface ParsedRelayLegSplit {
+  legOrder: number;
+  /** Lead-off time. Later relay legs are not official. */
+  time: string;
+}
+
 export interface ParsedRelayResult {
   time: string;
   place?: number;
   isDq?: boolean;
+  /** The relay was entered and did not swim. Not a DQ. */
+  noSwim?: boolean;
   resultType?: "prelim" | "swimoff" | "finals";
   heat?: number;
   lane?: number;
   dqCode?: string;
   exhibition?: boolean;
+  /** Lead-off split from a legal CL2 relay. Empty when that round is DQ or NS. */
+  legSplits?: ParsedRelayLegSplit[];
 }
 
 /** Team-roster identity row (Hy-Tek D1 / CL2 D0 without an event). */

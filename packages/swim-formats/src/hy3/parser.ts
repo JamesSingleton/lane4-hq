@@ -71,6 +71,7 @@ const COURSE_CODES: Record<string, Course> = {
 };
 
 const DQ_TIME_CODES = new Set(["Q", "F", "D"]);
+/** Hy-Tek time code R is a no-swim (CL2 `NS`), not a disqualification. */
 
 type Hy3Swimmer = {
   meetId: number;
@@ -253,6 +254,23 @@ function allRoundResults(
   return rounds;
 }
 
+function scoredRound(round: RoundResult): {
+  time: string;
+  isDq: boolean;
+  noSwim: boolean;
+} | null {
+  if (round.timeCode === "R") {
+    return { time: "NS", isDq: false, noSwim: true };
+  }
+  const isDq =
+    !!round.dqCode ||
+    DQ_TIME_CODES.has(round.timeCode ?? "") ||
+    round.timeCode === "Q";
+  const time = secondsToTimeString(round.timeSeconds);
+  if (!time && !isDq) return null;
+  return { time: time ?? "DQ", isDq, noSwim: false };
+}
+
 function pushResultFromRound(
   results: ParsedResult[],
   entry: Hy3Entry,
@@ -260,18 +278,15 @@ function pushResultFromRound(
   kind: ResultKind,
   round: RoundResult,
 ): void {
-  const time = secondsToTimeString(round.timeSeconds);
-  const isDq =
-    !!round.dqCode ||
-    DQ_TIME_CODES.has(round.timeCode ?? "") ||
-    round.timeCode === "Q";
-  if (!time && !isDq) return;
+  const scored = scoredRound(round);
+  if (!scored) return;
   results.push({
     eventNumber: entry.eventNumber,
     swimmerName: swimmerDisplayName(swimmer),
-    time: time ?? "DQ",
+    time: scored.time,
     place: round.overallPlace,
-    isDq,
+    isDq: scored.isDq,
+    ...(scored.noSwim ? { noSwim: true } : {}),
     usaMemberId: swimmer.usaMemberId,
     dateOfBirth: swimmer.dateOfBirth,
     eventSuffix: entry.eventSuffix,
@@ -283,7 +298,7 @@ function pushResultFromRound(
     resultType: kind,
     heat: round.heat,
     lane: round.lane,
-    dqCode: round.dqCode,
+    dqCode: scored.noSwim ? undefined : round.dqCode,
     exhibition: entry.exhibition,
     splitsMs:
       round.splits.size > 0
@@ -451,20 +466,17 @@ function relayResultFromRound(
   kind: ResultKind,
   round: RoundResult,
 ): ParsedRelayResult | null {
-  const time = secondsToTimeString(round.timeSeconds);
-  const isDq =
-    !!round.dqCode ||
-    DQ_TIME_CODES.has(round.timeCode ?? "") ||
-    round.timeCode === "Q";
-  if (!time && !isDq) return null;
+  const scored = scoredRound(round);
+  if (!scored) return null;
   return {
-    time: time ?? "DQ",
+    time: scored.time,
     place: round.overallPlace,
-    isDq,
+    isDq: scored.isDq,
+    ...(scored.noSwim ? { noSwim: true } : {}),
     resultType: kind,
     heat: round.heat,
     lane: round.lane,
-    dqCode: round.dqCode,
+    dqCode: scored.noSwim ? undefined : round.dqCode,
     exhibition: entry.exhibition,
   };
 }

@@ -5,6 +5,7 @@ import {
   type RelayStroke,
   type Stroke,
 } from "@lane4hq/swim-core/events";
+import { formatTime, parseTime } from "@lane4hq/swim-core/times";
 import { parseResultRoundType, parseSdifHeatLane } from "../g0-meta";
 import { parseCl2Roster } from "../roster/cl2";
 import {
@@ -18,6 +19,7 @@ import type {
   ParsedEntry,
   ParsedMeet,
   ParsedRelayEntry,
+  ParsedRelayLegSplit,
   ParsedResult,
 } from "../types";
 
@@ -257,7 +259,11 @@ function isNoTime(time: string): boolean {
 }
 
 function isDqTime(time: string, line: string): boolean {
-  return /^(DQ|NS|SCR|DNF)$/i.test(time.trim()) || /\bDQ\b/i.test(line);
+  return /^(DQ|SCR|DNF)$/i.test(time.trim()) || /\bDQ\b/i.test(line);
+}
+
+function isNoSwimTime(time: string): boolean {
+  return time.trim().toUpperCase() === "NS";
 }
 
 /**
@@ -287,14 +293,16 @@ type RoundSlot = {
 
 function parseFixedTimeField(
   field: string,
-): { time: string; isDq: boolean } | undefined {
+): { time: string; isDq: boolean; noSwim: boolean } | undefined {
   const raw = field.trim();
   if (!raw) return undefined;
   if (/^\d{0,2}:?\d{1,2}\.\d{2}$/.test(raw)) {
-    return { time: raw, isDq: false };
+    return { time: raw, isDq: false, noSwim: false };
   }
-  if (/^(DQ|NS|SCR|DNF)$/i.test(raw)) {
-    return { time: raw.toUpperCase(), isDq: true };
+  const upper = raw.toUpperCase();
+  if (upper === "NS") return { time: "NS", isDq: false, noSwim: true };
+  if (/^(DQ|SCR|DNF)$/i.test(raw)) {
+    return { time: upper, isDq: true, noSwim: false };
   }
   return undefined;
 }
@@ -305,11 +313,13 @@ function fixedRoundResults(
 ): Array<{
   time: string;
   isDq: boolean;
+  noSwim: boolean;
   resultType: RoundSlot["resultType"];
 }> {
   const out: Array<{
     time: string;
     isDq: boolean;
+    noSwim: boolean;
     resultType: RoundSlot["resultType"];
   }> = [];
   for (const slot of slots) {
@@ -318,25 +328,41 @@ function fixedRoundResults(
     out.push({
       time: parsed.time,
       isDq: parsed.isDq,
+      noSwim: parsed.noSwim,
       resultType: slot.resultType,
     });
   }
   return out;
 }
 
-/** Identity used to skip a D0 round time that a G0 line already recorded. */
+/**
+ * Identity used to skip a D0 round time that a G0 line already recorded.
+ * Event number is part of the identity so two no-swims (both time `NS`)
+ * in different events are both kept.
+ */
 function roundResultKey(result: ParsedResult): string {
-  return `${result.swimmerName.trim().toLowerCase()}\0${result.time.trim().toUpperCase()}\0${String(result.resultType)}`;
+  return [
+    result.swimmerName.trim().toLowerCase(),
+    String(result.eventNumber ?? ""),
+    result.time.trim().toUpperCase(),
+    String(result.resultType),
+  ].join("\0");
 }
 
 function looksLikeHytekStrokeCode(code: string): boolean {
+  // A split time fragment such as ".42" is not a stroke code. decodeEventCode
+  // would strip the dot and read it as a 4-yard backstroke.
+  if (/[.:]/.test(code)) return false;
   const decoded = decodeEventCode(code);
   return Boolean(decoded?.distance && decoded.stroke);
 }
 
 function parsePositiveInt(raw: string): number | undefined {
-  const n = Number.parseInt(raw.trim(), 10);
-  return Number.isFinite(n) && n > 0 ? n : undefined;
+  const trimmed = raw.trim();
+  // parseInt("3:00") is 3. A time fragment must not become an event number.
+  if (!/^\d+$/.test(trimmed)) return undefined;
+  const n = Number.parseInt(trimmed, 10);
+  return n > 0 ? n : undefined;
 }
 
 /**
@@ -403,7 +429,9 @@ function rememberRelayLeg(
   relay: ParsedRelayEntry,
   swimmerName: string,
   line: string,
-): void {
+  legOrder: number | undefined,
+): number {
+  const order = legOrder ?? relay.swimmerNames.length + 1;
   relay.swimmerNames.push(swimmerName);
   const names = relay.cl2LegNameFields ?? [];
   names.push(line.slice(22, 62));
@@ -416,6 +444,16 @@ function rememberRelayLeg(
   const identity = line.slice(65, 79);
   identities.push(identity.trim() ? identity : "");
   relay.cl2LegIdentity = identities;
+  return order;
+}
+
+/** Team Manager F0 leg number, columns 78–79 (`SRM  3`). 1–8, else append order. */
+function f0LegOrder(line: string): number | undefined {
+  const raw = line.slice(77, 79).trim();
+  if (!/^\d+$/.test(raw)) return undefined;
+  const n = Number.parseInt(raw, 10);
+  if (n < 1 || n > 8) return undefined;
+  return n;
 }
 
 function parseRelayTeamLine(line: string): ParsedRelayEntry | null {
@@ -486,18 +524,20 @@ function parseRelayLegLine(line: string): {
   const teamCode = line.slice(15, 21).trim();
   const relayLetter = line.slice(21, 22).trim();
   const nameField = line.slice(22, 62).trim();
+  const legOrder = f0LegOrder(line);
   if (/^[A-Za-z].*,\s*[A-Za-z]/.test(nameField)) {
     const parsed = parseLastFirstName(nameField);
     return {
       teamCode: teamCode || undefined,
       relayLetter: relayLetter || undefined,
       swimmerName: `${parsed.firstName} ${parsed.lastName}`.trim(),
+      legOrder,
     };
   }
 
   const name = parseHytekSwimmerName(line);
   if (!name.swimmerName) return null;
-  return { swimmerName: name.swimmerName };
+  return { swimmerName: name.swimmerName, legOrder };
 }
 
 function parseG0Result(line: string): ParsedResult | null {
@@ -514,6 +554,7 @@ function parseG0Result(line: string): ParsedResult | null {
     special;
 
   const time = primary!.time;
+  const noSwim = isNoSwimTime(time);
   let eventNumber = extractD0Event(line).eventNumber;
   if (eventNumber == null) {
     const raw = line.substring(2, 6).trim();
@@ -538,7 +579,8 @@ function parseG0Result(line: string): ParsedResult | null {
     swimmerName,
     time,
     place,
-    isDq: isDqTime(time, line),
+    isDq: noSwim ? false : isDqTime(time, line),
+    ...(noSwim ? { noSwim: true } : {}),
     usaMemberId: usaMemberId || undefined,
     ...(resultType ? { resultType } : {}),
     ...(heat != null ? { heat } : {}),
@@ -595,6 +637,7 @@ function parseD0Athlete(
   if (kind === "meet_results" && !hasG0) {
     const finalTime = swimTimes[swimTimes.length - 1] ?? special;
     if (!finalTime) return;
+    const noSwim = isNoSwimTime(finalTime.time);
 
     let place: number | undefined;
     const placeMatch = line.match(
@@ -607,7 +650,8 @@ function parseD0Athlete(
       swimmerName,
       time: finalTime.time,
       place,
-      isDq: isDqTime(finalTime.time, line),
+      isDq: noSwim ? false : isDqTime(finalTime.time, line),
+      ...(noSwim ? { noSwim: true } : {}),
       usaMemberId: usaMemberId || undefined,
       dateOfBirth: identity.dateOfBirth,
       gender: rosterGender,
@@ -649,6 +693,7 @@ function parseD0Athlete(
         swimmerName,
         time: round.time,
         isDq: round.isDq,
+        ...(round.noSwim ? { noSwim: true } : {}),
         resultType: round.resultType,
         usaMemberId: usaMemberId || undefined,
         dateOfBirth: identity.dateOfBirth,
@@ -656,6 +701,88 @@ function parseD0Athlete(
         teamCode,
       });
     }
+  }
+}
+
+/**
+ * Team Manager G0 checkpoint lines (`1 2  50C 31.93 1:10.19`) are splits.
+ * A line without that marker is still an official result.
+ */
+const SPLIT_CHECKPOINT = /\d+\s+\d+\s+50[CSYL]/i;
+
+type SplitRound = NonNullable<ParsedResult["resultType"]>;
+
+type LegCumulative = {
+  legOrder: number;
+  resultType?: SplitRound;
+  cumulativeMs: number;
+};
+
+type OpenSplits =
+  | { kind: "relay"; relay: ParsedRelayEntry; legOrder: number }
+  | { kind: "individual"; pending: ParsedResult[] };
+
+function isSplitCheckpoint(line: string): boolean {
+  return SPLIT_CHECKPOINT.test(line);
+}
+
+/** Swim times on a G0, in file order. Cumulative from the start of the race. */
+function checkpointMs(line: string): number[] {
+  const out: number[] = [];
+  for (const found of extractTimes(line)) {
+    if (isNoTime(found.time)) continue;
+    const ms = parseTime(found.time);
+    if (ms > 0) out.push(ms);
+  }
+  return out;
+}
+
+function attachIndividualSplits(
+  pending: ParsedResult[],
+  checkpoints: number[],
+  resultType: SplitRound | undefined,
+): void {
+  if (checkpoints.length === 0) return;
+  const targets =
+    resultType != null
+      ? pending.filter((row) => row.resultType === resultType)
+      : pending.length === 1
+        ? pending
+        : [];
+  for (const row of targets) {
+    row.splitsMs = checkpoints;
+  }
+}
+
+/**
+ * The lead-off leg is the only official relay split. Later legs are flying
+ * starts. A disqualified or no-swim relay does not keep the lead-off either.
+ * The time is the cumulative at the end of leg 1, which is that swimmer's
+ * own leg because the relay starts at zero.
+ */
+function leadOffSplit(rows: LegCumulative[]): ParsedRelayLegSplit[] {
+  let cumulativeMs: number | undefined;
+  for (const row of rows) {
+    if (row.legOrder !== 1) continue;
+    cumulativeMs = row.cumulativeMs;
+  }
+  if (cumulativeMs == null) return [];
+  return [{ legOrder: 1, time: formatTime(cumulativeMs) }];
+}
+
+function applyRelayLegSplits(
+  relay: ParsedRelayEntry,
+  rows: LegCumulative[],
+): void {
+  if (!relay.results?.length || rows.length === 0) return;
+  const resultCount = relay.results.length;
+  for (const result of relay.results) {
+    if (result.isDq || result.noSwim) continue;
+    const matched = rows.filter((row) =>
+      row.resultType ? row.resultType === result.resultType : resultCount === 1,
+    );
+    const splits = leadOffSplit(matched);
+    if (splits.length > 0) result.legSplits = splits;
   }
 }
 
@@ -764,6 +891,8 @@ export function parseCl2Meet(content: string): ParsedMeet {
   const entriesByName = new Map<string, ParsedEntry[]>();
   const resultsByName = new Map<string, ParsedResult[]>();
   const pendingRoundResults: ParsedResult[] = [];
+  const relayCumulatives = new Map<ParsedRelayEntry, LegCumulative[]>();
+  let openSplits: OpenSplits | null = null;
   let lastTeamCode: string | undefined;
   let lastSwimmerKey: string | undefined;
 
@@ -805,6 +934,7 @@ export function parseCl2Meet(content: string): ParsedMeet {
   for (const line of lines) {
     const type = line.substring(0, 2);
     if (type === "C1") {
+      openSplits = null;
       const identity = parseCl2TeamIdentity(line);
       if (identity.lsc) meet.lscCode = identity.lsc;
       if (identity.teamCode) meet.teamCode = identity.teamCode;
@@ -826,6 +956,7 @@ export function parseCl2Meet(content: string): ParsedMeet {
     } else if (type === "D0" || type === "D1") {
       const entriesBefore = meet.entries.length;
       const resultsBefore = meet.results.length;
+      const pendingBefore = pendingRoundResults.length;
       parseD0Athlete(
         line,
         kind,
@@ -847,7 +978,34 @@ export function parseCl2Meet(content: string): ParsedMeet {
         lastSwimmerKey = added.swimmerName.toLowerCase();
         applyD3(lastSwimmerKey);
       }
+      openSplits = {
+        kind: "individual",
+        pending: pendingRoundResults.slice(pendingBefore),
+      };
     } else if (type === "G0" && kind !== "meet_entries") {
+      if (isSplitCheckpoint(line)) {
+        const checkpoints = checkpointMs(line);
+        if (openSplits?.kind === "relay") {
+          const cumulativeMs = checkpoints[checkpoints.length - 1];
+          if (cumulativeMs != null) {
+            const list = relayCumulatives.get(openSplits.relay) ?? [];
+            list.push({
+              legOrder: openSplits.legOrder,
+              cumulativeMs,
+              resultType: parseResultRoundType(line),
+            });
+            relayCumulatives.set(openSplits.relay, list);
+          }
+        } else if (openSplits?.kind === "individual") {
+          attachIndividualSplits(
+            openSplits.pending,
+            checkpoints,
+            parseResultRoundType(line),
+          );
+        }
+        continue;
+      }
+      openSplits = null;
       const result = parseG0Result(line);
       if (result?.time) {
         const cached = identityByName.get(result.swimmerName.toLowerCase());
@@ -863,6 +1021,7 @@ export function parseCl2Meet(content: string): ParsedMeet {
         rememberRow(resultsByName, result);
       }
     } else if (type === "E0") {
+      openSplits = null;
       const relay = parseRelayTeamLine(line);
       if (relay) {
         relay.seedCourse = firstCourse(line, E0_COURSE_COLS);
@@ -871,6 +1030,7 @@ export function parseCl2Meet(content: string): ParsedMeet {
           relay.results = rounds.map((round) => ({
             time: round.time,
             isDq: round.isDq,
+            ...(round.noSwim ? { noSwim: true } : {}),
             resultType: round.resultType,
           }));
         }
@@ -886,6 +1046,7 @@ export function parseCl2Meet(content: string): ParsedMeet {
         relays.push(relay);
       }
     } else if (type === "F0") {
+      openSplits = null;
       const leg = parseRelayLegLine(line);
       if (!leg) continue;
       let attached = false;
@@ -894,13 +1055,26 @@ export function parseCl2Meet(content: string): ParsedMeet {
         const teamOk = !leg.teamCode || r.teamCode === leg.teamCode;
         const letterOk = !leg.relayLetter || r.relayLetter === leg.relayLetter;
         if (teamOk && letterOk) {
-          rememberRelayLeg(r, leg.swimmerName, line);
+          const order = rememberRelayLeg(
+            r,
+            leg.swimmerName,
+            line,
+            leg.legOrder,
+          );
+          openSplits = { kind: "relay", relay: r, legOrder: order };
           attached = true;
           break;
         }
       }
       if (!attached && relays.length > 0) {
-        rememberRelayLeg(relays[relays.length - 1]!, leg.swimmerName, line);
+        const relay = relays[relays.length - 1]!;
+        const order = rememberRelayLeg(
+          relay,
+          leg.swimmerName,
+          line,
+          leg.legOrder,
+        );
+        openSplits = { kind: "relay", relay, legOrder: order };
       }
     }
   }
@@ -914,6 +1088,10 @@ export function parseCl2Meet(content: string): ParsedMeet {
     if (seenRoundResults.has(key)) continue;
     seenRoundResults.add(key);
     meet.results.push(candidate);
+  }
+
+  for (const relay of relays) {
+    applyRelayLegSplits(relay, relayCumulatives.get(relay) ?? []);
   }
 
   if (relays.length > 0) {

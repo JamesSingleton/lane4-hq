@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  formatResultMark,
   formatTime,
   formatTypedSwimTime,
   isFasterTime,
@@ -47,6 +48,16 @@ describe("formatTypedSwimTime", () => {
     expect(formatTypedSwimTime("1234567")).toBe("1:23:45.67");
     expect(formatTypedSwimTime("2:37.52")).toBe("2:37.52");
     expect(formatTypedSwimTime("12a3b45678")).toBe("1:23:45.67");
+  });
+});
+
+describe("formatResultMark", () => {
+  it("shows a no-swim as NS and a DQ with its time", () => {
+    expect(formatResultMark(0, false, "NS")).toBe("NS");
+    expect(formatResultMark(0, true, "1F")).toBe("DQ NT");
+    expect(formatResultMark(60100, true, null)).toBe("DQ 1:00.10");
+    expect(formatResultMark(60100, false, null)).toBe("1:00.10");
+    expect(formatResultMark(0, true, "NS")).toBe("DQ NT");
   });
 });
 

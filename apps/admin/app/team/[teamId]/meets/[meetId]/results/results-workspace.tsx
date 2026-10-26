@@ -4,7 +4,11 @@ import { swimmerAgeOnDate } from "@lane4hq/swim-core/age";
 import { formatDateOnlyLabel } from "@lane4hq/swim-core/calendar-date";
 import { isRelayStroke } from "@lane4hq/swim-core/entry-limits";
 import { formatEventName, formatGenderShort } from "@lane4hq/swim-core/events";
-import { formatTime, formatTypedSwimTime } from "@lane4hq/swim-core/times";
+import {
+  formatResultMark,
+  formatTime,
+  formatTypedSwimTime,
+} from "@lane4hq/swim-core/times";
 import { Badge } from "@lane4hq/ui/components/badge";
 import { Button } from "@lane4hq/ui/components/button";
 import { Input } from "@lane4hq/ui/components/input";
@@ -460,9 +464,7 @@ function RelayResultCard({
             attempt.isDq && "text-destructive line-through",
           )}
         >
-          {attempt.isDq
-            ? `DQ ${formatTime(attempt.timeMs)}`
-            : formatTime(attempt.timeMs)}
+          {formatResultMark(attempt.timeMs, attempt.isDq, attempt.dqCode)}
         </p>
       </div>
       {attempt.members.length > 0 ? (
@@ -1110,9 +1112,11 @@ export function ResultsWorkspace({
                                   row.isDq && "text-destructive line-through",
                                 )}
                               >
-                                {row.isDq
-                                  ? `DQ ${formatTime(row.timeMs)}`
-                                  : formatTime(row.timeMs)}
+                                {formatResultMark(
+                                  row.timeMs,
+                                  row.isDq,
+                                  row.dqCode,
+                                )}
                               </span>
                               <ResultMetaBadges row={row} />
                             </span>

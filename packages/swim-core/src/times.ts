@@ -45,6 +45,20 @@ export function formatTypedSwimTime(raw: string): string {
   return `${hours}:${mm}:${seconds}.${hundredths}`;
 }
 
+/**
+ * Result cell. A no-swim is `NS`. A DQ keeps its time, or `NT` when the
+ * file recorded none. `dqCode` `NS` with `isDq` false is the stored no-swim.
+ */
+export function formatResultMark(
+  timeMs: number,
+  isDq: boolean,
+  dqCode?: string | null,
+): string {
+  if (!isDq && dqCode === "NS") return "NS";
+  if (isDq) return `DQ ${formatTime(timeMs)}`;
+  return formatTime(timeMs);
+}
+
 /** Format milliseconds to swim time string */
 export function formatTime(ms: number): string {
   if (ms <= 0) return "NT";
