@@ -1,10 +1,12 @@
 import { describe, expect, it } from "vitest";
 import {
   formatResultMark,
+  formatResultPlace,
   formatTime,
   formatTypedSwimTime,
   isFasterTime,
   parseTime,
+  resultMarkKind,
 } from "../src/times";
 
 describe("parseTime", () => {
@@ -58,6 +60,18 @@ describe("formatResultMark", () => {
     expect(formatResultMark(60100, true, null)).toBe("DQ 1:00.10");
     expect(formatResultMark(60100, false, null)).toBe("1:00.10");
     expect(formatResultMark(0, true, "NS")).toBe("DQ NT");
+  });
+
+  it("paints a no-swim apart from a DQ and leaves NS and DQ unplaced", () => {
+    expect(resultMarkKind(false, "NS")).toBe("ns");
+    expect(resultMarkKind(true, "1F")).toBe("dq");
+    expect(resultMarkKind(false, null)).toBe("time");
+    expect(formatResultPlace(0, false, "NS")).toBe("—");
+    expect(formatResultPlace(0, true, "1F")).toBe("—");
+    expect(formatResultPlace(1, true, null)).toBe("—");
+    expect(formatResultPlace(null, false, null)).toBe("—");
+    expect(formatResultPlace(3, false, null)).toBe("3");
+    expect(formatResultPlace(0, false, null)).toBe("0");
   });
 });
 

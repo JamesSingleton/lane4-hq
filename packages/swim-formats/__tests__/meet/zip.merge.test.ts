@@ -394,6 +394,167 @@ describe("mergeParsedMeets", () => {
     });
   });
 
+  it("copies a missing CL2 lead-off onto the matching HY3 round", () => {
+    const merged = mergeParsedMeets(
+      {
+        ...primary,
+        relays: [
+          {
+            eventNumber: 21,
+            teamCode: "MARI",
+            relayLetter: "A",
+            swimmerNames: ["Lead"],
+            results: [
+              { time: "3:46.22", place: 1, resultType: "finals" },
+              { time: "3:50.00", place: 2, resultType: "prelim" },
+              { time: "4:10.00" },
+              {
+                time: "3:40.00",
+                resultType: "swimoff",
+                legSplits: [{ legOrder: 1, time: "59.00" }],
+              },
+            ],
+          },
+          {
+            eventNumber: 22,
+            teamCode: "MARI",
+            relayLetter: "A",
+            swimmerNames: ["Kept"],
+            results: [{ time: "1:40.00", resultType: "finals" }],
+          },
+          {
+            eventNumber: 23,
+            teamCode: "MARI",
+            relayLetter: "A",
+            swimmerNames: ["From file"],
+          },
+          {
+            eventNumber: 24,
+            teamCode: "MARI",
+            relayLetter: "A",
+            swimmerNames: ["Untyped"],
+            results: [{ time: "1:10.00" }],
+          },
+          {
+            eventNumber: 26,
+            teamCode: "MARI",
+            relayLetter: "A",
+            swimmerNames: ["Names only"],
+          },
+        ],
+      },
+      [
+        {
+          ...supplement,
+          relays: [
+            {
+              eventNumber: 21,
+              teamCode: "AZMARI",
+              relayLetter: "A",
+              swimmerNames: ["Other"],
+              results: [
+                {
+                  time: "3:46.10",
+                  resultType: "finals",
+                  legSplits: [{ legOrder: 1, time: "1:00.22" }],
+                },
+                { time: "3:50.10", resultType: "prelim" },
+                {
+                  time: "3:39.00",
+                  resultType: "swimoff",
+                  legSplits: [{ legOrder: 1, time: "58.00" }],
+                },
+              ],
+            },
+            {
+              eventNumber: 22,
+              teamCode: "MARI",
+              relayLetter: "A",
+              swimmerNames: ["Kept"],
+            },
+            {
+              eventNumber: 23,
+              teamCode: "MARI",
+              relayLetter: "A",
+              swimmerNames: ["From file"],
+              results: [
+                {
+                  time: "2:00.00",
+                  legSplits: [{ legOrder: 1, time: "30.00" }],
+                },
+              ],
+            },
+            {
+              eventNumber: 24,
+              teamCode: "MARI",
+              relayLetter: "A",
+              swimmerNames: ["Untyped"],
+              results: [
+                {
+                  time: "1:10.50",
+                  legSplits: [{ legOrder: 1, time: "28.00" }],
+                },
+              ],
+            },
+            {
+              eventNumber: 25,
+              teamCode: "MARI",
+              relayLetter: "B",
+              swimmerNames: ["Supplement only"],
+              results: [{ time: "1:00.00", resultType: "finals" }],
+            },
+            {
+              eventNumber: 26,
+              teamCode: "MARI",
+              relayLetter: "A",
+              swimmerNames: ["Names only"],
+              seedTime: "2:05.00",
+            },
+          ],
+        },
+      ],
+    );
+
+    const byEvent = (eventNumber: number) =>
+      merged.relays?.find((relay) => relay.eventNumber === eventNumber);
+
+    expect(byEvent(21)?.results).toEqual([
+      {
+        time: "3:46.22",
+        place: 1,
+        resultType: "finals",
+        legSplits: [{ legOrder: 1, time: "1:00.22" }],
+      },
+      { time: "3:50.00", place: 2, resultType: "prelim" },
+      { time: "4:10.00" },
+      {
+        time: "3:40.00",
+        resultType: "swimoff",
+        legSplits: [{ legOrder: 1, time: "59.00" }],
+      },
+    ]);
+    expect(byEvent(22)?.results).toEqual([
+      { time: "1:40.00", resultType: "finals" },
+    ]);
+    expect(byEvent(23)?.results).toEqual([
+      {
+        time: "2:00.00",
+        legSplits: [{ legOrder: 1, time: "30.00" }],
+      },
+    ]);
+    expect(byEvent(24)?.results).toEqual([
+      {
+        time: "1:10.00",
+        legSplits: [{ legOrder: 1, time: "28.00" }],
+      },
+    ]);
+    expect(byEvent(25)?.results).toEqual([
+      { time: "1:00.00", resultType: "finals" },
+    ]);
+    expect(byEvent(26)?.seedTime).toBe("2:05.00");
+    expect(byEvent(26)?.results).toBeUndefined();
+  });
+
   it("treats HY3 MARI and CL2 AZMARI as the same relay team", () => {
     const merged = mergeParsedMeets(
       {

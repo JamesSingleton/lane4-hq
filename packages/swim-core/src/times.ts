@@ -59,6 +59,27 @@ export function formatResultMark(
   return formatTime(timeMs);
 }
 
+/** A no-swim is its own mark. A DQ stays a DQ. Everything else is a time. */
+export function resultMarkKind(
+  isDq: boolean,
+  dqCode?: string | null,
+): "dq" | "ns" | "time" {
+  if (isDq) return "dq";
+  if (dqCode === "NS") return "ns";
+  return "time";
+}
+
+/** Place cell. NS and DQ are unplaced, even when the file stored 0. */
+export function formatResultPlace(
+  place: number | null | undefined,
+  isDq: boolean,
+  dqCode?: string | null,
+): string {
+  if (resultMarkKind(isDq, dqCode) !== "time") return "—";
+  if (place == null) return "—";
+  return String(place);
+}
+
 /** Format milliseconds to swim time string */
 export function formatTime(ms: number): string {
   if (ms <= 0) return "NT";

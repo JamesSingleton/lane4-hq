@@ -922,14 +922,7 @@ async function applyFileOwnedMeetFields(
 
 function relaySplitSwimmers(
   roster: Awaited<ReturnType<typeof getRoster>>,
-  resolvedLegs: Array<{
-    legOrder: number;
-    resolved: { membershipId: string };
-  }>,
-  saved: {
-    requireSavedMatch: boolean;
-    savedLegs: Array<{ membershipId: string; legOrder: number }>;
-  },
+  legs: Array<{ legOrder: number; membershipId: string }>,
 ):
   | Array<{
       legOrder: number;
@@ -944,21 +937,9 @@ function relaySplitSwimmers(
     swimmerId: string;
     swimmerGender: "male" | "female";
   }> = [];
-  for (const leg of resolvedLegs) {
+  for (const leg of legs) {
     if (leg.legOrder > 4) continue;
-    if (
-      saved.requireSavedMatch &&
-      !saved.savedLegs.some(
-        (row) =>
-          row.legOrder === leg.legOrder &&
-          row.membershipId === leg.resolved.membershipId,
-      )
-    ) {
-      continue;
-    }
-    const member = roster.find(
-      (row) => row.membershipId === leg.resolved.membershipId,
-    );
+    const member = roster.find((row) => row.membershipId === leg.membershipId);
     if (!member) continue;
     swimmers.push({
       legOrder: leg.legOrder,
@@ -1665,22 +1646,32 @@ export async function importMeetFileAction(
               .map((leg) => leg.legOrder),
           )
         : { action: "write" as const };
-      const splitSwimmers = resolvedLegs
-        ? relaySplitSwimmers(roster, resolvedLegs, {
-            requireSavedMatch: lineupPlan.action === "keep",
-            savedLegs: persistedRelayLegs.filter(
-              (leg) =>
-                leg.meetEventId === meetEventId &&
-                leg.relayLetter.toUpperCase() === letter,
-            ),
-          })
-        : undefined;
+      const savedLegs = persistedRelayLegs.filter(
+        (leg) =>
+          leg.meetEventId === meetEventId &&
+          leg.relayLetter.toUpperCase() === letter,
+      );
+      // A kept lineup is the lineup on the result. Credit the lead-off to
+      // that saved leg even when the file names do not all resolve.
+      const splitSwimmers =
+        lineupPlan.action === "keep"
+          ? relaySplitSwimmers(roster, savedLegs)
+          : resolvedLegs
+            ? relaySplitSwimmers(
+                roster,
+                resolvedLegs.map((leg) => ({
+                  legOrder: leg.legOrder,
+                  membershipId: leg.resolved.membershipId,
+                })),
+              )
+            : undefined;
       if (lineupPlan.action === "skip" || !resolvedLegs) {
         if (lineupPlan.action === "keep" && relay.results?.length) {
           relayResultsToImport.push({
             meetEventId,
             relayLetter: letter,
             attempts: relay.results,
+            splitSwimmers,
           });
           relaysAdded++;
           continue;

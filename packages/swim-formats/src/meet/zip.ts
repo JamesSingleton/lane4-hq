@@ -1,6 +1,11 @@
 import { unzipSync } from "fflate";
 import { detectCl2FileKind } from "../cl2/kind";
-import type { ParsedEvent, ParsedMeet, ParsedRelayEntry } from "../types";
+import type {
+  ParsedEvent,
+  ParsedMeet,
+  ParsedRelayEntry,
+  ParsedRelayResult,
+} from "../types";
 import { withEventsSortedByNumber } from "./sort-events";
 
 export type MeetZipFormat = "sdif" | "hy3" | "ev3" | "hyv" | "cl2" | "xls";
@@ -269,6 +274,45 @@ function findMergedRelayIndex(
   );
 }
 
+function copyRelayResult(result: ParsedRelayResult): ParsedRelayResult {
+  return {
+    ...result,
+    ...(result.legSplits
+      ? { legSplits: result.legSplits.map((split) => ({ ...split })) }
+      : {}),
+  };
+}
+
+function relayRoundsMatch(
+  primary: ParsedRelayResult,
+  extra: ParsedRelayResult,
+): boolean {
+  return (primary.resultType ?? "") === (extra.resultType ?? "");
+}
+
+/**
+ * HY3 is the primary relay result and has no lead-off. CL2 carries that
+ * split. Keep the primary time and fill a missing lead-off from the same round.
+ */
+function mergeRelayResults(
+  primary: ParsedRelayResult[] | undefined,
+  extra: ParsedRelayResult[] | undefined,
+): ParsedRelayResult[] | undefined {
+  if (!primary?.length) {
+    return extra?.length ? extra.map(copyRelayResult) : primary;
+  }
+  if (!extra?.length) return primary;
+  return primary.map((result) => {
+    if (result.legSplits?.length) return result;
+    const match = extra.find((row) => relayRoundsMatch(result, row));
+    if (!match?.legSplits?.length) return result;
+    return {
+      ...result,
+      legSplits: match.legSplits.map((split) => ({ ...split })),
+    };
+  });
+}
+
 function mergeRelayEntries(
   primary: ParsedRelayEntry[] | undefined,
   extra: ParsedRelayEntry[],
@@ -288,9 +332,8 @@ function mergeRelayEntries(
     if (existing.swimmerNames.length === 0 && relay.swimmerNames.length > 0) {
       existing.swimmerNames = [...relay.swimmerNames];
     }
-    if (!existing.results?.length && relay.results?.length) {
-      existing.results = relay.results.map((result) => ({ ...result }));
-    }
+    const results = mergeRelayResults(existing.results, relay.results);
+    if (results?.length) existing.results = results;
   }
 
   return merged;

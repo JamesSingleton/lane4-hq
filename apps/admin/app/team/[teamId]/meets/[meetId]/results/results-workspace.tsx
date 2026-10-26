@@ -6,8 +6,10 @@ import { isRelayStroke } from "@lane4hq/swim-core/entry-limits";
 import { formatEventName, formatGenderShort } from "@lane4hq/swim-core/events";
 import {
   formatResultMark,
+  formatResultPlace,
   formatTime,
   formatTypedSwimTime,
+  resultMarkKind,
 } from "@lane4hq/swim-core/times";
 import { Badge } from "@lane4hq/ui/components/badge";
 import { Button } from "@lane4hq/ui/components/button";
@@ -271,12 +273,26 @@ function roundSortKey(round: ResultRow["round"]) {
   return ROUND_SORT[round] ?? 3;
 }
 
+function resultMarkClass(isDq: boolean, dqCode?: string | null) {
+  const kind = resultMarkKind(isDq, dqCode);
+  if (kind === "dq") return "text-destructive line-through";
+  if (kind === "ns") return "text-violet-700 dark:text-violet-300";
+  return undefined;
+}
+
+function sortablePlace(row: ResultRow): number | null {
+  if (resultMarkKind(row.isDq, row.dqCode) !== "time") return null;
+  return row.place;
+}
+
 function compareResultRows(a: ResultRow, b: ResultRow) {
   const roundDiff = roundSortKey(a.round) - roundSortKey(b.round);
   if (roundDiff !== 0) return roundDiff;
-  if (a.place != null && b.place != null) return a.place - b.place;
-  if (a.place != null) return -1;
-  if (b.place != null) return 1;
+  const placeA = sortablePlace(a);
+  const placeB = sortablePlace(b);
+  if (placeA != null && placeB != null) return placeA - placeB;
+  if (placeA != null) return -1;
+  if (placeB != null) return 1;
   return a.timeMs - b.timeMs;
 }
 
@@ -461,7 +477,7 @@ function RelayResultCard({
         <p
           className={cn(
             "font-timing text-lg tabular-nums",
-            attempt.isDq && "text-destructive line-through",
+            resultMarkClass(attempt.isDq, attempt.dqCode),
           )}
         >
           {formatResultMark(attempt.timeMs, attempt.isDq, attempt.dqCode)}
@@ -1109,7 +1125,7 @@ export function ResultsWorkspace({
                             <span className="flex flex-col">
                               <span
                                 className={cn(
-                                  row.isDq && "text-destructive line-through",
+                                  resultMarkClass(row.isDq, row.dqCode),
                                 )}
                               >
                                 {formatResultMark(
@@ -1163,7 +1179,7 @@ export function ResultsWorkspace({
                             </TableCell>
                           ) : null}
                           <TableCell className="tabular-nums">
-                            {row.place ?? "—"}
+                            {formatResultPlace(row.place, row.isDq, row.dqCode)}
                           </TableCell>
                           <TableCell
                             className={cn(

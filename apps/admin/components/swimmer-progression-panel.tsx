@@ -1,6 +1,10 @@
 import { formatDateOnlyLabel } from "@lane4hq/swim-core/calendar-date";
 import { formatBestTimeEventLabel } from "@lane4hq/swim-core/team-types";
-import { formatResultMark } from "@lane4hq/swim-core/times";
+import {
+  formatResultMark,
+  formatResultPlace,
+  resultMarkKind,
+} from "@lane4hq/swim-core/times";
 import {
   Card,
   CardContent,
@@ -16,6 +20,7 @@ import {
   TableHeader,
   TableRow,
 } from "@lane4hq/ui/components/table";
+import { cn } from "@lane4hq/ui/lib/utils";
 import { type BestTimeRow, BestTimesCard } from "@/components/best-times-card";
 import {
   SwimmerEventChart,
@@ -107,38 +112,54 @@ export function SwimmerProgressionPanel({
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {timeHistory.map((result) => (
-                  <TableRow key={`${result.source}-${result.id}`}>
-                    <TableCell>
-                      {formatDateOnlyLabel(result.achievedAt)}
-                    </TableCell>
-                    <TableCell>
-                      <span className="block">
-                        {result.source === "meet" ? "Meet" : "Manual"}
-                      </span>
-                      <span className="text-muted-foreground block truncate text-xs">
-                        {result.label}
-                      </span>
-                    </TableCell>
-                    <TableCell>
-                      {formatBestTimeEventLabel(
-                        result.eventLabel,
-                        result.course,
-                        result.eventGender,
-                        teamType,
-                      )}
-                    </TableCell>
-                    <TableCell className="font-mono font-timing">
-                      {formatResultMark(
-                        result.timeMs,
-                        result.isDq,
-                        result.dqCode,
-                      )}
-                    </TableCell>
-                    <TableCell>{result.place ?? "—"}</TableCell>
-                    <TableCell>{result.isDq ? "Yes" : "No"}</TableCell>
-                  </TableRow>
-                ))}
+                {timeHistory.map((result) => {
+                  const markKind = resultMarkKind(result.isDq, result.dqCode);
+                  return (
+                    <TableRow key={`${result.source}-${result.id}`}>
+                      <TableCell>
+                        {formatDateOnlyLabel(result.achievedAt)}
+                      </TableCell>
+                      <TableCell>
+                        <span className="block">
+                          {result.source === "meet" ? "Meet" : "Manual"}
+                        </span>
+                        <span className="text-muted-foreground block truncate text-xs">
+                          {result.label}
+                        </span>
+                      </TableCell>
+                      <TableCell>
+                        {formatBestTimeEventLabel(
+                          result.eventLabel,
+                          result.course,
+                          result.eventGender,
+                          teamType,
+                        )}
+                      </TableCell>
+                      <TableCell
+                        className={cn(
+                          "font-mono font-timing",
+                          markKind === "dq" && "text-destructive line-through",
+                          markKind === "ns" &&
+                            "text-violet-700 dark:text-violet-300",
+                        )}
+                      >
+                        {formatResultMark(
+                          result.timeMs,
+                          result.isDq,
+                          result.dqCode,
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        {formatResultPlace(
+                          result.place,
+                          result.isDq,
+                          result.dqCode,
+                        )}
+                      </TableCell>
+                      <TableCell>{result.isDq ? "Yes" : "No"}</TableCell>
+                    </TableRow>
+                  );
+                })}
               </TableBody>
             </Table>
           )}
