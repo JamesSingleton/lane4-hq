@@ -19,10 +19,13 @@ The Next.js backend owns database queries, authorization, uploads, and deletes. 
 | Path | Purpose |
 | --- | --- |
 | `apps/admin` | Coach app |
+| `apps/api` | Backend API |
+| `apps/desktop` | Tauri app |
+| `apps/docs` | Mint app for docs |
 | `apps/web` | Marketing site |
-| `apps/desktop` | Electron app |
-| `packages/db` | Drizzle schema, migrations, and queries |
+| `packages/analytics` | PostHog Analytics |
 | `packages/auth` | Better Auth configuration and authorization |
+| `packages/db` | Drizzle schema, migrations, and queries |
 | `packages/storage` | Server-side logo and avatar storage |
 | `packages/swim-core` | Swim domain logic |
 | `packages/swim-formats` | Meet and roster parsers and exporters |
