@@ -27,6 +27,7 @@ import {
   toHundredths,
 } from "./labels";
 import type { Entry, Meet, MeetEvent } from "./model";
+import { type GenderFilter, genderLabel } from "./pools";
 import { eventStandings } from "./standings";
 
 function parsedEvent(event: MeetEvent, meet: Meet): ParsedEvent {
@@ -49,11 +50,25 @@ function parsedEvent(event: MeetEvent, meet: Meet): ParsedEvent {
 function resultTime(timeMs: number | null): string {
   return timeMs == null ? "" : displayTime(toHundredths(timeMs));
 }
+/** Girls' events, boys' events, or (no gender) all of them. */
+export type ResultsScope = { gender?: GenderFilter };
+
 /** One team's slice of the meet, shaped for the swim-formats exporters. */
-export function teamResultsMeet(meet: Meet, teamCode: string): ParsedMeet {
+export function teamResultsMeet(
+  meet: Meet,
+  teamCode: string,
+  scope: ResultsScope = {},
+): ParsedMeet {
   const index = indexMeet(meet);
   const team = meet.teams.find((t) => t.code === teamCode);
-  const teamEntries = meet.entries.filter((e) => e.teamCode === teamCode);
+  const inScope = new Set(
+    meet.events
+      .filter((e) => !scope.gender || e.gender === scope.gender)
+      .map((e) => e.id),
+  );
+  const teamEntries = meet.entries.filter(
+    (e) => e.teamCode === teamCode && inScope.has(e.eventId),
+  );
   const eventIds = new Set(teamEntries.map((e) => e.eventId));
   const events = meet.events.filter(
     (e) => eventIds.has(e.id) && e.kind === "swim",
@@ -232,11 +247,19 @@ function ddMmmYyyy(date: string | undefined): string {
 }
 
 /** TM-style stem: `MARI-AZ-Results-2026 Croswhite Invite-12Sep2026-001`. */
-export function teamResultsStem(meet: Meet, teamCode: string): string {
+export function teamResultsStem(
+  meet: Meet,
+  teamCode: string,
+  scope: ResultsScope = {},
+): string {
   const team = meet.teams.find((t) => t.code === teamCode);
   const prefix = team?.lsc ? `${teamCode}-${team.lsc}` : teamCode;
   const date = ddMmmYyyy(meet.startDate);
-  return `${prefix}-Results-${safeStem(meet.name)}${date ? `-${date}` : ""}-001`;
+  return `${prefix}-Results-${safeStem(meet.name)}${scopeSuffix(scope)}${date ? `-${date}` : ""}-001`;
+}
+
+function scopeSuffix(scope: ResultsScope): string {
+  return scope.gender ? `-${genderLabel(scope.gender)}` : "";
 }
 
 export type ExportFile = { filename: string; bytes: Uint8Array };
@@ -250,31 +273,42 @@ export type ExportFile = { filename: string; bytes: Uint8Array };
 function teamFiles(
   meet: Meet,
   teamCode: string,
+  scope: ResultsScope,
   dir = "",
 ): Record<string, Uint8Array> {
-  const parsed = teamResultsMeet(meet, teamCode);
-  const stem = teamResultsStem(meet, teamCode);
+  const parsed = teamResultsMeet(meet, teamCode, scope);
+  const stem = teamResultsStem(meet, teamCode, scope);
   return { [`${dir}${stem}.hy3`]: strToU8(exportHy3(parsed)) };
 }
 
-/** One team's results, zipped the way Team Manager expects. */
-export function exportTeamResults(meet: Meet, teamCode: string): ExportFile {
+/**
+ * One team's results, zipped the way Team Manager expects. `scope.gender`
+ * limits it to the girls' or boys' events.
+ */
+export function exportTeamResults(
+  meet: Meet,
+  teamCode: string,
+  scope: ResultsScope = {},
+): ExportFile {
   return {
-    filename: `${teamResultsStem(meet, teamCode)}.zip`,
-    bytes: zipSync(teamFiles(meet, teamCode), { level: 6 }),
+    filename: `${teamResultsStem(meet, teamCode, scope)}.zip`,
+    bytes: zipSync(teamFiles(meet, teamCode, scope), { level: 6 }),
   };
 }
 
 /** Every team's results pack in one ZIP, one folder per team. */
-export function exportAllTeamResults(meet: Meet): ExportFile {
+export function exportAllTeamResults(
+  meet: Meet,
+  scope: ResultsScope = {},
+): ExportFile {
   const files: Record<string, Uint8Array> = {};
   for (const team of meet.teams) {
     if (!meet.entries.some((e) => e.teamCode === team.code)) continue;
-    Object.assign(files, teamFiles(meet, team.code, `${team.code}/`));
+    Object.assign(files, teamFiles(meet, team.code, scope, `${team.code}/`));
   }
   const date = ddMmmYyyy(meet.startDate);
   return {
-    filename: `Results-${safeStem(meet.name)}${date ? `-${date}` : ""}.zip`,
+    filename: `Results-${safeStem(meet.name)}${scopeSuffix(scope)}${date ? `-${date}` : ""}.zip`,
     bytes: zipSync(files, { level: 6 }),
   };
 }

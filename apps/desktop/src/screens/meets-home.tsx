@@ -41,17 +41,17 @@ import {
   Waves,
 } from "lucide-react";
 import { useEffect, useState, useTransition } from "react";
-import {
-  trackImportFailed,
-  trackMeetCreated,
-  trackResultsImported,
-} from "@/lib/analytics";
 import { AccountButton } from "../components/account-panel";
 import { ChoiceSelect } from "../components/choice-select";
 import { DatePicker } from "../components/date-picker";
 import { BLANK_TEMPLATE, TemplatePicker } from "../components/event-builder";
 import { UpdateBanner } from "../components/update-banner";
 import { pickBackupInBrowser, pickMeetFiles } from "../hooks/pick-files";
+import {
+  trackImportFailed,
+  trackMeetCreated,
+  trackResultsImported,
+} from "../lib/analytics";
 import { COURSES, GENDER_ORDERS, LANES, SCORING } from "../lib/meet-choices";
 import { formatDateRange } from "../lib/meet-labels";
 import {
@@ -59,13 +59,18 @@ import {
   type MeetSummary,
   parseMeet,
 } from "../lib/meet-repository";
-import { errorMessage, isTauri, pickBackupPath } from "../lib/native";
+import {
+  confirmReplaceFromBackup,
+  errorMessage,
+  isTauri,
+  pickBackupPath,
+} from "../lib/native";
 import {
   damagedMeetMessage,
   recoverySummary,
   replayCaptureJournal,
 } from "../lib/recover-meet";
-import { importBackup } from "../lib/tauri-repository";
+import { importBackup, isAlreadyExistsError } from "../lib/tauri-repository";
 
 export function MeetsHome({
   repository,
@@ -133,7 +138,16 @@ export function MeetsHome({
       if (isTauri()) {
         const path = await pickBackupPath();
         if (!path) return;
-        const id = await importBackup(path);
+        let id: string;
+        try {
+          id = await importBackup(path);
+        } catch (error) {
+          if (!isAlreadyExistsError(error)) throw error;
+          // Two deck machines can share a meet; an old backup must not
+          // silently replace races recorded on this one.
+          if (!(await confirmReplaceFromBackup())) return;
+          id = await importBackup(path, true);
+        }
         onOpen(await repository.load(id));
       } else {
         const json = await pickBackupInBrowser();

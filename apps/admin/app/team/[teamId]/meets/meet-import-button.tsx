@@ -64,7 +64,10 @@ import {
   type MeetImportFilePayload,
   type MeetImportPreview,
   parseMeetFilePreviewAction,
+  type RelayLineupConflict,
 } from "./actions";
+
+type RelayLineupChoice = "file" | "saved";
 
 const MEET_ACCEPT = ".sd3,.sdif,.cl2,.hy3,.ev3,.hyv,.xls,.xlsx,.txt,.zip";
 const MAX_FILE_BYTES = 10 * 1024 * 1024;
@@ -201,6 +204,16 @@ export function MeetImportButton({
   const [eventConflictResolutions, setEventConflictResolutions] = useState<
     Record<number, "keep_manual" | "use_import">
   >({});
+  /** Relays whose file lineup differs from the meet's, from the last attempt. */
+  const [relayConflicts, setRelayConflicts] = useState<
+    RelayLineupConflict[] | null
+  >(null);
+  const [relayLineupResolutions, setRelayLineupResolutions] = useState<
+    Record<string, RelayLineupChoice>
+  >({});
+  const relayChoicesMissing =
+    relayConflicts?.some((conflict) => !relayLineupResolutions[conflict.key]) ??
+    false;
 
   function resetFlow() {
     void setImportStep("upload");
@@ -215,6 +228,8 @@ export function MeetImportButton({
     setAddNewAthletes(false);
     setAthleteMaps({});
     setEventConflictResolutions({});
+    setRelayConflicts(null);
+    setRelayLineupResolutions({});
   }
 
   useEffect(() => {
@@ -337,6 +352,8 @@ export function MeetImportButton({
       });
       setAddNewAthletes(false);
       setAthleteMaps({});
+      setRelayConflicts(null);
+      setRelayLineupResolutions({});
       if (parsed.resultsFile && target === "auto") {
         if (parsed.suggestedMeetId) setTarget(parsed.suggestedMeetId);
         else if (meets.length === 0) setTarget("new");
@@ -370,6 +387,7 @@ export function MeetImportButton({
         athleteMaps,
         addNewAthletes,
         eventConflictResolutions,
+        relayLineupResolutions,
         review: {
           name: review.name,
           startDate: review.startDate || undefined,
@@ -385,6 +403,22 @@ export function MeetImportButton({
           events: review.events,
         },
       });
+
+      if (result.needsRelayLineupConfirmation) {
+        // Nothing was saved. Ask which lineup swam, then import again.
+        setRelayConflicts(result.relayLineupConflicts);
+        setRelayLineupResolutions((current) => {
+          const kept: Record<string, RelayLineupChoice> = {};
+          for (const conflict of result.relayLineupConflicts) {
+            const choice = current[conflict.key];
+            if (choice && (choice === "saved" || conflict.canUseFile)) {
+              kept[conflict.key] = choice;
+            }
+          }
+          return kept;
+        });
+        return;
+      }
 
       const parts = [
         result.events ? `${result.events} events` : null,
@@ -1197,6 +1231,14 @@ export function MeetImportButton({
                 </>
               ) : null}
 
+              {relayConflicts && relayConflicts.length > 0 ? (
+                <RelayLineupReview
+                  conflicts={relayConflicts}
+                  resolutions={relayLineupResolutions}
+                  onChange={setRelayLineupResolutions}
+                />
+              ) : null}
+
               <div className="flex flex-wrap gap-2">
                 <Button
                   type="button"
@@ -1208,6 +1250,8 @@ export function MeetImportButton({
                     setPreview(null);
                     setReview(null);
                     setFileMeta(null);
+                    setRelayConflicts(null);
+                    setRelayLineupResolutions({});
                   }}
                 >
                   Back
@@ -1216,6 +1260,7 @@ export function MeetImportButton({
                   type="button"
                   disabled={
                     busy ||
+                    relayChoicesMissing ||
                     (preview.resultsFile && target !== "new"
                       ? !isExistingMeetTarget(target)
                       : !review.name.trim() || !review.entryDeadline.trim())
@@ -1270,5 +1315,109 @@ export function MeetImportButton({
         </div>
       </DialogContent>
     </Dialog>
+  );
+}
+
+/**
+ * Relays whose results file names different swimmers than the lineup saved
+ * on the meet. The lead-off split is credited to whichever lineup the coach
+ * says swam, so nothing is imported until each one is answered.
+ */
+function RelayLineupReview({
+  conflicts,
+  resolutions,
+  onChange,
+}: {
+  conflicts: RelayLineupConflict[];
+  resolutions: Record<string, RelayLineupChoice>;
+  onChange: (next: Record<string, RelayLineupChoice>) => void;
+}) {
+  function setAll(choice: RelayLineupChoice) {
+    const next: Record<string, RelayLineupChoice> = {};
+    for (const conflict of conflicts) {
+      next[conflict.key] =
+        choice === "file" && !conflict.canUseFile ? "saved" : choice;
+    }
+    onChange(next);
+  }
+
+  return (
+    <Alert>
+      <AlertTriangleIcon aria-hidden="true" />
+      <AlertTitle>Confirm relay lineups</AlertTitle>
+      <AlertDescription className="space-y-3">
+        <p>
+          {conflicts.length === 1
+            ? "This relay lists different swimmers than your lineup."
+            : `These ${conflicts.length} relays list different swimmers than your lineup.`}{" "}
+          Choose who swam. The lead-off split counts as an individual time for
+          the swimmer on leg 1. Nothing has been imported yet.
+        </p>
+        <div className="flex flex-wrap gap-2">
+          <Button
+            type="button"
+            size="sm"
+            variant="outline"
+            onClick={() => setAll("file")}
+          >
+            Use the file for all
+          </Button>
+          <Button
+            type="button"
+            size="sm"
+            variant="outline"
+            onClick={() => setAll("saved")}
+          >
+            Keep our lineups for all
+          </Button>
+        </div>
+        <ul className="max-h-72 space-y-2 overflow-y-auto">
+          {conflicts.map((conflict) => (
+            <li
+              key={conflict.key}
+              className="grid gap-2 border-b border-border/60 py-2 last:border-0 sm:grid-cols-[1fr_minmax(12rem,16rem)] sm:items-center"
+            >
+              <div className="min-w-0 text-sm">
+                <p className="font-medium">{conflict.label}</p>
+                <p className="text-muted-foreground">
+                  File: {conflict.fileSwimmers.join(", ") || "—"}
+                  {conflict.canUseFile ? "" : " (not all on your roster)"}
+                </p>
+                <p className="text-muted-foreground">
+                  Our lineup: {conflict.savedSwimmers.join(", ")}
+                </p>
+              </div>
+              <Select
+                items={[
+                  ...(conflict.canUseFile
+                    ? [{ value: "file", label: "The file's swimmers swam" }]
+                    : []),
+                  { value: "saved", label: "Our lineup swam" },
+                ]}
+                value={resolutions[conflict.key] ?? null}
+                onValueChange={(value) => {
+                  if (value !== "file" && value !== "saved") return;
+                  onChange({ ...resolutions, [conflict.key]: value });
+                }}
+              >
+                <SelectTrigger aria-label={`Who swam ${conflict.label}`}>
+                  <SelectValue placeholder="Choose who swam" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectGroup>
+                    {conflict.canUseFile ? (
+                      <SelectItem value="file">
+                        The file&apos;s swimmers swam
+                      </SelectItem>
+                    ) : null}
+                    <SelectItem value="saved">Our lineup swam</SelectItem>
+                  </SelectGroup>
+                </SelectContent>
+              </Select>
+            </li>
+          ))}
+        </ul>
+      </AlertDescription>
+    </Alert>
   );
 }

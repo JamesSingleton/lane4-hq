@@ -1736,3 +1736,22 @@ export async function searchLinkableSwimmersByIdentity(
     ...identity,
   });
 }
+
+/** The ids in `membershipIds` that are swimmer memberships of this team. */
+export async function filterTeamMembershipIds(
+  organizationId: string,
+  membershipIds: readonly string[],
+): Promise<Set<string>> {
+  const unique = [...new Set(membershipIds.filter(Boolean))];
+  if (unique.length === 0) return new Set();
+  const rows = await db
+    .select({ id: teamSwimmerMemberships.id })
+    .from(teamSwimmerMemberships)
+    .where(
+      and(
+        eq(teamSwimmerMemberships.organizationId, organizationId),
+        inArray(teamSwimmerMemberships.id, unique),
+      ),
+    );
+  return new Set(rows.map((row) => row.id));
+}

@@ -9,6 +9,7 @@ import {
   type EventConflictResolution,
   resolveImportedEventForMerge,
 } from "./meet-import-merge";
+import { normalizePersonName } from "./people";
 import { parseTime } from "./times";
 
 export type ImportedAthleteDecision =
@@ -415,4 +416,111 @@ export function meetImportSummaryWarning(args: {
     args.entriesSkipped > 0 ? `${args.entriesSkipped} entries skipped. ` : "";
   const limitMsg = `${skipPrefix}${sample}${suffix}`;
   return importWarning ? `${importWarning} ${limitMsg}` : limitMsg;
+}
+
+/**
+ * The existing meet a results file belongs to, or null when no meet or more
+ * than one could be it. With a file date, the meet must start that day and
+ * its name must equal or contain the file's (or the reverse). Without a
+ * date, only an exact name counts.
+ */
+export function findMeetForResultsFile(
+  meets: ReadonlyArray<{ id: string; name: string; startDate: string | null }>,
+  file: { name: string; startDate?: string | null },
+): string | null {
+  const fileName = normalizePersonName(file.name);
+  if (!fileName) return null;
+  const fileDate = file.startDate?.slice(0, 10) || null;
+
+  const exact: string[] = [];
+  const partial: string[] = [];
+  for (const meet of meets) {
+    const name = normalizePersonName(meet.name);
+    if (!name) continue;
+    if (fileDate && meet.startDate?.slice(0, 10) !== fileDate) continue;
+    if (name === fileName) exact.push(meet.id);
+    else if (fileDate && (name.includes(fileName) || fileName.includes(name)))
+      partial.push(meet.id);
+  }
+  if (exact.length === 1) return exact[0]!;
+  if (exact.length === 0 && partial.length === 1) return partial[0]!;
+  return null;
+}
+
+export type RelayLineupLeg = { legOrder: number; membershipId: string };
+
+/** The coach's answer when a results file's relay differs from the saved one. */
+export type RelayLineupResolution = "file" | "saved";
+
+function racingLegs(legs: readonly RelayLineupLeg[]): Map<number, string> {
+  const byOrder = new Map<number, string>();
+  for (const leg of legs) {
+    if (leg.legOrder >= 1 && leg.legOrder <= 4) {
+      byOrder.set(leg.legOrder, leg.membershipId);
+    }
+  }
+  return byOrder;
+}
+
+/** The same four swimmers in the same racing order. */
+export function sameRacingLineup(
+  a: readonly RelayLineupLeg[],
+  b: readonly RelayLineupLeg[],
+): boolean {
+  const left = racingLegs(a);
+  const right = racingLegs(b);
+  if (left.size !== 4 || right.size !== 4) return false;
+  for (const [order, membershipId] of left) {
+    if (right.get(order) !== membershipId) return false;
+  }
+  return true;
+}
+
+export type AttachedRelayPlan =
+  /** Nothing to import: the saved lineup or the file's racing legs are incomplete. */
+  | { action: "skip"; reason: "saved_incomplete" | "file_incomplete" }
+  /** Save the file's legs as the lineup and credit the lead-off to them. */
+  | { action: "write"; credit: "file" }
+  /**
+   * Keep the saved lineup. `credit: "none"` means the file disagrees (or can't
+   * be compared) and the coach hasn't said which lineup swam, so nobody gets
+   * the lead-off split.
+   */
+  | { action: "keep"; credit: "saved" | "none"; needsConfirmation: boolean };
+
+/**
+ * A relay result attached to a meet that may already have a lineup. Coaches
+ * change relays on deck, so the saved lineup only gets the lead-off split
+ * when the file agrees with it or the coach confirms it.
+ */
+export function planAttachedRelayLineup(args: {
+  savedLegs: readonly RelayLineupLeg[];
+  /** Null when the file's racing legs don't all match the roster. */
+  fileLegs: readonly RelayLineupLeg[] | null;
+  resolution?: RelayLineupResolution;
+}): AttachedRelayPlan {
+  const base = planResultRelayLineup(args.savedLegs.map((leg) => leg.legOrder));
+  if (base.action === "skip") {
+    return { action: "skip", reason: "saved_incomplete" };
+  }
+  if (base.action === "write") {
+    return args.fileLegs
+      ? { action: "write", credit: "file" }
+      : { action: "skip", reason: "file_incomplete" };
+  }
+  if (args.fileLegs && sameRacingLineup(args.savedLegs, args.fileLegs)) {
+    return { action: "keep", credit: "saved", needsConfirmation: false };
+  }
+  if (args.resolution === "saved") {
+    return { action: "keep", credit: "saved", needsConfirmation: false };
+  }
+  if (args.resolution === "file" && args.fileLegs) {
+    return { action: "write", credit: "file" };
+  }
+  return { action: "keep", credit: "none", needsConfirmation: true };
+}
+
+/** Key for one relay in `relayLineupResolutions`. */
+export function relayLineupKey(meetEventId: string, relayLetter: string) {
+  return `${meetEventId}:${relayLetter.toUpperCase()}`;
 }

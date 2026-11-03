@@ -7,6 +7,7 @@
 import { touch } from "./create";
 import { indexMeet } from "./labels";
 import type { Dive, DiveCard, DiveJudges, LaneResult, Meet } from "./model";
+import { assertRunsEvent } from "./pool-ownership";
 import { eventHasResults } from "./seeding";
 
 export const DIVE_JUDGE_PANELS: DiveJudges[] = [3, 5, 7];
@@ -80,6 +81,7 @@ export function setDiveSettings(
   patch: { diveCount?: number; diveJudges?: DiveJudges },
   now?: Date,
 ): Meet {
+  assertRunsEvent(meet, eventId);
   diveSettings(meet, eventId);
   if (patch.diveJudges != null && !DIVE_JUDGE_PANELS.includes(patch.diveJudges))
     throw new RangeError("Judging panels are 3, 5, or 7 judges.");
@@ -143,6 +145,7 @@ export function saveDiveSheet(
   dives: Dive[],
   now?: Date,
 ): Meet {
+  assertRunsEvent(meet, eventId);
   const { diveCount } = diveSettings(meet, eventId);
   if (dives.length > diveCount) {
     throw new RangeError(`This event has ${diveCount} dives.`);

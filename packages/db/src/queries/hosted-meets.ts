@@ -27,6 +27,8 @@ export type HeatPublicationInput = {
  * - `created` / `updated`: stored as the heat's latest revision.
  * - `duplicate`: this exact revision was already stored.
  * - `stale`: a newer revision is already stored.
+ * - `conflict`: this revision is stored with different results, e.g. two
+ *   deck machines publishing the same heat. Nothing is replaced.
  * - `meet_taken`: another team already publishes a meet with this id.
  */
 export type RecordHeatOutcome =
@@ -34,6 +36,7 @@ export type RecordHeatOutcome =
   | "updated"
   | "duplicate"
   | "stale"
+  | "conflict"
   | "meet_taken";
 
 export async function recordHeatPublication(input: {
@@ -150,7 +153,11 @@ export async function recordHeatPublication(input: {
     }
 
     const [existing] = await tx
-      .select({ revision: publishedHeats.revision })
+      .select({
+        revision: publishedHeats.revision,
+        // jsonb equality ignores key order, so this compares content.
+        sameContent: sql<boolean>`(${publishedHeats.lanes} = ${JSON.stringify(heat.lanes)}::jsonb and ${publishedHeats.event} = ${JSON.stringify(heat.event)}::jsonb)`,
+      })
       .from(publishedHeats)
       .where(
         and(
@@ -161,7 +168,8 @@ export async function recordHeatPublication(input: {
         ),
       )
       .limit(1);
-    return existing?.revision === heat.revision ? "duplicate" : "stale";
+    if (existing?.revision !== heat.revision) return "stale";
+    return existing.sameContent ? "duplicate" : "conflict";
   });
 }
 

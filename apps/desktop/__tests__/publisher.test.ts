@@ -10,6 +10,7 @@ import {
   newerRevisionNotice,
   OfflineError,
   publishCounts,
+  REVISION_CONFLICT_ERROR,
 } from "../src/lib/publisher";
 
 const NOW = new Date("2026-10-25T16:00:00Z");
@@ -47,6 +48,41 @@ function meetWithHeats(heats: number) {
 }
 
 describe("publisher", () => {
+  it("treats a 409 without a known code as a newer revision", async () => {
+    const { meet } = meetWithHeats(1);
+    const result = await drainPublishQueue(
+      meet,
+      async () => ({ status: 409, body: JSON.stringify({ error: {} }) }),
+      NOW.getTime(),
+    );
+    expect(result.notices).toEqual([newerRevisionNotice(1)]);
+    expect(result.outcomes[0]).toMatchObject({ ok: true });
+  });
+
+  it("doesn't count a conflicting copy of the same revision as published", async () => {
+    const { meet, eventId } = meetWithHeats(1);
+    const result = await drainPublishQueue(
+      meet,
+      async () => ({
+        status: 409,
+        body: JSON.stringify({
+          error: { code: "revision_conflict", message: "different results" },
+        }),
+      }),
+      NOW.getTime(),
+    );
+    expect(result.notices).toEqual([]);
+    const next = applyPublishOutcomes(meet, result.outcomes, NOW);
+    expect(publishCounts(next)).toEqual({
+      published: 0,
+      pending: 0,
+      failed: 1,
+    });
+    expect(next.heatRecords[heatKey(eventId, 1)]!.publish.lastError).toBe(
+      REVISION_CONFLICT_ERROR,
+    );
+  });
+
   it("publishes, treats 409 as done, and records failures", async () => {
     const { meet, eventId } = meetWithHeats(3);
     const seen: string[] = [];

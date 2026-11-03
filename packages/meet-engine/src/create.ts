@@ -9,6 +9,7 @@ import {
   type Scoring,
   type ScoringPreset,
 } from "./model";
+import { assertRunsEvent } from "./pool-ownership";
 
 export const SCORING_PRESETS: Record<ScoringPreset, Omit<Scoring, "preset">> = {
   none: { individual: [], relay: [] },
@@ -172,6 +173,7 @@ export function addEvent(
 }
 
 export function removeEvent(meet: Meet, eventId: string, now?: Date): Meet {
+  assertRunsEvent(meet, eventId);
   if (meet.results.some((r) => r.eventId === eventId)) {
     throw new Error("This event has results; it can't be removed.");
   }

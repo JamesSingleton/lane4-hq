@@ -5,6 +5,7 @@ import {
   indexMeet,
   markLabel,
 } from "@lane4hq/meet-engine/labels";
+import { runsEvent } from "@lane4hq/meet-engine/pools";
 import {
   eventProgress,
   eventStandings,
@@ -20,9 +21,18 @@ import {
   TableRow,
 } from "@lane4hq/ui/components/table";
 import { useMemo, useState } from "react";
+import { ChoiceSelect } from "../components/choice-select";
 import { EventList } from "../components/event-list";
 import { PrintButton } from "../components/print-button";
 import { useMeet } from "../state/meet-context";
+
+type ScoreScope = "combined" | "female" | "male";
+
+const SCORE_SCOPES = [
+  { value: "combined", label: "Combined" },
+  { value: "female", label: "Girls" },
+  { value: "male", label: "Boys" },
+] as const satisfies readonly { value: ScoreScope; label: string }[];
 
 export function ResultsScreen() {
   const {
@@ -40,7 +50,19 @@ export function ResultsScreen() {
     () => (event ? eventStandings(meet, event.id) : []),
     [meet, event],
   );
-  const scores = useMemo(() => teamScores(meet), [meet]);
+  const [scoreScope, setScoreScope] = useState<ScoreScope>("combined");
+  const scores = useMemo(
+    () =>
+      teamScores(meet, scoreScope === "combined" ? {} : { gender: scoreScope }),
+    [meet, scoreScope],
+  );
+  // A split meet before the merge: nothing from the other pool yet.
+  const waitingForOtherPool =
+    meet.split != null &&
+    !meet.results.some((r) => !runsEvent(meet, r.eventId));
+  const hasBothGenders =
+    meet.events.some((e) => e.gender === "female") &&
+    meet.events.some((e) => e.gender === "male");
   const progress = event ? eventProgress(meet, event.id) : null;
   const scoring = meet.scoring.preset !== "none";
   const diving = event?.kind === "dive";
@@ -163,6 +185,20 @@ export function ResultsScreen() {
       {scoring ? (
         <aside className="w-60 shrink-0 overflow-auto border-l p-4">
           <h2 className="mb-2 text-sm font-semibold">Team scores</h2>
+          {hasBothGenders ? (
+            <ChoiceSelect
+              className="mb-3"
+              value={scoreScope}
+              onValueChange={setScoreScope}
+              items={SCORE_SCOPES}
+            />
+          ) : null}
+          {waitingForOtherPool ? (
+            <p className="mb-2 text-xs text-muted-foreground">
+              Until you merge the other pool, scores count only this computer's
+              events.
+            </p>
+          ) : null}
           <ol className="flex flex-col gap-1">
             {scores.map((s, i) => (
               <li key={s.teamCode} className="flex items-center gap-2 text-sm">

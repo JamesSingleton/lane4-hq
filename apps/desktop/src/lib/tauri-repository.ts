@@ -22,6 +22,19 @@ export const tauriRepository: MeetRepository = {
   readJournal: (id) => invoke<string>("store_read_journal", { id }),
 };
 
-export function importBackup(path: string): Promise<string> {
-  return invoke<string>("store_import_backup", { path });
+/**
+ * Import a `.lane4meet` backup. Rejects with `{ kind: "alreadyExists" }` when
+ * that meet is already on this computer, unless `replace` (the current copy
+ * is then kept in the trash).
+ */
+export function importBackup(path: string, replace = false): Promise<string> {
+  return invoke<string>("store_import_backup", { path, replace });
+}
+
+export function isAlreadyExistsError(error: unknown): boolean {
+  return (
+    typeof error === "object" &&
+    error !== null &&
+    (error as { kind?: unknown }).kind === "alreadyExists"
+  );
 }

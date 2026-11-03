@@ -17,6 +17,7 @@ import {
 } from "@lane4hq/meet-engine/event-edits";
 import { eventTitle } from "@lane4hq/meet-engine/labels";
 import type { Meet, Team } from "@lane4hq/meet-engine/model";
+import { runsEvent } from "@lane4hq/meet-engine/pools";
 import { seedAllEvents } from "@lane4hq/meet-engine/seeding";
 import { eventProgress } from "@lane4hq/meet-engine/standings";
 import {
@@ -64,13 +65,14 @@ import {
   Users,
 } from "lucide-react";
 import { useMemo, useState, useTransition } from "react";
-import { trackImportFailed, trackResultsImported } from "@/lib/analytics";
 import { ChoiceSelect } from "../components/choice-select";
 import { DatePicker } from "../components/date-picker";
 import { EditEventDialog } from "../components/edit-event-dialog";
 import { AddEventsDialog } from "../components/event-builder";
+import { PoolsPanel } from "../components/pools-panel";
 import { Section } from "../components/section";
 import { pickMeetFiles } from "../hooks/pick-files";
+import { trackImportFailed, trackResultsImported } from "../lib/analytics";
 import { missingMeetEventsMessage } from "../lib/entry-import";
 import { COURSES, LANES, SCORING } from "../lib/meet-choices";
 import { errorMessage } from "../lib/native";
@@ -384,6 +386,8 @@ export function SetupScreen({ onSeeded }: { onSeeded: () => void }) {
 
       <EventsSection entriesByEvent={entriesByEvent} onError={setError} />
 
+      <PoolsPanel onError={setError} />
+
       <ConfirmTeamDialog
         pending={pendingImport}
         onCancel={() => setPendingImport(null)}
@@ -556,7 +560,10 @@ function EventsSection({
       onError(errorMessage(e));
     }
   }
-  const removable = rows.filter((r) => r.progress.verified === 0);
+  // In a split meet, the other pool's events are changed on its computer.
+  const removable = rows.filter(
+    (r) => r.progress.verified === 0 && runsEvent(meet, r.event.id),
+  );
   const chosen = removable.filter((r) => selected.has(r.event.id));
   const allChosen = removable.length > 0 && chosen.length === removable.length;
 
@@ -602,7 +609,7 @@ function EventsSection({
       }
       action={
         <div className="flex flex-wrap items-center justify-end gap-2">
-          {chosen.length === 0 && order ? (
+          {chosen.length === 0 && order && !meet.split ? (
             <Button
               size="sm"
               variant="outline"
@@ -616,7 +623,7 @@ function EventsSection({
                   : "Swap girls and boys"}
             </Button>
           ) : null}
-          {chosen.length === 0 && gaps ? (
+          {chosen.length === 0 && gaps && !meet.split ? (
             <Button
               size="sm"
               variant="outline"
@@ -700,7 +707,8 @@ function EventsSection({
             </TableHeader>
             <TableBody>
               {rows.map(({ event, progress }) => {
-                const locked = progress.verified > 0;
+                const locked =
+                  progress.verified > 0 || !runsEvent(meet, event.id);
                 const isSelected = selected.has(event.id);
                 return (
                   <TableRow

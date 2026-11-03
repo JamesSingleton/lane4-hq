@@ -49,3 +49,11 @@ _Avoid_: finished heat, completed race
 **Heat publication**:
 One verified heat sent from the deck machine to Lane4 (`lane4.heat-results/v1`). Its idempotency key is meet, event, heat, and revision.
 _Avoid_: sync, upload
+
+**Pool split**:
+One meet run in two pools on two computers, usually girls and boys. Each event belongs to one pool, and each computer runs only its own pool's events. At the end, either computer merges the other's copy to get combined results and scores.
+_Avoid_: session, flight, two meets
+
+**Pool merge**:
+Bringing the other pool's copy of a split meet into this one. Every event's results come from the computer that ran it, so nothing is reconciled. Swimmers both pools added on deck are flagged, not combined.
+_Avoid_: sync, import

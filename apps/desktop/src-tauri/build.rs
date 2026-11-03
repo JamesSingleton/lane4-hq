@@ -8,6 +8,7 @@ const COMMANDS: &[&str] = &[
     "store_delete_meet",
     "store_append_capture",
     "store_import_backup",
+    "store_read_backup",
     "store_restore_backup",
     "store_read_journal",
     "timing_list_ports",

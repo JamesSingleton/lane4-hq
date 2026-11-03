@@ -10,6 +10,7 @@ import {
   randomId,
   type Team,
 } from "./model";
+import { assertRunsEvent } from "./pool-ownership";
 
 export function parsePersonName(name: string): {
   firstName: string;
@@ -302,12 +303,18 @@ function entryKey(entry: Entry): string {
     : `${entry.eventId}|${entry.athleteId}`;
 }
 
+function assertRunsEntryEvent(meet: Meet, entryId: string) {
+  const entry = meet.entries.find((e) => e.id === entryId);
+  if (entry) assertRunsEvent(meet, entry.eventId);
+}
+
 export function scratchEntry(
   meet: Meet,
   entryId: string,
   scratched = true,
   now?: Date,
 ): Meet {
+  assertRunsEntryEvent(meet, entryId);
   return touch(
     {
       ...meet,
@@ -325,6 +332,7 @@ export function setSeedTime(
   seedTimeMs: number | null,
   now?: Date,
 ): Meet {
+  assertRunsEntryEvent(meet, entryId);
   return touch(
     {
       ...meet,
@@ -350,6 +358,7 @@ export function addIndividualEntry(
   },
   options: { newId?: IdFactory; now?: Date } = {},
 ): Meet {
+  assertRunsEvent(meet, input.eventId);
   const newId = options.newId ?? randomId;
   const code = input.teamCode.trim().toUpperCase();
   let athletes = meet.athletes;

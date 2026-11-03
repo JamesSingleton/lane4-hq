@@ -2,8 +2,14 @@ import {
   exportAllTeamResults,
   exportResultsCsv,
   exportTeamResults,
+  type ResultsScope,
 } from "@lane4hq/meet-engine/export";
 import { eventTitle, indexMeet } from "@lane4hq/meet-engine/labels";
+import {
+  type GenderFilter,
+  mergePoolCopy,
+  type PoolMergeReport,
+} from "@lane4hq/meet-engine/pools";
 import { publishQueue } from "@lane4hq/meet-engine/publish";
 import {
   Alert,
@@ -17,11 +23,15 @@ import {
   CloudUpload,
   Download,
   FileSpreadsheet,
+  Merge,
   TriangleAlert,
 } from "lucide-react";
 import { useMemo, useState, useTransition } from "react";
+import { ChoiceSelect } from "../components/choice-select";
 import { PublishSettingsPanel } from "../components/publish-settings";
 import { Section } from "../components/section";
+import { pickBackupText } from "../hooks/pick-files";
+import { parseMeet } from "../lib/meet-repository";
 import {
   type ExportFile,
   errorMessage,
@@ -44,6 +54,9 @@ export function ExportScreen() {
   const teams = meet.teams.filter((t) =>
     meet.entries.some((e) => e.teamCode === t.code),
   );
+  const [scopeChoice, setScopeChoice] = useState<ScopeChoice>("combined");
+  const scope: ResultsScope =
+    scopeChoice === "combined" ? {} : { gender: scopeChoice };
 
   function save(build: () => ExportFile) {
     setMessage(null);
@@ -80,18 +93,28 @@ export function ExportScreen() {
         </Alert>
       ) : null}
 
+      {meet.split ? <MergePoolSection /> : null}
+
       <Section
         title="Results for teams"
         description="Each team gets a Hy-Tek HY3 results file in a ZIP, the format Team Manager, TeamUnify, SwimTopia, and Commit Swimming import. Send teams their own ZIP, or everything at once."
         action={
-          <Button
-            size="sm"
-            onClick={() => save(() => exportAllTeamResults(meet))}
-            disabled={isPending || teams.length === 0}
-          >
-            <Archive />
-            All teams (ZIP)
-          </Button>
+          <div className="flex items-center gap-2">
+            <ChoiceSelect
+              className="w-36"
+              value={scopeChoice}
+              onValueChange={setScopeChoice}
+              items={SCOPES}
+            />
+            <Button
+              size="sm"
+              onClick={() => save(() => exportAllTeamResults(meet, scope))}
+              disabled={isPending || teams.length === 0}
+            >
+              <Archive />
+              All teams (ZIP)
+            </Button>
+          </div>
         }
       >
         <div className="flex flex-col divide-y rounded-xl border">
@@ -115,7 +138,9 @@ export function ExportScreen() {
                 size="sm"
                 variant="outline"
                 disabled={isPending}
-                onClick={() => save(() => exportTeamResults(meet, team.code))}
+                onClick={() =>
+                  save(() => exportTeamResults(meet, team.code, scope))
+                }
               >
                 <Download />
                 Results ZIP
@@ -152,6 +177,102 @@ export function ExportScreen() {
 
       <PublishSection />
     </div>
+  );
+}
+
+type ScopeChoice = "combined" | GenderFilter;
+
+const SCOPES = [
+  { value: "combined", label: "Combined" },
+  { value: "female", label: "Girls only" },
+  { value: "male", label: "Boys only" },
+] as const satisfies readonly { value: ScopeChoice; label: string }[];
+
+/**
+ * End of a two-pool meet: bring in the other computer's backup so this copy
+ * has every event's results for scores and results files.
+ */
+function MergePoolSection() {
+  const {
+    state: { meet },
+    actions: { update },
+  } = useMeet();
+  const [report, setReport] = useState<PoolMergeReport | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [isPending, startTransition] = useTransition();
+
+  function merge() {
+    setError(null);
+    startTransition(async () => {
+      try {
+        const json = await pickBackupText();
+        if (!json) return;
+        const other = parseMeet(json);
+        let merged: PoolMergeReport | null = null;
+        update((m) => {
+          const result = mergePoolCopy(m, other);
+          merged = result.report;
+          return result.meet;
+        });
+        setReport(merged);
+      } catch (e) {
+        setReport(null);
+        setError(errorMessage(e));
+      }
+    });
+  }
+
+  return (
+    <Section
+      title="Merge the other pool"
+      description="When both pools are done, save a meet backup on the other computer and open it here. Its events' heats and results replace this computer's copies of them; this pool's results aren't touched. You can merge again if the other pool corrects a heat."
+      action={
+        <Button size="sm" disabled={isPending || !meet.split} onClick={merge}>
+          <Merge />
+          {isPending ? "Merging…" : "Merge other pool's backup"}
+        </Button>
+      }
+    >
+      {error ? (
+        <Alert variant="destructive">
+          <TriangleAlert />
+          <AlertTitle>Couldn't merge</AlertTitle>
+          <AlertDescription>{error}</AlertDescription>
+        </Alert>
+      ) : null}
+      {report ? (
+        <Alert>
+          <Merge />
+          <AlertTitle>Merged the {report.poolName}</AlertTitle>
+          <AlertDescription className="flex flex-col gap-1">
+            <span>
+              {report.events} events · {report.heats} verified heats ·{" "}
+              {report.results} results
+              {report.athletesAdded > 0
+                ? ` · ${report.athletesAdded} swimmers added on deck`
+                : ""}
+            </span>
+            {report.possibleDuplicates.length > 0 ? (
+              <span>
+                Check for swimmers entered twice:{" "}
+                {report.possibleDuplicates
+                  .map((d) => `${d.name} (${d.teamCode})`)
+                  .join(", ")}
+                .
+              </span>
+            ) : null}
+            {report.claimedByBoth.length > 0 ? (
+              <span>
+                Both computers ran event
+                {report.claimedByBoth.length === 1 ? "" : "s"}{" "}
+                {report.claimedByBoth.join(", ")}; this computer's results were
+                kept. Check which pool each one belongs to in Setup.
+              </span>
+            ) : null}
+          </AlertDescription>
+        </Alert>
+      ) : null}
+    </Section>
   );
 }
 

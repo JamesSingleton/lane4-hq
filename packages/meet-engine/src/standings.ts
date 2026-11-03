@@ -111,9 +111,17 @@ export function eventStandings(meet: Meet, eventId: string): StandingRow[] {
 
 export type TeamScore = { teamCode: string; points: number };
 
-export function teamScores(meet: Meet): TeamScore[] {
+/**
+ * Team totals. `gender` scores only the girls' or boys' events, the way
+ * high school meets announce girls, boys, and combined scores.
+ */
+export function teamScores(
+  meet: Meet,
+  options: { gender?: "female" | "male" } = {},
+): TeamScore[] {
   const totals = new Map<string, number>(meet.teams.map((t) => [t.code, 0]));
   for (const event of meet.events) {
+    if (options.gender && event.gender !== options.gender) continue;
     for (const row of eventStandings(meet, event.id)) {
       if (!row.points) continue;
       totals.set(

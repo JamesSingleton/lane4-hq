@@ -2,7 +2,7 @@ import type { TimerTransport } from "@lane4hq/timing-cts/client";
 import { invoke, isTauri } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import { getCurrentWebview } from "@tauri-apps/api/webview";
-import { open, save } from "@tauri-apps/plugin-dialog";
+import { ask, open, save } from "@tauri-apps/plugin-dialog";
 import { trackExport } from "./analytics";
 import { basename, MEET_FILE_EXTENSIONS, type SourceFile } from "./meet-file";
 
@@ -30,6 +30,38 @@ export async function pickMeetFilePaths(
   });
   if (!selected) return [];
   return Array.isArray(selected) ? selected : [selected];
+}
+
+/** A yes/no question: the native dialog on desktop, `confirm` in the browser. */
+export async function confirmDialog(
+  message: string,
+  options: { title: string; okLabel: string; cancelLabel?: string },
+): Promise<boolean> {
+  if (!isTauri()) return window.confirm(message);
+  return ask(message, {
+    title: options.title,
+    kind: "warning",
+    okLabel: options.okLabel,
+    cancelLabel: options.cancelLabel ?? "Cancel",
+  });
+}
+
+/** The text of a `.lane4meet` file, without importing it. */
+export function readBackupFile(path: string): Promise<string> {
+  return invoke<string>("store_read_backup", { path });
+}
+
+/** Asked when a backup is for a meet that's already on this computer. */
+export function confirmReplaceFromBackup(): Promise<boolean> {
+  return ask(
+    "This meet is already on this computer. Replace it with the backup? Anything recorded here since the backup was made will be replaced. The current copy is kept in the meets trash folder.",
+    {
+      title: "Replace this meet?",
+      kind: "warning",
+      okLabel: "Replace",
+      cancelLabel: "Keep this computer's copy",
+    },
+  );
 }
 
 export async function pickBackupPath(): Promise<string | null> {

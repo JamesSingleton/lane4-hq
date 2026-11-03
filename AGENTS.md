@@ -20,7 +20,8 @@ Do not use other model families (Claude, GPT, GLM, etc.) unless the human explic
   - pulls races from Colorado Time Systems consoles over serial;
   - lets officials verify results, scores, and places;
   - builds finals from prelims, scores diving, and prints heat sheets and results (`@lane4hq/reports/meet-program`);
-  - exports per-team results files, and publishes verified heats when online.
+  - runs one meet in two pools on two computers (girls and boys) and merges them at the end ([ADR 0006](docs/adr/0006-two-pool-meets.md));
+  - exports per-team results files (girls, boys, or combined), and publishes verified heats when online.
 
   It does **not** copy admin screens. Team management stays on the web ([ADR 0002](docs/adr/0002-desktop-is-for-running-meets.md)). See [`docs/specs/desktop-roadmap.md`](docs/specs/desktop-roadmap.md), [ADR 0003](docs/adr/0003-cts-timing-interface-split.md) (CTS transport/codec), and [ADR 0004](docs/adr/0004-offline-meet-store-and-publishing.md) (offline store and publishing).
 - **API (`apps/api`)** is the versioned HTTP API for the desktop, future Expo mobile apps, and public live results ([ADR 0005](docs/adr/0005-lane4-api-service.md)). It uses Hono with zod-openapi on Node, is deployed to Railway, and mounts the shared Better Auth (bearer tokens, device-code sign-in approved at admin's `/device`). New routes declare zod schemas under `/v1`, and authorize inside an operation (`requireTeamRole`), never in the route alone.

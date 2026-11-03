@@ -114,7 +114,7 @@ app.openapi(
     summary: "Publish a verified heat",
     operationId: "publishHeat",
     description:
-      "Send the same `Idempotency-Key` on retries. Re-sending a revision is a no-op; a corrected heat is a new revision and replaces the old one. `409` means a newer revision is already stored, so the sender can stop retrying.",
+      "Send the same `Idempotency-Key` on retries. Re-sending a revision is a no-op; a corrected heat is a new revision and replaces the old one. `409 stale_revision` means a newer revision is already stored, so the sender can stop retrying. `409 revision_conflict` means this revision is already stored with different results (another deck machine published it); nothing was replaced and an official needs to look.",
     tags: ["Results"],
     security: bearer,
     middleware: [rateLimit("publish")] as const,
@@ -137,7 +137,9 @@ app.openapi(
       },
       400: errorResponse("Invalid publication"),
       ...authErrors,
-      409: errorResponse("A newer revision of this heat is already stored"),
+      409: errorResponse(
+        "A newer revision is stored, or this revision is stored with different results",
+      ),
     },
   }),
   async (c) => {
@@ -156,6 +158,18 @@ app.openapi(
           error: {
             code: "stale_revision",
             message: "A newer revision of this heat is already published.",
+          },
+        },
+        409,
+      );
+    }
+    if (status === "conflict") {
+      return c.json(
+        {
+          error: {
+            code: "revision_conflict",
+            message:
+              "This revision of the heat was already published with different results.",
           },
         },
         409,

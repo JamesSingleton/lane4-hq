@@ -183,8 +183,32 @@ export type Meet = {
    */
   diveSheets?: Record<string, Dive[]>;
   scoring: Scoring;
+  /**
+   * Two pools running one meet on two machines (see `pools.ts`). Absent for a
+   * meet run in one pool.
+   */
+  split?: PoolSplit;
   createdAt: string;
   updatedAt: string;
+};
+
+/** One pool of a split meet, e.g. the girls pool. */
+export type Pool = {
+  id: string;
+  name: string;
+  /** Events of these genders run here unless assigned by hand. */
+  genders: EventGender[];
+};
+
+export type PoolSplit = {
+  pools: Pool[];
+  /**
+   * The pool this copy of the meet runs. Each machine sets its own, and a
+   * merge never changes it.
+   */
+  localPoolId: string;
+  /** Events placed by hand (mixed relays, diving), by event id. */
+  assignments: Record<string, string>;
 };
 
 export function heatKey(eventId: string, heat: number): string {
