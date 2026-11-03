@@ -51,6 +51,7 @@ pub fn run() {
             store::store_delete_meet,
             store::store_append_capture,
             store::store_import_backup,
+            store::store_read_backup,
             store::store_restore_backup,
             store::store_read_journal,
             timing::timing_list_ports,

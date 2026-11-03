@@ -1,5 +1,6 @@
 import { compareEventOrder, touch } from "./create";
 import type { Meet, MeetEvent } from "./model";
+import { assertRunsEvent } from "./pool-ownership";
 
 export type EventPatch = Partial<
   Pick<
@@ -60,6 +61,7 @@ export function updateEvent(
 ): Meet {
   const event = meet.events.find((e) => e.id === eventId);
   if (!event) throw new Error("That event isn't in this meet.");
+  assertRunsEvent(meet, eventId);
   if (event.round === "final") {
     throw new Error("Edit the prelim event; its final follows it.");
   }
@@ -170,6 +172,9 @@ export function genderOrder(meet: Meet): "girls" | "boys" | "mixed" | null {
  * now swims second. Entries, heats, and finals stay with their events.
  */
 export function swapGenderOrder(meet: Meet, now?: Date): Meet {
+  // Both computers of a split meet must keep the same event numbers.
+  if (meet.split)
+    throw new Error("Renumber events before splitting into pools.");
   const pairs = genderPairs(meet);
   if (pairs.length === 0) {
     throw new Error("There are no girls' and boys' events to swap.");
@@ -207,6 +212,9 @@ export function hasNumberGaps(meet: Meet): boolean {
 
 /** Number events 1, 2, 3… in their current order, closing gaps. */
 export function renumberEvents(meet: Meet, now?: Date): Meet {
+  // Both computers of a split meet must keep the same event numbers.
+  if (meet.split)
+    throw new Error("Renumber events before splitting into pools.");
   let number = 1;
   const events = meet.events.map((e) => {
     if (e.round === "final") return e;

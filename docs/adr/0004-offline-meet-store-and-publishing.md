@@ -23,7 +23,7 @@
    1. probes the Lane4 API (`/health`);
    2. POSTs each due heat as a `lane4.heat-results/v1` publication to `/v1/teams/{team}/hosted-meets/{meetId}/heats` ([ADR 0005](0005-lane4-api-service.md)).
 
-   The `Idempotency-Key` is `<meetId>:<event><P|F>:<heat>:r<revision>` (`P` and `F` mark prelims and finals), so a retried POST can't double-count, and a corrected heat publishes as a new revision. `2xx` and `409` (a newer revision is already stored; the same revision is `200`) count as published, so the queue stops retrying a heat it cannot replace. A `409` is also shown to the operator in plain language. Other responses back off exponentially, from 5 s up to 5 min. A network failure stops the pass and leaves everything queued.
+   The `Idempotency-Key` is `<meetId>:<event><P|F>:<heat>:r<revision>` (`P` and `F` mark prelims and finals), so a retried POST can't double-count, and a corrected heat publishes as a new revision. `2xx` and `409 stale_revision` (a newer revision is already stored; the same revision is `200`) count as published, so the queue stops retrying a heat it cannot replace. `409 revision_conflict` (the same revision is stored with different results, from another computer) does not; the heat is marked failed until an official re-verifies it. A `409` is also shown to the operator in plain language. Other responses back off exponentially, from 5 s up to 5 min. A network failure stops the pass and leaves everything queued.
    - The API URL and hosting team live in app config. The URL must be `https://`, except `http://localhost` for development.
    - The operator signs in by device code. The session token lives in the OS keychain (macOS Keychain, Windows Credential Manager, via the `keyring` crate) and never goes back to the webview. Sign-in and POSTs are made from Rust (`reqwest` with rustls), so no CSP or CORS exception is needed.
    - The payload contract is `HeatPublication` in `packages/meet-engine/src/publish.ts`, mirrored by the API's zod schema.
@@ -33,5 +33,5 @@
 
 - The meet runs the same with or without WiFi. Publishing is best-effort and never blocks the deck.
 - A crash loses at most the change being written. The capture journal means timing is never lost.
-- Moving a meet to another machine is "Meet backup" then "Open a backup". There's no live multi-machine sync. Two deck machines editing the same meet isn't supported.
+- Moving a meet to another machine is "Meet backup" then "Open a backup". There's no live multi-machine sync. Two computers can run one meet only as two pools that merge at the end ([ADR 0006](0006-two-pool-meets.md)).
 - The API stores one row per heat and keeps the highest revision ([ADR 0005](0005-lane4-api-service.md)).

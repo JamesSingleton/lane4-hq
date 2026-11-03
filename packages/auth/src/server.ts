@@ -207,7 +207,10 @@ function createAuth(polarClient: PolarCore) {
         joins: true,
       },
       ipAddress: {
-        ipAddressHeaders: ["x-forwarded-for", "x-real-ip"],
+        // X-Real-IP first: Vercel (admin) and Railway (API) set it to the
+        // connecting client. The left-most X-Forwarded-For value can be sent
+        // by the client, which would let it dodge sign-in rate limits.
+        ipAddressHeaders: ["x-real-ip", "x-forwarded-for"],
       },
     },
     user: {

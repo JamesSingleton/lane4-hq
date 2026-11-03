@@ -1,6 +1,7 @@
 import { touch } from "./create";
 import { indexMeet } from "./labels";
 import type { Entry, Heat, Meet } from "./model";
+import { assertRunsEvent, runsEvent } from "./pool-ownership";
 
 /**
  * Seeding order for lanes, fastest first: the center lane, then alternating
@@ -124,6 +125,7 @@ export function seedEvent(
   options: Partial<SeedOptions> = {},
   now?: Date,
 ): Meet {
+  assertRunsEvent(meet, eventId);
   if (eventHasResults(meet, eventId)) {
     throw new Error("This event already has results; it can't be reseeded.");
   }
@@ -158,6 +160,7 @@ export function drawDiveOrder(
   random: () => number = Math.random,
   now?: Date,
 ): Meet {
+  assertRunsEvent(meet, eventId);
   if (indexMeet(meet).event(eventId)?.kind !== "dive") {
     throw new Error("That isn't a diving event.");
   }
@@ -201,6 +204,8 @@ export function seedAllEvents(
   let next = meet;
   for (const event of meet.events) {
     if (event.round === "final" || eventHasResults(next, event.id)) continue;
+    // A split meet seeds only this pool's events.
+    if (!runsEvent(next, event.id)) continue;
     next =
       event.kind === "dive"
         ? drawDiveOrder(next, event.id, random, now)
@@ -226,6 +231,7 @@ export function moveEntry(
     h.lanes.some((l) => l.entryId === entryId),
   );
   if (!from) throw new Error("That entry isn't seeded.");
+  assertRunsEvent(meet, from.eventId);
   const fromLane = from.lanes.find((l) => l.entryId === entryId)!.lane;
   const isDive = indexMeet(meet).event(from.eventId)?.kind === "dive";
   const maxLane = isDive

@@ -25,6 +25,9 @@ pub enum StoreError {
     NotAMeet,
     #[error("This meet file is already readable.")]
     NotDamaged,
+    /// Importing a backup would replace a meet already on this computer.
+    #[error("This meet is already on this computer.")]
+    AlreadyExists,
     #[error("{0}")]
     Io(String),
 }
@@ -333,10 +336,32 @@ pub async fn store_append_capture(
     append_in(&meets_dir(&app)?, &id, &line)
 }
 
-/// Import a `.lane4meet` backup chosen by the user. Returns the meet id.
-#[tauri::command]
-pub async fn store_import_backup(app: AppHandle, path: String) -> Result<String, StoreError> {
-    let path = Path::new(&path);
+/// Save an imported backup. A meet with the same id already here is only
+/// replaced when `replace` is set, and its current copy is kept in
+/// `meets/trash` first, so opening an old backup can't silently overwrite
+/// races recorded since.
+fn import_in(dir: &Path, json: &str, replace: bool) -> Result<String, StoreError> {
+    let header: MeetHeader = serde_json::from_str(json).map_err(|_| StoreError::NotAMeet)?;
+    check_id(&header.id)?;
+    let current = dir.join(format!("{}.json", header.id));
+    if current.exists() {
+        if !replace {
+            return Err(StoreError::AlreadyExists);
+        }
+        let trash = dir.join("trash");
+        fs::create_dir_all(&trash)?;
+        let stamp = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .map(|d| d.as_millis())
+            .unwrap_or(0);
+        fs::copy(&current, trash.join(format!("{}.replaced-{stamp}.json", header.id)))?;
+    }
+    save_in(dir, &header.id, json)?;
+    Ok(header.id)
+}
+
+/// Read a user-chosen `.lane4meet` file: right extension, a file, not huge.
+fn read_backup_file(path: &Path) -> Result<String, StoreError> {
     if path
         .extension()
         .and_then(|e| e.to_str())
@@ -346,13 +371,30 @@ pub async fn store_import_backup(app: AppHandle, path: String) -> Result<String,
     {
         return Err(StoreError::NotAMeet);
     }
-    if fs::metadata(path)?.len() > MAX_MEET_BYTES {
+    let meta = fs::metadata(path)?;
+    if !meta.is_file() || meta.len() > MAX_MEET_BYTES {
         return Err(StoreError::NotAMeet);
     }
-    let json = fs::read_to_string(path).map_err(|_| StoreError::NotAMeet)?;
-    let header: MeetHeader = serde_json::from_str(&json).map_err(|_| StoreError::NotAMeet)?;
-    save_in(&meets_dir(&app)?, &header.id, &json)?;
-    Ok(header.id)
+    fs::read_to_string(path).map_err(|_| StoreError::NotAMeet)
+}
+
+/// Import a `.lane4meet` backup chosen by the user. Returns the meet id.
+/// Fails with `alreadyExists` when that meet is here, unless `replace`.
+#[tauri::command]
+pub async fn store_import_backup(
+    app: AppHandle,
+    path: String,
+    replace: Option<bool>,
+) -> Result<String, StoreError> {
+    let json = read_backup_file(Path::new(&path))?;
+    import_in(&meets_dir(&app)?, &json, replace.unwrap_or(false))
+}
+
+/// The contents of a `.lane4meet` file chosen by the user, without saving
+/// it: the other pool's copy of a split meet, to merge in TypeScript.
+#[tauri::command]
+pub async fn store_read_backup(path: String) -> Result<String, StoreError> {
+    read_backup_file(Path::new(&path))
 }
 
 #[cfg(test)]
@@ -367,6 +409,45 @@ mod tests {
     }
 
     const MEET: &str = r#"{"id":"m-1","name":"Invite","startDate":"2026-09-12","course":"SCY","updatedAt":"2026-09-12T10:00:00Z","teams":[{}],"events":[{},{}]}"#;
+
+    #[test]
+    fn importing_a_backup_never_silently_replaces_a_meet() {
+        let dir = temp_dir("import");
+        assert_eq!(import_in(&dir, MEET, false).unwrap(), "m-1");
+
+        let older = MEET.replace("Invite", "Old backup");
+        assert!(matches!(import_in(&dir, &older, false), Err(StoreError::AlreadyExists)));
+        assert!(load_in(&dir, "m-1").unwrap().contains("\"Invite\""));
+
+        assert_eq!(import_in(&dir, &older, true).unwrap(), "m-1");
+        assert!(load_in(&dir, "m-1").unwrap().contains("Old backup"));
+        let kept: Vec<String> = fs::read_dir(dir.join("trash"))
+            .unwrap()
+            .map(|e| e.unwrap().file_name().to_string_lossy().into_owned())
+            .collect();
+        assert_eq!(kept.len(), 1);
+        assert!(kept[0].starts_with("m-1.replaced-"));
+        assert!(fs::read_to_string(dir.join("trash").join(&kept[0])).unwrap().contains("\"Invite\""));
+    }
+
+    #[test]
+    fn reads_only_lane4meet_files() {
+        let dir = temp_dir("read-backup");
+        let good = dir.join("Boys pool.LANE4MEET");
+        fs::write(&good, MEET).unwrap();
+        assert_eq!(read_backup_file(&good).unwrap(), MEET);
+        let other = dir.join("notes.txt");
+        fs::write(&other, MEET).unwrap();
+        assert!(matches!(read_backup_file(&other), Err(StoreError::NotAMeet)));
+        assert!(matches!(read_backup_file(&dir.join("x")), Err(StoreError::NotAMeet)));
+        let folder = dir.join("folder.lane4meet");
+        fs::create_dir_all(&folder).unwrap();
+        assert!(matches!(read_backup_file(&folder), Err(StoreError::NotAMeet)));
+        assert!(matches!(
+            read_backup_file(&dir.join("missing.lane4meet")),
+            Err(StoreError::NotFound)
+        ));
+    }
 
     #[test]
     fn validates_ids() {

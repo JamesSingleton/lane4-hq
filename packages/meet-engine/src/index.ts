@@ -7,6 +7,7 @@ export * from "./export";
 export * from "./finals";
 export * from "./labels";
 export * from "./model";
+export * from "./pools";
 export * from "./publish";
 export * from "./seeding";
 export * from "./standings";

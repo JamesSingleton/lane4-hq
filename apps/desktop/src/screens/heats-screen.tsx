@@ -15,6 +15,7 @@ import {
   heatKey,
   type MeetEvent,
 } from "@lane4hq/meet-engine/model";
+import { runsEvent } from "@lane4hq/meet-engine/pools";
 import {
   eventHasResults,
   heatsForEvent,
@@ -52,7 +53,8 @@ export function HeatsScreen() {
   const index = useMemo(() => indexMeet(meet), [meet]);
   const event = index.event(eventId);
   const heats = event ? heatsForEvent(meet, event.id) : [];
-  const locked = event ? eventHasResults(meet, event.id) : true;
+  const elsewhere = event ? !runsEvent(meet, event.id) : false;
+  const locked = event ? eventHasResults(meet, event.id) || elsewhere : true;
   const isDive = event?.kind === "dive";
 
   const seatedIds = new Set(
@@ -92,7 +94,11 @@ export function HeatsScreen() {
                 </h1>
                 <p className="text-sm text-muted-foreground">
                   {seedingNote(event)}
-                  {locked ? " · has results, seeding is locked" : ""}
+                  {elsewhere
+                    ? " · runs on the other pool's computer"
+                    : locked
+                      ? " · has results, seeding is locked"
+                      : ""}
                 </p>
               </div>
               <div className="flex flex-wrap items-start gap-2">

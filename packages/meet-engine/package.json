@@ -18,6 +18,7 @@
     "./labels": "./src/labels.ts",
     "./diving": "./src/diving.ts",
     "./finals": "./src/finals.ts",
+    "./pools": "./src/pools.ts",
     "./templates": "./src/templates.ts"
   },
   "scripts": {

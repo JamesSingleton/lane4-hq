@@ -364,6 +364,13 @@ describe("POST /v1/teams/{teamId}/hosted-meets/{meetId}/heats", () => {
     expect((await res.json()).error.code).toBe("stale_revision");
   });
 
+  it("flags the same revision with different results as a conflict", async () => {
+    mocks.recordHeatPublication.mockResolvedValue("conflict");
+    const res = await app.request(url, json(pub, key));
+    expect(res.status).toBe(409);
+    expect((await res.json()).error.code).toBe("revision_conflict");
+  });
+
   it("won't let a second team publish the same meet", async () => {
     mocks.recordHeatPublication.mockResolvedValue("meet_taken");
     const res = await app.request(url, json(pub, key));

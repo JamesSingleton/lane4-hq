@@ -14,6 +14,7 @@ import {
   type MeetEvent,
   randomId,
 } from "./model";
+import { assertRunsEvent } from "./pool-ownership";
 import { eventHasResults, laneOrder } from "./seeding";
 import { eventProgress, eventStandings, type StandingRow } from "./standings";
 
@@ -124,6 +125,7 @@ export function createFinals(
   prelimEventId: string,
   options: FinalsOptions & { newId?: IdFactory; now?: Date } = {},
 ): { meet: Meet; finalEventId: string; plan: FinalsPlan } {
+  assertRunsEvent(meet, prelimEventId);
   const prelim = prelimEvent(meet, prelimEventId);
   const progress = eventProgress(meet, prelimEventId);
   if (progress.heats === 0 || progress.state !== "complete") {

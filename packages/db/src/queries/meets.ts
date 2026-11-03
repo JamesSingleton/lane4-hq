@@ -684,7 +684,13 @@ export async function getMeetEntriesDetailed(meetId: string) {
     .where(eq(meetEntries.meetId, meetId));
 }
 
+/**
+ * Entry writes are scoped to a meet: callers check the meet belongs to the
+ * team, and the entry must belong to that meet. Each returns whether a row
+ * matched.
+ */
 export async function updateMeetEntry(
+  meetId: string,
   entryId: string,
   data: {
     seedTimeMs?: number | null;
@@ -693,8 +699,8 @@ export async function updateMeetEntry(
     exhibition?: boolean;
     status?: "draft" | "approved" | "scratched";
   },
-) {
-  await db
+): Promise<boolean> {
+  const rows = await db
     .update(meetEntries)
     .set({
       ...(data.seedTimeMs !== undefined ? { seedTimeMs: data.seedTimeMs } : {}),
@@ -706,21 +712,33 @@ export async function updateMeetEntry(
       ...(data.status !== undefined ? { status: data.status } : {}),
       updatedAt: new Date(),
     })
-    .where(eq(meetEntries.id, entryId));
+    .where(and(eq(meetEntries.id, entryId), eq(meetEntries.meetId, meetId)))
+    .returning({ id: meetEntries.id });
+  return rows.length > 0;
 }
 
 export async function updateMeetEntryStatus(
+  meetId: string,
   entryId: string,
   status: "draft" | "approved" | "scratched",
-) {
-  await db
+): Promise<boolean> {
+  const rows = await db
     .update(meetEntries)
     .set({ status, updatedAt: new Date() })
-    .where(eq(meetEntries.id, entryId));
+    .where(and(eq(meetEntries.id, entryId), eq(meetEntries.meetId, meetId)))
+    .returning({ id: meetEntries.id });
+  return rows.length > 0;
 }
 
-export async function deleteMeetEntry(entryId: string) {
-  await db.delete(meetEntries).where(eq(meetEntries.id, entryId));
+export async function deleteMeetEntry(
+  meetId: string,
+  entryId: string,
+): Promise<boolean> {
+  const rows = await db
+    .delete(meetEntries)
+    .where(and(eq(meetEntries.id, entryId), eq(meetEntries.meetId, meetId)))
+    .returning({ id: meetEntries.id });
+  return rows.length > 0;
 }
 
 /** Deletes a meet owned by the organization. Cascades events/entries/results. */

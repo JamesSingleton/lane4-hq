@@ -10,6 +10,7 @@ import {
 } from "@lane4hq/meet-engine/adjudicate";
 import { eventTitle, heatLabel } from "@lane4hq/meet-engine/labels";
 import { heatKey, type TimerCapture } from "@lane4hq/meet-engine/model";
+import { runsEvent } from "@lane4hq/meet-engine/pools";
 import { heatsForEvent } from "@lane4hq/meet-engine/seeding";
 import { Badge } from "@lane4hq/ui/components/badge";
 import { Button } from "@lane4hq/ui/components/button";
@@ -236,8 +237,11 @@ function ManualEntryPicker({
   const {
     state: { meet },
   } = useMeet();
+  // A split meet times only this pool's heats here.
   const options = meet.events.flatMap((event) =>
-    heatsForEvent(meet, event.id).map((h) => ({ event, heat: h.number })),
+    (runsEvent(meet, event.id) ? heatsForEvent(meet, event.id) : []).map(
+      (h) => ({ event, heat: h.number }),
+    ),
   );
   if (options.length === 0) return null;
   return (

@@ -10,6 +10,7 @@ import {
   randomId,
   type TimerCapture,
 } from "./model";
+import { assertRunsEvent, runsEvent } from "./pool-ownership";
 
 export type ReviewFlag =
   /** Touchpad didn't register; the backup time was used. */
@@ -96,8 +97,10 @@ export function suggestAssignment(
   if (race.event > 0) {
     // Prelims and finals share a number: take the round still being swum.
     const heat = Math.max(1, race.heat);
+    // In a split meet the console's event number means this pool's event.
     const candidates = meet.events.filter(
-      (e) => e.number === race.event && e.kind === "swim",
+      (e) =>
+        e.number === race.event && e.kind === "swim" && runsEvent(meet, e.id),
     );
     const open = candidates.find(
       (e) =>
@@ -116,7 +119,7 @@ export function suggestAssignment(
 
 function firstUnswumHeat(meet: Meet): TimerCapture["assignment"] {
   for (const event of meet.events) {
-    if (event.kind !== "swim") continue;
+    if (event.kind !== "swim" || !runsEvent(meet, event.id)) continue;
     const heats = meet.heats
       .filter((h) => h.eventId === event.id)
       .sort((a, b) => a.number - b.number);
@@ -140,7 +143,7 @@ export function nextHeat(
   }
   const index = meet.events.findIndex((e) => e.id === from.eventId);
   for (const event of meet.events.slice(index + 1)) {
-    if (event.kind !== "swim") continue;
+    if (event.kind !== "swim" || !runsEvent(meet, event.id)) continue;
     const first = meet.heats
       .filter((h) => h.eventId === event.id)
       .sort((a, b) => a.number - b.number)[0];
@@ -155,6 +158,7 @@ export function assignCapture(
   assignment: TimerCapture["assignment"],
   now?: Date,
 ): Meet {
+  if (assignment) assertRunsEvent(meet, assignment.eventId);
   return touch(
     {
       ...meet,
@@ -351,6 +355,7 @@ export function verifyHeat(
   results: LaneResult[],
   now: Date = new Date(),
 ): Meet {
+  assertRunsEvent(meet, review.eventId);
   for (const r of results) {
     if (r.eventId !== review.eventId || r.heat !== review.heat) {
       throw new Error("Every result must belong to the heat being verified.");

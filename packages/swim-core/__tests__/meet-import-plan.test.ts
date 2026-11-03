@@ -1,15 +1,19 @@
 import { describe, expect, it } from "vitest";
 import {
   decideImportedAthlete,
+  findMeetForResultsFile,
   importedEventSlot,
   isImportedNoSwim,
   meetImportSummaryWarning,
+  planAttachedRelayLineup,
   planImportedEventWrites,
   planImportedIndividualEntries,
   planImportedIndividualResult,
   planImportedTime,
   planResultAttachmentEvents,
   planResultRelayLineup,
+  relayLineupKey,
+  sameRacingLineup,
 } from "../src/meet-import-plan";
 
 const event = {
@@ -548,5 +552,194 @@ describe("planResultRelayLineup", () => {
     expect(planResultRelayLineup([0, 5, 8])).toEqual({ action: "write" });
     expect(planResultRelayLineup([1, 2, 3])).toEqual({ action: "skip" });
     expect(planResultRelayLineup([1, 1, 2, 3])).toEqual({ action: "skip" });
+  });
+});
+
+describe("findMeetForResultsFile", () => {
+  const meets = [
+    { id: "fall", name: "Fall Invitational", startDate: "2026-10-17" },
+    { id: "champs-25", name: "Winter Champs", startDate: "2025-02-14" },
+    { id: "champs-26", name: "Winter Champs", startDate: "2026-02-13" },
+    { id: "dual", name: "Dual Meet", startDate: "2026-10-17" },
+  ];
+
+  it("matches an exact name on the same day", () => {
+    expect(
+      findMeetForResultsFile(meets, {
+        name: "fall invitational",
+        startDate: "2026-10-17",
+      }),
+    ).toBe("fall");
+  });
+
+  it("accepts a partial name only on the same day", () => {
+    expect(
+      findMeetForResultsFile(meets, {
+        name: "2026 Fall Invitational",
+        startDate: "2026-10-17",
+      }),
+    ).toBe("fall");
+    expect(
+      findMeetForResultsFile(meets, { name: "2026 Fall Invitational" }),
+    ).toBeNull();
+  });
+
+  it("refuses a meet on another day", () => {
+    expect(
+      findMeetForResultsFile(meets, {
+        name: "Fall Invitational",
+        startDate: "2026-10-18",
+      }),
+    ).toBeNull();
+  });
+
+  it("refuses to guess between meets with the same name", () => {
+    expect(findMeetForResultsFile(meets, { name: "Winter Champs" })).toBeNull();
+    expect(
+      findMeetForResultsFile(meets, {
+        name: "Winter Champs",
+        startDate: "2026-02-13",
+      }),
+    ).toBe("champs-26");
+  });
+
+  it("ignores blank names and meets without a date when the file has one", () => {
+    expect(findMeetForResultsFile(meets, { name: "  " })).toBeNull();
+    expect(
+      findMeetForResultsFile(
+        [
+          { id: "blank", name: "", startDate: "2026-10-17" },
+          { id: "undated", name: "Fall Invitational", startDate: null },
+        ],
+        { name: "Fall Invitational", startDate: "2026-10-17" },
+      ),
+    ).toBeNull();
+  });
+
+  it("refuses when two meets partly match on the same day", () => {
+    const sameDay = [
+      { id: "girls", name: "Girls Invitational", startDate: "2026-10-17" },
+      { id: "boys", name: "Boys Invitational", startDate: "2026-10-17" },
+    ];
+    expect(
+      findMeetForResultsFile(sameDay, {
+        name: "Invitational",
+        startDate: "2026-10-17",
+      }),
+    ).toBeNull();
+  });
+});
+
+describe("planAttachedRelayLineup", () => {
+  const legs = (...ids: string[]) =>
+    ids.map((membershipId, i) => ({ legOrder: i + 1, membershipId }));
+  const saved = legs("a", "b", "c", "d");
+
+  it("credits the saved lineup when the file agrees", () => {
+    expect(
+      planAttachedRelayLineup({
+        savedLegs: saved,
+        fileLegs: legs("a", "b", "c", "d"),
+      }),
+    ).toEqual({ action: "keep", credit: "saved", needsConfirmation: false });
+  });
+
+  it("credits nobody until the coach confirms a changed lineup", () => {
+    expect(
+      planAttachedRelayLineup({
+        savedLegs: saved,
+        fileLegs: legs("e", "b", "c", "d"),
+      }),
+    ).toEqual({ action: "keep", credit: "none", needsConfirmation: true });
+  });
+
+  it("treats a reordered lineup as changed", () => {
+    expect(
+      planAttachedRelayLineup({
+        savedLegs: saved,
+        fileLegs: legs("b", "a", "c", "d"),
+      }).action,
+    ).toBe("keep");
+    expect(sameRacingLineup(saved, legs("b", "a", "c", "d"))).toBe(false);
+  });
+
+  it("follows the coach's answer", () => {
+    const fileLegs = legs("e", "b", "c", "d");
+    expect(
+      planAttachedRelayLineup({
+        savedLegs: saved,
+        fileLegs,
+        resolution: "file",
+      }),
+    ).toEqual({ action: "write", credit: "file" });
+    expect(
+      planAttachedRelayLineup({
+        savedLegs: saved,
+        fileLegs,
+        resolution: "saved",
+      }),
+    ).toEqual({ action: "keep", credit: "saved", needsConfirmation: false });
+  });
+
+  it("asks when the file's swimmers can't be matched", () => {
+    expect(
+      planAttachedRelayLineup({ savedLegs: saved, fileLegs: null }),
+    ).toEqual({
+      action: "keep",
+      credit: "none",
+      needsConfirmation: true,
+    });
+    expect(
+      planAttachedRelayLineup({
+        savedLegs: saved,
+        fileLegs: null,
+        resolution: "file",
+      }),
+    ).toEqual({ action: "keep", credit: "none", needsConfirmation: true });
+    expect(
+      planAttachedRelayLineup({
+        savedLegs: saved,
+        fileLegs: null,
+        resolution: "saved",
+      }),
+    ).toEqual({ action: "keep", credit: "saved", needsConfirmation: false });
+  });
+
+  it("writes the file's lineup when none is saved", () => {
+    expect(
+      planAttachedRelayLineup({
+        savedLegs: [],
+        fileLegs: legs("a", "b", "c", "d"),
+      }),
+    ).toEqual({ action: "write", credit: "file" });
+    expect(planAttachedRelayLineup({ savedLegs: [], fileLegs: null })).toEqual({
+      action: "skip",
+      reason: "file_incomplete",
+    });
+  });
+
+  it("skips a partly saved lineup", () => {
+    expect(
+      planAttachedRelayLineup({
+        savedLegs: legs("a", "b"),
+        fileLegs: legs("a", "b", "c", "d"),
+      }),
+    ).toEqual({ action: "skip", reason: "saved_incomplete" });
+  });
+
+  it("compares only legs 1–4, and needs all four", () => {
+    expect(
+      sameRacingLineup(saved, [
+        ...legs("a", "b", "c", "d"),
+        { legOrder: 5, membershipId: "z" },
+      ]),
+    ).toBe(true);
+    expect(sameRacingLineup(legs("a", "b", "c"), legs("a", "b", "c"))).toBe(
+      false,
+    );
+  });
+
+  it("keys resolutions by event and letter", () => {
+    expect(relayLineupKey("ev1", "a")).toBe("ev1:A");
   });
 });

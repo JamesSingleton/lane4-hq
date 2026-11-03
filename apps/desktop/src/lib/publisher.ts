@@ -32,6 +32,19 @@ export function newerRevisionNotice(count: number): string {
   return `Lane4 already has a newer revision of ${count} heats, so those copies were not stored.`;
 }
 
+/** Why a heat didn't publish when another copy has different results. */
+export const REVISION_CONFLICT_ERROR =
+  "Lane4 already has different results for this heat. Check the heat and verify it again to publish your version.";
+
+function errorCode(body: string): string | null {
+  try {
+    const parsed = JSON.parse(body) as { error?: { code?: unknown } };
+    return typeof parsed.error?.code === "string" ? parsed.error.code : null;
+  } catch {
+    return null;
+  }
+}
+
 export type PostFn = (
   idempotencyKey: string,
   body: string,
@@ -98,6 +111,20 @@ export async function drainPublishQueue(
         key: item.key,
         revision: publication.revision,
         ok: true,
+      });
+      continue;
+    }
+    // 409 revision_conflict: Lane4 has this revision with different results,
+    // e.g. another deck machine published it. Not published: an official
+    // re-verifies the heat, which makes a new revision that replaces it.
+    if (
+      response.status === 409 &&
+      errorCode(response.body) === "revision_conflict"
+    ) {
+      outcomes.push({
+        key: item.key,
+        ok: false,
+        error: REVISION_CONFLICT_ERROR,
       });
       continue;
     }
