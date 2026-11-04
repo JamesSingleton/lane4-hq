@@ -1,5 +1,4 @@
-import { Text } from "react-email";
-import { EmailButton, EmailLayout, textStyle } from "../_layout";
+import { EmailButton, EmailLayout, P } from "../_layout";
 
 export interface VerifyEmailProps {
   name: string;
@@ -9,23 +8,25 @@ export interface VerifyEmailProps {
 export default function VerifyEmail({ name, url }: VerifyEmailProps) {
   return (
     <EmailLayout
-      preview="Verify your email address"
-      heading="Verify your email"
+      preview="Confirm your email to finish setting up Lane4 HQ."
+      eyebrow="Account"
+      heading="Confirm your email"
+      reason="You're getting this because someone signed up for Lane4 HQ with this address. If it wasn't you, ignore this email and no account will be activated."
     >
-      <Text style={textStyle}>Hi {name},</Text>
-      <Text style={textStyle}>
-        Thanks for signing up for Lane4 HQ. Please verify your email address to
-        get started.
-      </Text>
-      <EmailButton href={url}>Verify email</EmailButton>
-      <Text style={textStyle}>
-        If you didn&apos;t create an account, you can safely ignore this email.
-      </Text>
+      <P>Hi {name},</P>
+      <P>
+        Confirm this is your email address and you can start setting up your
+        team: roster, meets, entries, and results.
+      </P>
+      <EmailButton href={url} showLink>
+        Confirm email
+      </EmailButton>
+      <P>This link expires in 1 hour.</P>
     </EmailLayout>
   );
 }
 
 VerifyEmail.PreviewProps = {
-  name: "Coach Jane",
-  url: "https://admin.lane4hq.com/verify?token=abc",
+  name: "Jane",
+  url: "https://admin.lane4hq.com/api/auth/verify-email?token=abc123",
 } satisfies VerifyEmailProps;

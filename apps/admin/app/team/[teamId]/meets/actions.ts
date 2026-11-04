@@ -5,6 +5,7 @@ import { getSession } from "@lane4hq/auth/session";
 import { assertFeature } from "@lane4hq/billing/features";
 import {
   getOrganizationMeetImportIdentity,
+  getOrganizationName,
   requireCoachSafeSportCurrent,
   requireTeamMember,
   requireTeamRole,
@@ -1983,7 +1984,7 @@ export async function importMeetFileAction(
 
     if (session?.user?.email) {
       await sendMeetImportComplete(session.user.email, {
-        teamName: "Your team",
+        teamName: (await getOrganizationName(teamId)) ?? "your team",
         meetName: parsed.name,
         eventsCount: eventsAdded,
         entriesCount: entriesAdded,

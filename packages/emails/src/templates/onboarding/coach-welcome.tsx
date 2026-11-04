@@ -1,5 +1,4 @@
-import { Text } from "react-email";
-import { EmailButton, EmailLayout, textStyle } from "../_layout";
+import { EmailButton, EmailLayout, P, Steps } from "../_layout";
 
 export interface CoachWelcomeProps {
   name: string;
@@ -11,22 +10,37 @@ export default function CoachWelcome({
   dashboardUrl,
 }: CoachWelcomeProps) {
   return (
-    <EmailLayout preview="Welcome to Lane4 HQ" heading="Welcome, coach!">
-      <Text style={textStyle}>Hi {name},</Text>
-      <Text style={textStyle}>
-        Welcome to Lane4 HQ! You&apos;re all set to start managing your swim
-        team.
-      </Text>
-      <Text style={textStyle}>Quick start:</Text>
-      <Text style={textStyle}>1. Create or join a team</Text>
-      <Text style={textStyle}>2. Add your roster</Text>
-      <Text style={textStyle}>3. Set up your first practice</Text>
-      <EmailButton href={dashboardUrl}>Go to dashboard</EmailButton>
+    <EmailLayout
+      preview="Your Lane4 HQ account is ready. Here's how to get your team set up."
+      eyebrow="Welcome"
+      heading={`Welcome to Lane4, ${name}`}
+      reason="You're getting this because you just confirmed your Lane4 HQ account."
+    >
+      <P>Your account is ready. Three steps to get your team going:</P>
+      <Steps
+        items={[
+          {
+            title: "Create your team",
+            detail: "Or accept an invitation from your head coach.",
+          },
+          {
+            title: "Bring in your roster",
+            detail:
+              "Import a Team Manager, SDIF, or CSV file, or add swimmers by hand.",
+          },
+          {
+            title: "Add your first meet",
+            detail:
+              "Load the host's meet file, enter your swimmers, and send the entries back.",
+          },
+        ]}
+      />
+      <EmailButton href={dashboardUrl}>Set up your team</EmailButton>
     </EmailLayout>
   );
 }
 
 CoachWelcome.PreviewProps = {
-  name: "Coach Jane",
+  name: "Jane",
   dashboardUrl: "https://admin.lane4hq.com/onboarding",
 } satisfies CoachWelcomeProps;

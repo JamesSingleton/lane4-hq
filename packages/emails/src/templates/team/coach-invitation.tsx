@@ -1,5 +1,4 @@
-import { Text } from "react-email";
-import { EmailButton, EmailLayout, textStyle } from "../_layout";
+import { B, Details, EmailButton, EmailLayout, P, roleLabel } from "../_layout";
 
 export interface CoachInvitationProps {
   inviterName: string;
@@ -16,22 +15,32 @@ export default function CoachInvitation({
 }: CoachInvitationProps) {
   return (
     <EmailLayout
-      preview={`Join ${teamName} on Lane4 HQ`}
-      heading="You've been invited!"
+      preview={`${inviterName} invited you to coach with ${teamName} on Lane4 HQ.`}
+      eyebrow="Invitation"
+      heading={`Join ${teamName} on Lane4`}
+      reason={`You're getting this because ${inviterName} invited this address to ${teamName}. If you don't know them, ignore this email.`}
     >
-      <Text style={textStyle}>
-        {inviterName} invited you to join <strong>{teamName}</strong> as{" "}
-        <strong>{role}</strong>.
-      </Text>
-      <EmailButton href={inviteUrl}>Accept invitation</EmailButton>
-      <Text style={textStyle}>This invitation expires in 7 days.</Text>
+      <P>
+        <B>{inviterName}</B> invited you to help coach <B>{teamName}</B>.
+      </P>
+      <Details
+        items={[
+          { label: "Team", value: teamName },
+          { label: "Your role", value: roleLabel(role) },
+          { label: "Invited by", value: inviterName },
+        ]}
+      />
+      <EmailButton href={inviteUrl} showLink>
+        Accept invitation
+      </EmailButton>
+      <P>The invitation expires in 7 days.</P>
     </EmailLayout>
   );
 }
 
 CoachInvitation.PreviewProps = {
-  inviterName: "Coach Jane",
+  inviterName: "Jane Smith",
   teamName: "FAST Swim Club",
   inviteUrl: "https://admin.lane4hq.com/accept-invite?id=abc",
-  role: "assistant coach",
+  role: "assistant_coach",
 } satisfies CoachInvitationProps;

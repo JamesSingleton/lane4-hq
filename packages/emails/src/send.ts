@@ -95,29 +95,34 @@ export interface EmailProps {
   };
 }
 
-const SUBJECTS: Record<EmailType, string> = {
-  "verify-email": "Verify your email — Lane4 HQ",
-  "reset-password": "Reset your password — Lane4 HQ",
-  "password-changed": "Your password was changed — Lane4 HQ",
-  "two-factor-otp": "Your sign-in code — Lane4 HQ",
-  "coach-welcome": "Welcome to Lane4 HQ!",
-  "team-welcome": "Your team is ready — Lane4 HQ",
-  "coach-invitation": "You've been invited to join a team",
-  "invitation-accepted": "Invitation accepted",
-  "role-changed": "Your role was updated",
-  "removed-from-team": "Team access removed",
-  "member-joined": "New team member joined",
-  "subscription-confirmed": "Subscription confirmed",
-  "payment-failed": "Payment failed — action required",
-  "subscription-renewed": "Subscription renewed",
-  "plan-downgraded": "Plan updated",
-  "roster-import-complete": "Roster import complete",
-  "roster-import-failed": "Roster import failed",
-  "meet-import-complete": "Meet import complete",
-  "swims-sync-summary": "USA Swimming sync complete",
-  "maapp-acknowledgment-request": "MAAPP acknowledgment required",
-  "safesport-training-expiring": "SafeSport training expiring soon",
-  "safesport-training-required": "SafeSport training required",
+/** Subject lines say what happened and, when it helps, to which team. */
+const SUBJECTS: { [K in EmailType]: (props: EmailProps[K]) => string } = {
+  "verify-email": () => "Confirm your email for Lane4 HQ",
+  "reset-password": () => "Reset your Lane4 HQ password",
+  "password-changed": () => "Your Lane4 HQ password was changed",
+  "two-factor-otp": (p) => `${p.otp} is your Lane4 HQ sign-in code`,
+  "coach-welcome": () => "Welcome to Lane4 HQ",
+  "team-welcome": (p) => `${p.teamName} is ready on Lane4 HQ`,
+  "coach-invitation": (p) =>
+    `${p.inviterName} invited you to ${p.teamName} on Lane4 HQ`,
+  "invitation-accepted": (p) => `${p.inviteeName} joined ${p.teamName}`,
+  "role-changed": (p) => `Your role on ${p.teamName} changed`,
+  "removed-from-team": (p) => `You were removed from ${p.teamName}`,
+  "member-joined": (p) => `${p.memberName} joined ${p.teamName}`,
+  "subscription-confirmed": (p) => `${p.teamName} is on the ${p.plan} plan`,
+  "payment-failed": (p) => `Action needed: payment failed for ${p.teamName}`,
+  "subscription-renewed": (p) => `${p.teamName}'s ${p.plan} plan renewed`,
+  "plan-downgraded": (p) => `${p.teamName} moved to the Free plan`,
+  "roster-import-complete": (p) => `Roster import finished for ${p.teamName}`,
+  "roster-import-failed": (p) =>
+    `Roster import didn't finish for ${p.teamName}`,
+  "meet-import-complete": (p) => `${p.meetName} is imported`,
+  "swims-sync-summary": (p) => `USA Swimming sync finished for ${p.teamName}`,
+  "maapp-acknowledgment-request": (p) =>
+    `Action needed: MAAPP acknowledgment for ${p.swimmerName}`,
+  "safesport-training-expiring": () => "Your SafeSport training expires soon",
+  "safesport-training-required": (p) =>
+    `SafeSport training needed for ${p.teamName}`,
 };
 
 type TemplateLoaders = {
@@ -174,14 +179,24 @@ export async function sendEmail<T extends EmailType>(
 
   const loader = TEMPLATE_LOADERS[opts.type] as TemplateLoaders[T];
   const mod = await loader();
-  const html = await render(mod.default(opts.props));
+  const email = mod.default(opts.props);
+  // Plain text alongside HTML: better for spam filters, screen readers, and
+  // text-only mail clients.
+  const [html, text] = await Promise.all([
+    render(email),
+    render(email, { plainText: true }),
+  ]);
+  const subject = (SUBJECTS[opts.type] as (props: EmailProps[T]) => string)(
+    opts.props,
+  );
 
   const resend = getResendClient();
   const { error } = await resend.emails.send({
     from: getEmailFrom(),
     to: Array.isArray(opts.to) ? opts.to : [opts.to],
-    subject: SUBJECTS[opts.type],
+    subject,
     html,
+    text,
     ...(opts.idempotencyKey && {
       headers: { "Idempotency-Key": opts.idempotencyKey },
     }),

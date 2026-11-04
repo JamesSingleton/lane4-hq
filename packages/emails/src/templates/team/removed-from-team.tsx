@@ -1,5 +1,4 @@
-import { Text } from "react-email";
-import { EmailLayout, textStyle } from "../_layout";
+import { B, EmailLayout, P } from "../_layout";
 
 export interface RemovedFromTeamProps {
   name: string;
@@ -12,13 +11,24 @@ export default function RemovedFromTeam({
 }: RemovedFromTeamProps) {
   return (
     <EmailLayout
-      preview={`Removed from ${teamName}`}
-      heading="Team access removed"
+      preview={`You no longer have access to ${teamName} on Lane4 HQ.`}
+      eyebrow="Team"
+      heading={`You were removed from ${teamName}`}
+      reason={`You're getting this because your access to ${teamName} on Lane4 HQ changed.`}
     >
-      <Text style={textStyle}>Hi {name},</Text>
-      <Text style={textStyle}>
-        You have been removed from <strong>{teamName}</strong> on Lane4 HQ.
-      </Text>
+      <P>
+        Hi {name}, you no longer have access to <B>{teamName}</B>. Your Lane4 HQ
+        account and any other teams you belong to aren&apos;t affected.
+      </P>
+      <P>
+        If this was a mistake, ask the team&apos;s owner or head coach to invite
+        you again.
+      </P>
     </EmailLayout>
   );
 }
+
+RemovedFromTeam.PreviewProps = {
+  name: "Alex",
+  teamName: "FAST Swim Club",
+} satisfies RemovedFromTeamProps;

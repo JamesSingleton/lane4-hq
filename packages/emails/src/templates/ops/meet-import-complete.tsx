@@ -1,5 +1,4 @@
-import { Text } from "react-email";
-import { EmailLayout, textStyle } from "../_layout";
+import { B, EmailLayout, P, Stats } from "../_layout";
 
 export interface MeetImportCompleteProps {
   teamName: string;
@@ -15,14 +14,29 @@ export default function MeetImportComplete({
   entriesCount,
 }: MeetImportCompleteProps) {
   return (
-    <EmailLayout preview="Meet import complete" heading="Meet import complete">
-      <Text style={textStyle}>
-        <strong>{meetName}</strong> for <strong>{teamName}</strong> was imported
-        successfully.
-      </Text>
-      <Text style={textStyle}>
-        Events: {eventsCount} · Entries: {entriesCount}
-      </Text>
+    <EmailLayout
+      preview={`${meetName} imported: ${eventsCount} events, ${entriesCount} entries.`}
+      eyebrow="Meet import"
+      status={{ tone: "ok", label: "Imported" }}
+      heading={`${meetName} is imported`}
+      reason={`You're getting this because you imported a meet file for ${teamName}.`}
+    >
+      <P>
+        It&apos;s on <B>{teamName}</B>&apos;s schedule and ready for entries.
+      </P>
+      <Stats
+        items={[
+          { label: "Events", value: eventsCount },
+          { label: "Entries", value: entriesCount },
+        ]}
+      />
     </EmailLayout>
   );
 }
+
+MeetImportComplete.PreviewProps = {
+  teamName: "FAST Swim Club",
+  meetName: "Fall Invitational",
+  eventsCount: 24,
+  entriesCount: 118,
+} satisfies MeetImportCompleteProps;
