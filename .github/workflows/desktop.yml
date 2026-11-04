@@ -1,30 +1,70 @@
 name: Desktop
 
+# The macOS and Windows builds are slow, so they run only when a change can
+# affect the desktop app. The `changes` job asks Turborepo, which knows the
+# desktop's workspace dependencies and reads pnpm-lock.yaml per package, so a
+# change to admin, the API, or their packages (or a dependency bump only they
+# use) skips the build. Run it by hand with "Run workflow" when needed.
 on:
   push:
     branches:
       - main
-    paths:
-      - "apps/desktop/**"
-      - "packages/**"
-      - "pnpm-lock.yaml"
-      - ".github/workflows/desktop.yml"
   pull_request:
     branches:
       - main
-    paths:
-      - "apps/desktop/**"
-      - "packages/**"
-      - "pnpm-lock.yaml"
-      - ".github/workflows/desktop.yml"
+  workflow_dispatch:
 
 concurrency:
   group: desktop-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
+  changes:
+    name: Check for desktop changes
+    runs-on: ubuntu-latest
+    outputs:
+      desktop: ${{ steps.affected.outputs.desktop }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - name: Set up Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: "24"
+      - uses: pnpm/action-setup@v6
+      - name: Is the desktop affected?
+        id: affected
+        env:
+          EVENT: ${{ github.event_name }}
+          BASE: ${{ github.event_name == 'pull_request' && github.event.pull_request.base.sha || github.event.before }}
+        run: |
+          build() {
+            echo "desktop=$1" >> "$GITHUB_OUTPUT"
+            echo "Desktop build: $1 ($2)"
+            exit 0
+          }
+          if [ "$EVENT" = "workflow_dispatch" ]; then
+            build true "run by hand"
+          fi
+          if [ -z "$BASE" ] || ! git cat-file -e "$BASE^{commit}" 2>/dev/null; then
+            build true "no base commit to compare with"
+          fi
+          if git diff --name-only "$BASE" HEAD | grep -qx ".github/workflows/desktop.yml"; then
+            build true "this workflow changed"
+          fi
+          affected=$(TURBO_SCM_BASE="$BASE" TURBO_SCM_HEAD=HEAD \
+            npx --yes turbo@2.11.10 ls --affected --output=json)
+          if echo "$affected" | jq -e '.packages.items[] | select(.name == "@lane4hq/desktop")' > /dev/null; then
+            build true "the desktop or one of its dependencies changed"
+          fi
+          build false "nothing the desktop uses changed"
+
   build:
     name: Build (${{ matrix.name }})
+    needs: changes
+    if: needs.changes.outputs.desktop == 'true'
     strategy:
       fail-fast: false
       matrix:
