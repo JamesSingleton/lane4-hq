@@ -10,7 +10,7 @@ pnpm dev:api          # http://localhost:8080, reads the root .env.local
 
 - `/docs`: API reference (Scalar)
 - `/openapi.json`: OpenAPI 3.1 document. `pnpm --filter @lane4hq/api openapi` writes it to `apps/api/openapi.json` for client generators.
-- `/api/auth/*`: Better Auth (bearer tokens, device-code sign-in)
+- `/api/auth/*`: Better Auth, limited to what the desktop needs: `POST device/code`, `POST device/token`, `GET get-session`, and `POST sign-out` (`API_AUTH_ROUTES` in `src/app.ts`). Sign-up, password sign-in, and password resets are admin's, behind Vercel BotID. Every other path is `404`.
 - `/health`: liveness (the process is up). Railway's deploy healthcheck uses this, so a database blip doesn't fail a deploy.
 - `/health/ready`: readiness. `503` with `{ checks: { database: "failed" } }` when Postgres doesn't answer within 3 s. The reason is logged, never returned.
 

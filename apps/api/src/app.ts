@@ -66,6 +66,18 @@ export type AppOptions = {
   onException?: (event: ApiExceptionObservation) => void;
 };
 
+/**
+ * The Better Auth routes this API serves: desktop device sign-in and session
+ * basics. Sign-up, password sign-in, and password resets happen in admin,
+ * behind Vercel BotID; serving them here would let bots skip that check.
+ */
+export const API_AUTH_ROUTES: ReadonlySet<string> = new Set([
+  "POST /api/auth/device/code",
+  "POST /api/auth/device/token",
+  "GET /api/auth/get-session",
+  "POST /api/auth/sign-out",
+]);
+
 /** Probes hit these constantly; logging them buries real traffic. */
 const QUIET_PATHS = new Set(["/health", "/health/ready"]);
 
@@ -119,8 +131,17 @@ export function createApp(options: AppOptions) {
     }),
   );
 
-  // Sign-in for native apps: device codes, bearer tokens, and later Expo.
-  app.on(["GET", "POST"], "/api/auth/*", (c) => auth.handler(c.req.raw));
+  // Sign-in for native apps: device codes and bearer tokens. Everything else
+  // under /api/auth is admin's (see API_AUTH_ROUTES).
+  app.on(["GET", "POST"], "/api/auth/*", (c) => {
+    const path = c.req.path.replace(/\/+$/, "");
+    if (!API_AUTH_ROUTES.has(`${c.req.method} ${path}`)) {
+      return Response.json(errorBody("not_found", "No such endpoint."), {
+        status: 404,
+      });
+    }
+    return auth.handler(c.req.raw);
+  });
 
   app.get("/", (c) => c.json({ name: "Lane4 API", docs: "/docs" }));
   // Liveness: the process is up. Railway's deploy healthcheck uses this, so
