@@ -57,6 +57,7 @@ import {
 } from "./device-session";
 import { keys } from "./keys";
 import { orgAc, orgRoles } from "./organization-ac";
+import { welcomeOnCreate, welcomeOnVerify } from "./welcome";
 
 function asPlan(value: unknown): PlanTier | null {
   if (value === "pro" || value === "enterprise" || value === "free") {
@@ -242,6 +243,9 @@ function createAuth(polarClient: PolarCore) {
       sendOnSignUp: true,
       sendOnSignIn: true,
       autoSignInAfterVerification: true,
+      afterEmailVerification: async (user) => {
+        await welcomeOnVerify(user, sendCoachWelcome);
+      },
       sendVerificationEmail: async ({ user, url }) => {
         await sendVerifyEmail({ user, url });
       },
@@ -340,16 +344,9 @@ function createAuth(polarClient: PolarCore) {
       },
       user: {
         create: {
+          // Unverified sign-ups are welcomed in afterEmailVerification.
           after: async (user) => {
-            await sendCoachWelcome({
-              to: user.email,
-              props: {
-                name:
-                  typeof user.firstName === "string"
-                    ? user.firstName
-                    : user.name,
-              },
-            });
+            await welcomeOnCreate(user, sendCoachWelcome);
           },
         },
       },

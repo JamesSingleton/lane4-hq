@@ -118,11 +118,30 @@ describe("service routes", () => {
     expect(docs.headers.get("content-type")).toContain("text/html");
   });
 
-  it("hands /api/auth to Better Auth", async () => {
-    mocks.handler.mockResolvedValue(new Response("ok"));
+  it("hands desktop sign-in routes to Better Auth", async () => {
+    mocks.handler.mockImplementation(async () => new Response("ok"));
     const res = await app.request("/api/auth/device/code", { method: "POST" });
     expect(await res.text()).toBe("ok");
-    expect(mocks.handler).toHaveBeenCalledOnce();
+    const trailing = await app.request("/api/auth/sign-out/", {
+      method: "POST",
+    });
+    expect(await trailing.text()).toBe("ok");
+    expect(mocks.handler).toHaveBeenCalledTimes(2);
+  });
+
+  it("leaves sign-up and password sign-in to admin", async () => {
+    for (const [method, path] of [
+      ["POST", "/api/auth/sign-up/email"],
+      ["POST", "/api/auth/sign-in/email"],
+      ["POST", "/api/auth/request-password-reset"],
+      ["POST", "/api/auth/device/approve"],
+      ["GET", "/api/auth/device/code"],
+      ["POST", "/api/auth/Sign-Up/email"],
+    ] as const) {
+      const res = await app.request(path, { method });
+      expect(res.status, `${method} ${path}`).toBe(404);
+    }
+    expect(mocks.handler).not.toHaveBeenCalled();
   });
 
   it("allows configured browser origins only", async () => {
