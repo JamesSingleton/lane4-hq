@@ -1,5 +1,4 @@
-import { Text } from "react-email";
-import { EmailButton, EmailLayout, textStyle } from "../_layout";
+import { B, EmailButton, EmailLayout, P, Steps } from "../_layout";
 
 export interface TeamWelcomeProps {
   name: string;
@@ -16,23 +15,38 @@ export default function TeamWelcome({
 }: TeamWelcomeProps) {
   const teamUrl = `${baseUrl}/team/${teamId}`;
   return (
-    <EmailLayout preview={`${teamName} is ready`} heading="Your team is ready!">
-      <Text style={textStyle}>Hi {name},</Text>
-      <Text style={textStyle}>
-        <strong>{teamName}</strong> has been created on the Free plan. You can
-        now manage your roster, track attendance, and more.
-      </Text>
-      <Text style={textStyle}>Next steps:</Text>
-      <Text style={textStyle}>• Import or add swimmers to your roster</Text>
-      <Text style={textStyle}>• Connect your USA Swimming club (optional)</Text>
-      <Text style={textStyle}>• Schedule your first practice</Text>
-      <EmailButton href={teamUrl}>Open team dashboard</EmailButton>
+    <EmailLayout
+      preview={`${teamName} is set up on Lane4 HQ. Here's what to do next.`}
+      eyebrow="Team"
+      heading={`${teamName} is ready`}
+      reason={`You're getting this because you created ${teamName} on Lane4 HQ.`}
+    >
+      <P>
+        Hi {name}, <B>{teamName}</B> is set up on the Free plan. Next:
+      </P>
+      <Steps
+        items={[
+          {
+            title: "Add your swimmers",
+            detail: "Import your roster or add swimmers one at a time.",
+          },
+          {
+            title: "Connect USA Swimming",
+            detail: "Optional. Keeps your roster matched to registrations.",
+          },
+          {
+            title: "Invite your coaches",
+            detail: "Give assistants access to attendance and lineups.",
+          },
+        ]}
+      />
+      <EmailButton href={teamUrl}>Open {teamName}</EmailButton>
     </EmailLayout>
   );
 }
 
 TeamWelcome.PreviewProps = {
-  name: "Coach Jane",
+  name: "Jane",
   teamName: "FAST Swim Club",
   teamId: "team_123",
   baseUrl: "https://admin.lane4hq.com",

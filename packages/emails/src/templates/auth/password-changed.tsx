@@ -1,5 +1,5 @@
-import { Text } from "react-email";
-import { EmailButton, EmailLayout, textStyle } from "../_layout";
+import { getBaseUrl } from "../../client";
+import { Callout, EmailButton, EmailLayout, P } from "../_layout";
 
 export interface PasswordChangedProps {
   name: string;
@@ -7,16 +7,25 @@ export interface PasswordChangedProps {
 
 export default function PasswordChanged({ name }: PasswordChangedProps) {
   return (
-    <EmailLayout preview="Your password was changed" heading="Password changed">
-      <Text style={textStyle}>Hi {name},</Text>
-      <Text style={textStyle}>
-        Your Lane4 HQ password was successfully changed. If you didn&apos;t make
-        this change, contact support immediately.
-      </Text>
+    <EmailLayout
+      preview="Your Lane4 HQ password was just changed."
+      eyebrow="Account security"
+      heading="Your password was changed"
+      reason="You're getting this because the password on your Lane4 HQ account changed. We send this every time, for your security."
+    >
+      <P>Hi {name},</P>
+      <P>The password for your Lane4 HQ account was just changed.</P>
+      <Callout tone="warn">
+        Didn&apos;t change it? Reset your password now. Resetting it signs out
+        every device, including whoever changed it.
+      </Callout>
+      <EmailButton href={`${getBaseUrl()}/forgot-password`}>
+        Reset password
+      </EmailButton>
     </EmailLayout>
   );
 }
 
 PasswordChanged.PreviewProps = {
-  name: "Coach Jane",
+  name: "Jane",
 } satisfies PasswordChangedProps;

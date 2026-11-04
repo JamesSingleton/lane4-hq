@@ -1,5 +1,4 @@
-import { Text } from "react-email";
-import { EmailLayout, textStyle } from "../_layout";
+import { CodeBox, EmailLayout, P } from "../_layout";
 
 export interface TwoFactorOtpProps {
   name: string;
@@ -9,33 +8,22 @@ export interface TwoFactorOtpProps {
 export default function TwoFactorOtp({ name, otp }: TwoFactorOtpProps) {
   return (
     <EmailLayout
-      preview="Your sign-in verification code"
-      heading="Sign-in verification code"
+      preview={`${otp} is your Lane4 HQ sign-in code.`}
+      eyebrow="Account security"
+      heading="Your sign-in code"
+      reason="You're getting this because someone signed in to your Lane4 HQ account with your password. If it wasn't you, change your password."
     >
-      <Text style={textStyle}>Hi {name},</Text>
-      <Text style={textStyle}>
-        Use this one-time code to finish signing in to Lane4 HQ:
-      </Text>
-      <Text
-        style={{
-          ...textStyle,
-          fontSize: "28px",
-          fontWeight: 700,
-          letterSpacing: "0.2em",
-          fontFamily: "monospace",
-        }}
-      >
-        {otp}
-      </Text>
-      <Text style={textStyle}>
-        This code expires shortly. If you didn&apos;t try to sign in, you can
-        ignore this email.
-      </Text>
+      <P>Hi {name}, enter this code to finish signing in:</P>
+      <CodeBox code={otp} />
+      <P>
+        The code expires in a few minutes. Lane4 will never ask you for it by
+        phone or text.
+      </P>
     </EmailLayout>
   );
 }
 
 TwoFactorOtp.PreviewProps = {
-  name: "Coach Jane",
-  otp: "123456",
+  name: "Jane",
+  otp: "482913",
 } satisfies TwoFactorOtpProps;

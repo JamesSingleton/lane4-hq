@@ -1,5 +1,4 @@
-import { Text } from "react-email";
-import { EmailLayout, textStyle } from "../_layout";
+import { B, EmailLayout, P, Stats } from "../_layout";
 
 export interface SwimsSyncSummaryProps {
   teamName: string;
@@ -16,15 +15,29 @@ export default function SwimsSyncSummary({
 }: SwimsSyncSummaryProps) {
   return (
     <EmailLayout
-      preview="USA Swimming sync complete"
-      heading="SWIMS sync complete"
+      preview={`USA Swimming sync for ${teamName}: ${added} added, ${updated} updated, ${removed} removed.`}
+      eyebrow="USA Swimming"
+      status={{ tone: "ok", label: "Synced" }}
+      heading="Your USA Swimming sync finished"
+      reason={`You're getting this because ${teamName} syncs its roster with USA Swimming.`}
     >
-      <Text style={textStyle}>
-        USA Swimming roster sync for <strong>{teamName}</strong> is complete.
-      </Text>
-      <Text style={textStyle}>
-        Added: {added} · Updated: {updated} · Removed: {removed}
-      </Text>
+      <P>
+        <B>{teamName}</B>&apos;s roster now matches USA Swimming.
+      </P>
+      <Stats
+        items={[
+          { label: "Added", value: added },
+          { label: "Updated", value: updated },
+          { label: "Removed", value: removed },
+        ]}
+      />
     </EmailLayout>
   );
 }
+
+SwimsSyncSummary.PreviewProps = {
+  teamName: "FAST Swim Club",
+  added: 3,
+  updated: 12,
+  removed: 1,
+} satisfies SwimsSyncSummaryProps;

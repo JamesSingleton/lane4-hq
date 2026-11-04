@@ -1,5 +1,4 @@
-import { Text } from "react-email";
-import { EmailLayout, textStyle } from "../_layout";
+import { B, Details, EmailLayout, P, roleLabel } from "../_layout";
 
 export interface RoleChangedProps {
   name: string;
@@ -13,12 +12,28 @@ export default function RoleChanged({
   newRole,
 }: RoleChangedProps) {
   return (
-    <EmailLayout preview="Your role was updated" heading="Role updated">
-      <Text style={textStyle}>Hi {name},</Text>
-      <Text style={textStyle}>
-        Your role on <strong>{teamName}</strong> has been updated to{" "}
-        <strong>{newRole}</strong>.
-      </Text>
+    <EmailLayout
+      preview={`You're now ${roleLabel(newRole).toLowerCase()} on ${teamName}.`}
+      eyebrow="Team"
+      heading="Your role changed"
+      reason={`You're getting this because your access to ${teamName} on Lane4 HQ changed.`}
+    >
+      <P>
+        Hi {name}, your role on <B>{teamName}</B> was updated.
+      </P>
+      <Details
+        items={[
+          { label: "Team", value: teamName },
+          { label: "New role", value: roleLabel(newRole) },
+        ]}
+      />
+      <P>If this looks wrong, ask your team&apos;s owner or head coach.</P>
     </EmailLayout>
   );
 }
+
+RoleChanged.PreviewProps = {
+  name: "Alex",
+  teamName: "FAST Swim Club",
+  newRole: "head_coach",
+} satisfies RoleChangedProps;

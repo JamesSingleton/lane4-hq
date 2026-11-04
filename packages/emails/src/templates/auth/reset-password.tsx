@@ -1,5 +1,4 @@
-import { Text } from "react-email";
-import { EmailButton, EmailLayout, textStyle } from "../_layout";
+import { EmailButton, EmailLayout, P } from "../_layout";
 
 export interface ResetPasswordProps {
   name: string;
@@ -8,22 +7,26 @@ export interface ResetPasswordProps {
 
 export default function ResetPassword({ name, url }: ResetPasswordProps) {
   return (
-    <EmailLayout preview="Reset your password" heading="Reset your password">
-      <Text style={textStyle}>Hi {name},</Text>
-      <Text style={textStyle}>
-        We received a request to reset your password. Click the button below to
-        choose a new password.
-      </Text>
-      <EmailButton href={url}>Reset password</EmailButton>
-      <Text style={textStyle}>
-        This link expires in 1 hour. If you didn&apos;t request this, ignore
-        this email.
-      </Text>
+    <EmailLayout
+      preview="Choose a new password for Lane4 HQ. The link expires in 1 hour."
+      eyebrow="Account"
+      heading="Reset your password"
+      reason="You're getting this because someone asked to reset the password for this Lane4 HQ account. If it wasn't you, ignore this email; your password won't change."
+    >
+      <P>Hi {name},</P>
+      <P>Use the button below to choose a new password.</P>
+      <EmailButton href={url} showLink>
+        Choose a new password
+      </EmailButton>
+      <P>
+        This link expires in 1 hour and works once. After you reset it,
+        you&apos;ll be signed out on your other devices.
+      </P>
     </EmailLayout>
   );
 }
 
 ResetPassword.PreviewProps = {
-  name: "Coach Jane",
-  url: "https://admin.lane4hq.com/reset?token=abc",
+  name: "Jane",
+  url: "https://admin.lane4hq.com/reset-password?token=abc123",
 } satisfies ResetPasswordProps;
