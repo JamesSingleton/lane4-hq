@@ -23,7 +23,7 @@ import { plans } from "@/lib/site";
 
 export const metadata = pageMetadata(
   "Pricing",
-  "Free covers unlimited swimmers, meet files, seed times, and progression for one coach. Pro adds seats, lineup suggestions, and a roster-wide cut list.",
+  "Free covers unlimited swimmers, meet files, seed times, and progression for two coaches. Pro adds more seats, lineup suggestions, and a roster-wide cut list.",
 );
 
 const comparison = [
@@ -89,7 +89,7 @@ export default function PricingPage() {
   return (
     <>
       <PageIntro
-        title="One coach can take a full season of meets on Free."
+        title="Two coaches can take a full season of meets on Free."
         description="Unlimited swimmers, meet files, seed times from best times, and progression, for a club or a high school. Pro adds coach seats, lineup suggestions for open individual spots, and a roster-wide cut list. Billing is per team."
       />
       <section

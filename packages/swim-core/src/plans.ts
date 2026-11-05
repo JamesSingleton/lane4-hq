@@ -6,7 +6,7 @@ export type PlanTier = (typeof PLAN_TIERS)[number];
 export const PLAN_LIMITS = {
   free: {
     maxSwimmers: Number.POSITIVE_INFINITY,
-    maxCoaches: 1,
+    maxCoaches: 2,
     meetImport: true,
     progression: true,
     swimsSync: true,

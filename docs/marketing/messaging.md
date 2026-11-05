@@ -32,7 +32,7 @@ Lane4 HQ is the coach's workspace for the team they take to someone else's meet.
 
 ## What a paid plan adds
 
-Free is one coach, unlimited swimmers and meets, import and export, seeds, progression, high school limits, and 5 practice drafts or relay-order suggestions a month. Pro is up to 5 coaches, lineup suggestions that fill leftover individual spots from eligible best times (relays stay as staffed), the roster-wide cut list, and 20 drafts a month, then overage. Enterprise is unlimited coaches and 100 drafts a month, then overage. Do not publish an overage price. Relay-order suggestions and practice drafts share one monthly pool on every plan. Lineup suggestions are Pro only, and they are not a full lineup.
+Free is two coaches, unlimited swimmers and meets, import and export, seeds, progression, high school limits, and 5 practice drafts or relay-order suggestions a month. Pro is up to 5 coaches, lineup suggestions that fill leftover individual spots from eligible best times (relays stay as staffed), the roster-wide cut list, and 20 drafts a month, then overage. Enterprise is unlimited coaches and 100 drafts a month, then overage. Do not publish an overage price. Relay-order suggestions and practice drafts share one monthly pool on every plan. Lineup suggestions are Pro only, and they are not a full lineup.
 
 ## Voice
 
