@@ -121,7 +121,7 @@ v1 focuses exclusively on **visiting-team** workflows: the coach prepares their 
 
 71. As a coach, I want to sign up, verify my email, and create or join a team, so that I can start using the product without sales contact.
 72. As a coach, I want two-factor authentication available on my account, so that my teams' data is protected.
-73. As a head coach on the free tier, I want one coach seat with unlimited swimmers and unlimited meets, so that small programs are not artificially capped.
+73. As a head coach on the free tier, I want two coach seats with unlimited swimmers and unlimited meets, so that small programs are not artificially capped.
 74. As a head coach on the free tier, I want auto-populated seed times when entering meets, so that I get real value without upgrading (unlike SwimCloud free).
 75. As a head coach on the Pro tier, I want to add additional coach seats, so that my full staff can work in the platform simultaneously.
 76. As a head coach on the Pro tier, I want lineup suggestion tools, so that I can optimize championship lineups faster.
@@ -172,7 +172,7 @@ v1 focuses exclusively on **visiting-team** workflows: the coach prepares their 
 
 | Tier | Includes |
 | ---- | -------- |
-| **Free** | 1 coach seat; unlimited swimmers and meets; full roster CRUD; meet entries with **auto-populated best times**; entry export (HY3/CL2/SDIF); results import; per-team progression; **SWIMS 3.0 sync for club teams** |
+| **Free** | 2 coach seats; unlimited swimmers and meets; full roster CRUD; meet entries with **auto-populated best times**; entry export (HY3/CL2/SDIF); results import; per-team progression; **SWIMS 3.0 sync for club teams** |
 | **Pro** | Additional coach seats; **lineup suggestions**; advanced analytics/reports; priority support |
 
 - No caps on swimmer count or meet count on free tier.

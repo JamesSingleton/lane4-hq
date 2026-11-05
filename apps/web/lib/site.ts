@@ -199,7 +199,7 @@ export const faqs = [
   {
     question: "What is free, and what is Pro?",
     answer:
-      "Free includes one coach seat, unlimited swimmers, unlimited meets, meet import and export, seed times from best times, progression, and high school class year and association event limits. Practice drafts and relay-order suggestions share one pool: 5 a month on Free. Pro adds more coach seats, lineup suggestions for open individual spots, a roster-wide cut list, and 20 drafts a month, with overage allowed after that.",
+      "Free includes two coach seats, unlimited swimmers, unlimited meets, meet import and export, seed times from best times, progression, and high school class year and association event limits. Practice drafts and relay-order suggestions share one pool: 5 a month on Free. Pro adds more coach seats, lineup suggestions for open individual spots, a roster-wide cut list, and 20 drafts a month, with overage allowed after that.",
   },
   {
     question: "Can one login cover a club team and a high school team?",
@@ -222,9 +222,9 @@ export const plans = [
   {
     id: "free",
     name: "Free",
-    seats: "1 coach seat",
+    seats: "2 coach seats",
     summary:
-      "Seeds, the lineup, and progression for one coach. Club or high school.",
+      "Seeds, the lineup, and progression for two coaches. Club or high school.",
     cta: PRIMARY_CTA,
     href: SIGN_UP_URL,
     featured: true,

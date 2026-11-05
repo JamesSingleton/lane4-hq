@@ -102,7 +102,7 @@ export function HomePage() {
             data-hero-note
             className="mt-6 max-w-lg text-sm leading-relaxed text-white/50 text-pretty"
           >
-            Free for one coach, on a club or a high school. No card to start.
+            Free for two coaches, on a club or a high school. No card to start.
             The host still opens the file in Meet Manager, SwimTopia, SwimCloud,
             or TeamUnify.
           </p>

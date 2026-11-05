@@ -87,7 +87,7 @@ const PLAN_OPTIONS: {
   {
     value: "free",
     price: "$0/month",
-    blurb: `Unlimited swimmers · ${PLAN_LIMITS.free.maxCoaches} coach · SWIMS · ${PLAN_LIMITS.free.aiGenerationsIncluded} relay/workout suggestions/mo`,
+    blurb: `Unlimited swimmers · ${PLAN_LIMITS.free.maxCoaches} coaches · SWIMS · ${PLAN_LIMITS.free.aiGenerationsIncluded} relay/workout suggestions/mo`,
   },
   {
     value: "pro",
