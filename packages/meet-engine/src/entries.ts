@@ -116,7 +116,8 @@ export function mergeTeamEntries(
     const fileEvent = fileEvents.get(eventNumber!);
     if (
       fileEvent &&
-      (fileEvent.distance !== event.distance ||
+      // Diving has no distance to compare; files disagree on what goes there.
+      ((event.kind !== "dive" && fileEvent.distance !== event.distance) ||
         fileEvent.stroke !== event.stroke ||
         fileEvent.gender !== event.gender)
     ) {

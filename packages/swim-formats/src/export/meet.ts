@@ -205,6 +205,7 @@ const HY3_STROKE_LETTER: Record<string, string> = {
   breast: "C",
   fly: "D",
   im: "E",
+  dive: "F",
 };
 
 function hy3StrokeLetter(stroke: string | undefined): string {
@@ -878,7 +879,14 @@ export function exportHy3(meet: ParsedMeet): string {
         .set(9, 5, lastNameStub(lastName))
         .set(14, 1, eventGender)
         .set(15, 1, eventGender)
-        .setRight(16, 6, event?.distance ?? 0)
+        // Meet Manager keeps the dive count in the distance field.
+        .setRight(
+          16,
+          6,
+          event?.eventKind === "dive"
+            ? (event.diveCount ?? 0)
+            : (event?.distance ?? 0),
+        )
         .set(22, 1, hy3StrokeLetter(event?.stroke))
         .setRight(23, 3, ageFields.min)
         .setRight(26, 3, ageFields.max);
@@ -1560,8 +1568,11 @@ export function exportEv3(meet: ParsedMeet): string {
     const parts = Array<string>(21).fill("");
     parts[0] = String(event.eventNumber ?? 0);
     parts[1] = String(event.eventNumber ?? 0);
-    parts[2] = "F";
-    parts[3] = "1";
+    const prelim = event.roundType === "prelim";
+    parts[2] = hyvRoundCode(event.roundType);
+    // Rounds swum or dived: Meet Manager writes 2 for prelim/finals, 3 for
+    // prelim/semifinal/final diving.
+    parts[3] = prelim ? (event.eventKind === "dive" ? "3" : "2") : "1";
     parts[4] = isRelay ? "R" : "I";
     parts[5] = genderCode;
     parts[6] = String(ageLow);
@@ -1628,7 +1639,8 @@ export function exportHyv(meet: ParsedMeet): string {
     parts[4] = String(ageLow);
     parts[5] = String(ageHigh);
     if (event.eventKind === "dive") {
-      parts[6] = String(event.diveCount ?? 0);
+      // Meet Manager writes 1 here; HYV doesn't carry the dive count.
+      parts[6] = "1";
       parts[7] = "6";
     } else {
       parts[6] = String(event.distance);

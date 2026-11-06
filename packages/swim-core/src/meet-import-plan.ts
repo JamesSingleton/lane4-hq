@@ -358,6 +358,7 @@ export type PreparedFileResult = {
   resolved: boolean;
   meetEventId: string | null;
   isRelayEvent: boolean;
+  isDiveEvent?: boolean;
   time: string | undefined;
   isDq: boolean;
 };
@@ -377,7 +378,8 @@ export function planImportedIndividualResult(
   if (!row.meetEventId) {
     return { outcome: "skip", countSkipped: true, countUnmatched: false };
   }
-  if (row.isRelayEvent) {
+  // Diving points aren't times; storing them would make a false best time.
+  if (row.isRelayEvent || row.isDiveEvent) {
     return { outcome: "skip", countSkipped: true, countUnmatched: false };
   }
   const timed = planImportedTime(row.time, row.isDq);

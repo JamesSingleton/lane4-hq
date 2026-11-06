@@ -207,7 +207,7 @@ export interface ParsedEvent {
   eventKind?: "swim" | "dive";
   /** Number of dives when present on EV3 dive rows. */
   diveCount?: number;
-  /** Championship round when present (HYV): prelims/finals/swimoff/time trial. */
+  /** Championship round when present (EV3/HYV): prelims/finals/swimoff/time trial. */
   roundType?: "prelim" | "finals" | "swimoff" | "time_trial";
   /** Primary meet qualifying/entry cut time in milliseconds when present. */
   qualifyingTimeMs?: number;
@@ -236,6 +236,11 @@ export interface ParsedResult {
   eventSuffix?: string;
   /** Split times in milliseconds when present (e.g. HY3 G1). */
   splitsMs?: number[];
+  /**
+   * Diving: points to the end of this round, running total included. `time`
+   * then holds the same points as text and isn't a swim time.
+   */
+  diveScore?: number;
 }
 
 export interface ParsedRelayEntry {

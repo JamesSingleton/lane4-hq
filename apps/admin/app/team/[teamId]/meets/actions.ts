@@ -1544,6 +1544,7 @@ export async function importMeetFileAction(
 
         let meetEventId: string | undefined;
         let isRelayEvent = false;
+        let isDiveEvent = false;
         if (isTeamAthlete && resolved) {
           meetEventId = await eventIdFor(result.eventNumber, {
             eventSuffix: result.eventSuffix,
@@ -1554,6 +1555,7 @@ export async function importMeetFileAction(
           isRelayEvent = Boolean(
             eventMeta && isRelayStroke(eventMeta.stroke, eventMeta.eventKey),
           );
+          isDiveEvent = eventMeta?.stroke === "dive";
         }
 
         const plannedResult = planImportedIndividualResult({
@@ -1561,6 +1563,7 @@ export async function importMeetFileAction(
           resolved: Boolean(resolved),
           meetEventId: meetEventId ?? null,
           isRelayEvent,
+          isDiveEvent,
           time: result.time,
           isDq: result.isDq === true,
         });

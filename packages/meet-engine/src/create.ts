@@ -91,8 +91,15 @@ function toMeetEvent(event: ParsedEvent, newId: IdFactory): MeetEvent | null {
     ageGroup: event.ageGroup,
     isRelay: event.stroke.endsWith("_relay"),
     kind: isDive ? "dive" : "swim",
-    round: event.roundType === "prelim" ? "prelim" : "timed_final",
-    ...(isDive ? { diveCount: event.diveCount ?? 6, diveJudges: 3 } : {}),
+    // Championship diving (prelims, semifinals, finals) is one card of running
+    // totals here, so it stays a single event. See `createFinals`.
+    round: !isDive && event.roundType === "prelim" ? "prelim" : "timed_final",
+    ...(isDive
+      ? {
+          diveCount: event.diveCount ?? (event.roundType === "prelim" ? 11 : 6),
+          diveJudges: 3,
+        }
+      : {}),
   };
 }
 
