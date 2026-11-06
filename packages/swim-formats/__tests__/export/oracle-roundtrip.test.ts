@@ -240,3 +240,16 @@ describe("Hy-Tek oracle round-trips", () => {
     expect(roundTripDiff(original, exported)).toBe("");
   });
 });
+
+describe("HY3 results round-trip", () => {
+  it("keeps one copy of each prelim and final result", () => {
+    const original = parseHy3(readFixture("azsi-results.hy3"));
+    const back = parseHy3(exportHy3(original));
+    const count = (meet: ParsedMeet, round: string) =>
+      meet.results.filter((r) => r.resultType === round).length;
+    expect(back.results).toHaveLength(original.results.length);
+    expect(count(back, "prelim")).toBe(count(original, "prelim"));
+    expect(count(back, "finals")).toBe(count(original, "finals"));
+    expect(back.relays).toHaveLength(original.relays?.length ?? 0);
+  });
+});

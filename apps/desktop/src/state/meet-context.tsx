@@ -12,15 +12,16 @@ import {
   type MeetRepository,
   type SaveState,
 } from "../lib/meet-repository";
+import { confirmDialog } from "../lib/native";
 
 type MeetContextValue = {
   state: { meet: Meet; saveState: SaveState };
   actions: {
     /** Apply a pure meet-engine update and persist it. */
     update: (fn: (meet: Meet) => Meet) => Meet;
-    /** Resolves once every change so far is on disk. */
-    flush: () => Promise<void>;
-    close: () => void;
+    /** Resolves whether every change so far is on disk. */
+    flush: () => Promise<boolean>;
+    close: () => Promise<void>;
   };
   meta: {
     repository: MeetRepository;
@@ -68,8 +69,21 @@ export function MeetProvider({
         return next;
       },
       flush: () => queue.flush(),
-      close() {
-        void queue.flush().then(onClose);
+      async close() {
+        const saved = await queue.flush();
+        if (!saved) {
+          const leave = await confirmDialog(
+            "Your latest changes couldn't be saved. If you leave now, they'll be lost. Races pulled from the timer are still in the timing journal.",
+            {
+              title: "Leave without saving?",
+              okLabel: "Leave without saving",
+              cancelLabel: "Stay on this meet",
+            },
+          );
+          if (!leave) return;
+          queue.discard();
+        }
+        onClose();
       },
     },
     meta: { repository, latest: () => latest.current },

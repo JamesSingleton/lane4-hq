@@ -1,4 +1,6 @@
-import { unzipSync } from "fflate";
+import { exportHy3 } from "@lane4hq/swim-formats/export";
+import { parseHy3 } from "@lane4hq/swim-formats/hy3";
+import { strFromU8, unzipSync } from "fflate";
 import { describe, expect, it } from "vitest";
 import { verifyHeat } from "../src/adjudicate";
 import { addEvent, createMeet } from "../src/create";
@@ -187,5 +189,104 @@ describe("export edge cases", () => {
       lastName: "",
     });
     expect(() => buildHeatPublication(meet, "ev1", 2)).toThrow(/verified/);
+  });
+});
+
+describe("a team's HY3 results read back", () => {
+  it("keeps prelims, finals, a DQ, and a relay", () => {
+    const newId = counterIds("rt");
+    const at = { newId, now: NOW };
+    let meet = createMeet({ name: "Round trip", course: "SCY" }, at);
+    const free = { distance: 100, stroke: "free", gender: "female" } as const;
+    meet = addEvent(meet, { number: 1, ...free, round: "prelim" }, at);
+    meet = addEvent(meet, { number: 1, ...free, round: "final" }, at);
+    meet = addEvent(
+      meet,
+      { number: 2, distance: 100, stroke: "back", gender: "male" },
+      at,
+    );
+    meet = addEvent(
+      meet,
+      { number: 3, distance: 200, stroke: "free_relay", gender: "female" },
+      at,
+    );
+    const event = (number: number, round = "timed_final") =>
+      meet.events.find((e) => e.number === number && e.round === round)!;
+    const prelim = event(1, "prelim");
+    const final = event(1, "final");
+    const back = event(2);
+    const relay = event(3);
+    const swimmer = (eventId: string, firstName: string) => ({
+      eventId,
+      teamCode: "AAA",
+      firstName,
+      lastName: "Swimmer",
+      seedTimeMs: 60_000,
+    });
+    meet = addIndividualEntry(meet, swimmer(prelim.id, "Ann"), at);
+    meet = addIndividualEntry(meet, swimmer(back.id, "Bob"), at);
+    const [ann, bob] = meet.entries;
+    const base = { exhibition: false, scratched: false, teamCode: "AAA" };
+    meet = {
+      ...meet,
+      entries: [
+        ...meet.entries,
+        {
+          ...base,
+          id: "ann-final",
+          eventId: final.id,
+          athleteId: ann!.athleteId,
+          seedTimeMs: 61_230,
+          sourceEntryId: ann!.id,
+        },
+        {
+          ...base,
+          id: "relay-a",
+          eventId: relay.id,
+          seedTimeMs: null,
+          relay: { letter: "A", legAthleteIds: [ann!.athleteId!] },
+        },
+      ],
+      results: [
+        lane(ann!.id, prelim.id, 3, { timeMs: 61_230 }),
+        lane("ann-final", final.id, 3, { timeMs: 60_450 }),
+        lane(bob!.id, back.id, 4, { status: "dq", timeMs: null, dqCode: "1A" }),
+        lane("relay-a", relay.id, 3, { timeMs: 101_990 }),
+      ],
+    };
+
+    const read = parseHy3(exportHy3(teamResultsMeet(meet, "AAA")));
+
+    const row = (round: string) =>
+      read.results.find((r) => r.resultType === round && r.eventNumber === 1);
+    expect(read.results).toHaveLength(3);
+    expect(row("prelim")?.time).toBe("1:01.23");
+    expect(row("finals")?.time).toBe("1:00.45");
+    expect(read.results.find((r) => r.isDq)?.dqCode).toBe("1A");
+    expect(read.relays?.[0]?.results?.[0]?.time).toBe("1:41.99");
+  });
+});
+
+describe("file edges", () => {
+  it("leaves out teams with nothing in the chosen gender", () => {
+    const dq = meetWithDq();
+    const meet = {
+      ...dq,
+      events: dq.events.map((e) => ({ ...e, gender: "female" as const })),
+    };
+    const zip = (gender: "female" | "male") =>
+      Object.keys(unzipSync(exportAllTeamResults(meet, { gender }).bytes));
+    expect(zip("female").length).toBeGreaterThan(0);
+    expect(zip("male")).toEqual([]);
+  });
+
+  it("quotes a carriage return in the results CSV", () => {
+    const meet = meetWithDq();
+    const carriage = {
+      ...meet,
+      teams: meet.teams,
+      entries: meet.entries.map((e) => ({ ...e, teamCode: "A\rB" })),
+    };
+    expect(strFromU8(exportResultsCsv(carriage).bytes)).toContain('"A\rB"');
   });
 });

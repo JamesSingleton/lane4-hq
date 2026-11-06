@@ -83,11 +83,31 @@ pub fn write_atomic_with_backup(path: &Path, contents: &[u8], backup: bool) -> s
         file.write_all(contents)?;
         file.sync_all()?;
     }
-    if backup && path.exists() {
-        fs::copy(path, path.with_extension("json.bak"))?;
+    let replaced = (|| {
+        if backup && path.exists() {
+            fs::copy(path, path.with_extension("json.bak"))?;
+        }
+        rename_with_retry(&tmp, path)
+    })();
+    if replaced.is_err() {
+        let _ = fs::remove_file(&tmp);
     }
-    fs::rename(&tmp, path)?;
-    Ok(())
+    replaced
+}
+
+/// On Windows a virus scanner or indexer can hold a just-written file for a
+/// moment, which fails the rename with access denied.
+fn rename_with_retry(from: &Path, to: &Path) -> std::io::Result<()> {
+    const ATTEMPTS: u32 = 5;
+    for attempt in 1.. {
+        match fs::rename(from, to) {
+            Err(e) if e.kind() == std::io::ErrorKind::PermissionDenied && attempt < ATTEMPTS => {
+                std::thread::sleep(std::time::Duration::from_millis(50));
+            }
+            result => return result,
+        }
+    }
+    unreachable!("the loop returns on its last attempt")
 }
 
 #[derive(Deserialize)]
@@ -354,7 +374,10 @@ fn import_in(dir: &Path, json: &str, replace: bool) -> Result<String, StoreError
             .duration_since(std::time::UNIX_EPOCH)
             .map(|d| d.as_millis())
             .unwrap_or(0);
-        fs::copy(&current, trash.join(format!("{}.replaced-{stamp}.json", header.id)))?;
+        fs::copy(
+            &current,
+            trash.join(format!("{}.replaced-{stamp}.json", header.id)),
+        )?;
     }
     save_in(dir, &header.id, json)?;
     Ok(header.id)
@@ -416,7 +439,10 @@ mod tests {
         assert_eq!(import_in(&dir, MEET, false).unwrap(), "m-1");
 
         let older = MEET.replace("Invite", "Old backup");
-        assert!(matches!(import_in(&dir, &older, false), Err(StoreError::AlreadyExists)));
+        assert!(matches!(
+            import_in(&dir, &older, false),
+            Err(StoreError::AlreadyExists)
+        ));
         assert!(load_in(&dir, "m-1").unwrap().contains("\"Invite\""));
 
         assert_eq!(import_in(&dir, &older, true).unwrap(), "m-1");
@@ -427,7 +453,9 @@ mod tests {
             .collect();
         assert_eq!(kept.len(), 1);
         assert!(kept[0].starts_with("m-1.replaced-"));
-        assert!(fs::read_to_string(dir.join("trash").join(&kept[0])).unwrap().contains("\"Invite\""));
+        assert!(fs::read_to_string(dir.join("trash").join(&kept[0]))
+            .unwrap()
+            .contains("\"Invite\""));
     }
 
     #[test]
@@ -438,11 +466,20 @@ mod tests {
         assert_eq!(read_backup_file(&good).unwrap(), MEET);
         let other = dir.join("notes.txt");
         fs::write(&other, MEET).unwrap();
-        assert!(matches!(read_backup_file(&other), Err(StoreError::NotAMeet)));
-        assert!(matches!(read_backup_file(&dir.join("x")), Err(StoreError::NotAMeet)));
+        assert!(matches!(
+            read_backup_file(&other),
+            Err(StoreError::NotAMeet)
+        ));
+        assert!(matches!(
+            read_backup_file(&dir.join("x")),
+            Err(StoreError::NotAMeet)
+        ));
         let folder = dir.join("folder.lane4meet");
         fs::create_dir_all(&folder).unwrap();
-        assert!(matches!(read_backup_file(&folder), Err(StoreError::NotAMeet)));
+        assert!(matches!(
+            read_backup_file(&folder),
+            Err(StoreError::NotAMeet)
+        ));
         assert!(matches!(
             read_backup_file(&dir.join("missing.lane4meet")),
             Err(StoreError::NotFound)

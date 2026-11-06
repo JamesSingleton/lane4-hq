@@ -54,6 +54,7 @@ export function ExportScreen() {
   const teams = meet.teams.filter((t) =>
     meet.entries.some((e) => e.teamCode === t.code),
   );
+  const hasDiving = meet.events.some((e) => e.kind === "dive");
   const [scopeChoice, setScopeChoice] = useState<ScopeChoice>("combined");
   const scope: ResultsScope =
     scopeChoice === "combined" ? {} : { gender: scopeChoice };
@@ -97,7 +98,7 @@ export function ExportScreen() {
 
       <Section
         title="Results for teams"
-        description="Each team gets a Hy-Tek HY3 results file in a ZIP, the format Team Manager, TeamUnify, SwimTopia, and Commit Swimming import. Send teams their own ZIP, or everything at once."
+        description={`Each team gets a Hy-Tek HY3 results file in a ZIP, the format Team Manager, TeamUnify, SwimTopia, and Commit Swimming import. Send teams their own ZIP, or everything at once.${hasDiving ? " Diving isn't in these files yet, so send printed results for diving events." : ""}`}
         action={
           <div className="flex items-center gap-2">
             <ChoiceSelect
