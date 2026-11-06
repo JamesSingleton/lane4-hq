@@ -1,5 +1,10 @@
 import { addCapture, findCapture } from "@lane4hq/meet-engine/adjudicate";
 import type { TimerTransport } from "@lane4hq/timing-cts/client";
+import {
+  type DiagnosticOptions,
+  type DiagnosticReport,
+  diagnoseTimer,
+} from "@lane4hq/timing-cts/diagnostics";
 import { toHex } from "@lane4hq/timing-cts/frame";
 import {
   createSimulator,
@@ -15,7 +20,7 @@ import {
 } from "react";
 import { errorMessage, isTauri, serial, serialTransport } from "../lib/native";
 import {
-  resumeCursor,
+  resumePoint,
   type SessionStatus,
   TimingSession,
 } from "../lib/timing-session";
@@ -41,6 +46,11 @@ type TimingContextValue = {
     setCursor: (cursor: number) => void;
     /** Skip everything already on the console; only pull races run from now on. */
     skipToLatest: () => Promise<void>;
+    /** Run the console test on the connection, or on `target` if there's none. */
+    testTimer: (
+      target: TimingSource,
+      options: DiagnosticOptions,
+    ) => Promise<DiagnosticReport>;
   };
   meta: {
     /** The simulated console, when connected to it (dev, demos, training). */
@@ -123,6 +133,7 @@ export function TimingProvider({ children }: { children: ReactNode }) {
               at: new Date().toISOString(),
               timer: identity.version,
               raceNumber: response.race.raceNumber,
+              maxNumLanes: response.maxNumLanes,
               raw: toHex(response.raw),
             }),
           )
@@ -134,11 +145,34 @@ export function TimingProvider({ children }: { children: ReactNode }) {
     setSource(next);
     try {
       const identity = await created.connect();
-      created.setCursor(resumeCursor(latest().captures, identity.meetDate));
+      const resume = resumePoint(latest().captures, identity.meetDate);
+      created.setCursor(resume.cursor, resume.anchor);
       created.start();
     } catch (error) {
       if (next.kind === "serial") await serial.close().catch(() => {});
       throw error;
+    }
+  }
+
+  async function testTimer(
+    target: TimingSource,
+    options: DiagnosticOptions,
+  ): Promise<DiagnosticReport> {
+    const live = session.current;
+    const describing = { describeError: errorMessage, ...options };
+    if (live?.current.state === "connected") return live.diagnose(describing);
+    await disconnect();
+    if (target.kind === "simulator") {
+      const sim = createSimulator({
+        pool: { lanesInPool: latest().poolLanes },
+      });
+      return diagnoseTimer(sim, describing);
+    }
+    await serial.open(target.port);
+    try {
+      return await diagnoseTimer(serialTransport, describing);
+    } finally {
+      await serial.close().catch(() => {});
     }
   }
 
@@ -162,11 +196,12 @@ export function TimingProvider({ children }: { children: ReactNode }) {
         await session.current?.pollOnce();
       },
       setCursor: (cursor) => session.current?.setCursor(cursor),
+      testTimer,
       async skipToLatest() {
         const s = session.current;
         if (!s) return;
-        const newest = await s.latestRaceNumber();
-        if (newest != null) s.setCursor(newest);
+        const newest = await s.latestRace();
+        if (newest) s.setCursor(newest.raceNumber, newest);
       },
     },
     meta: { simulator },

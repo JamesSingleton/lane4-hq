@@ -78,6 +78,17 @@ export function headerBytes(maxNumLanes = DEFAULT_MAX_NUM_LANES): number {
   return 16 + 2 * (maxNumLanes + 1) + 9;
 }
 
+/**
+ * `MAX_NUM_LANES` implied by the length of a `T` reply, which is a bare
+ * header. `null` when that length can't be a header.
+ */
+export function maxLanesFromHeader(bytes: number): number | null {
+  const maxLanes = (bytes - headerBytes(0)) / 2;
+  return Number.isInteger(maxLanes) && maxLanes >= 6 && maxLanes <= 20
+    ? maxLanes
+    : null;
+}
+
 function u16(data: Uint8Array, at: number): number {
   return data[at]! | (data[at + 1]! << 8);
 }
@@ -125,6 +136,16 @@ function decodeDate(data: Uint8Array, longYearAt: number): TimerDate | null {
   };
 }
 
+/**
+ * `event_16_bit` is set on every race from v3.1, and `event` holds 1–255.
+ * Before v3.1 those two bytes are reserved, so a value that disagrees with a
+ * non-zero `event` is not an event number.
+ */
+function eventNumber(event8: number, event16: number): number {
+  if (event8 !== 0) return event8;
+  return event16 <= 999 ? event16 : 0;
+}
+
 export function decodeHeader(
   data: Uint8Array,
   options: DecodeOptions = {},
@@ -137,10 +158,8 @@ export function decodeHeader(
     );
   }
   const tail = 16 + 2 * (maxLanes + 1);
-  const event8 = data[0]!;
-  const event16 = u16(data, tail + 4);
   return {
-    event: event16 || event8,
+    event: eventNumber(data[0]!, u16(data, tail + 4)),
     heat: data[1]!,
     raceNumber: u16(data, 4),
     date: decodeDate(data, tail),
@@ -164,6 +183,7 @@ type LaneLayout = {
   exchanges: number;
 };
 
+/** `num_times_for_each_lane` counts individual buttons along with splits and backup. */
 function layoutForTimes(
   header: TimerRaceHeader,
   perLane: number,
@@ -191,13 +211,122 @@ function layoutForTimes(
   return { splits, buttons, backup, exchanges: exchangeBytes / 2 };
 }
 
+/**
+ * `num_times_for_each_lane` counts splits and backup, with individual buttons
+ * sent on top. F397 says it includes "backup times" and never mentions the
+ * buttons, which v3.1 added with their own `number_of_buttons` field.
+ */
+function layoutBesideButtons(
+  header: TimerRaceHeader,
+  perLane: number,
+): LaneLayout | null {
+  const backup = header.includes.backup ? 1 : 0;
+  const buttons =
+    header.includes.individualButtons && header.numberOfButtons > 1
+      ? header.numberOfButtons
+      : 0;
+  const splits = header.numTimesPerLane - backup;
+  const exchangeBytes = perLane - 1 - 4 * (splits + buttons + backup);
+  if (buttons === 0 || splits < 1) return null;
+  if (exchangeBytes < 0 || exchangeBytes % 2 !== 0) return null;
+  if (!header.includes.relayJudging && exchangeBytes !== 0) return null;
+  return { splits, buttons, backup, exchanges: exchangeBytes / 2 };
+}
+
+function readLanes(
+  data: Uint8Array,
+  start: number,
+  lanesInPool: number,
+  layout: LaneLayout,
+): TimerLane[] {
+  const lanes: TimerLane[] = [];
+  let at = start;
+  for (let lane = 1; lane <= lanesInPool; lane++) {
+    const raw = data[at]!;
+    const place = raw > 127 ? raw - 256 : raw;
+    at += 1;
+    const splitsMs: Array<number | null> = [];
+    for (let i = 0; i < layout.splits; i++, at += 4) {
+      splitsMs.push(time(u32(data, at)));
+    }
+    const buttonsMs: Array<number | null> = [];
+    for (let i = 0; i < layout.buttons; i++, at += 4) {
+      buttonsMs.push(time(u32(data, at)));
+    }
+    let backupMs: number | null = null;
+    if (layout.backup) {
+      backupMs = time(u32(data, at));
+      at += 4;
+    }
+    const relayExchangesMs: number[] = [];
+    for (let i = 0; i < layout.exchanges; i++, at += 2) {
+      relayExchangesMs.push(i16(data, at));
+    }
+    lanes.push({
+      lane,
+      place,
+      status: place < 0 ? "dq" : place === 0 ? "no-finish" : "finished",
+      finalMs: splitsMs[splitsMs.length - 1] ?? null,
+      splitsMs,
+      buttonsMs,
+      backupMs,
+      relayExchangesMs,
+    });
+  }
+  return lanes;
+}
+
+function splitsAscend(lanes: TimerLane[]): boolean {
+  return lanes.every((lane) => {
+    const times = lane.splitsMs.filter((t) => t != null);
+    return times.every((t, i) => i === 0 || t >= times[i - 1]!);
+  });
+}
+
+/** How well a layout fits what the race itself says. Higher is better. */
+function layoutFit(header: TimerRaceHeader, layout: LaneLayout): number {
+  const lengths = header.raceLengths;
+  const splitsFit = header.includes.splits
+    ? layout.splits === lengths || layout.splits === Math.ceil(lengths / 2)
+    : layout.splits === 1;
+  const exchangesFit = layout.exchanges === 0 || layout.exchanges === 3;
+  return (splitsFit ? 2 : 0) + (exchangesFit ? 1 : 0);
+}
+
+type DecodedLanes = { lanes: TimerLane[]; warning?: string };
+
+/** Layouts the header explains, best first. A wrong pick would give wrong times. */
+function declaredLanes(
+  data: Uint8Array,
+  start: number,
+  header: TimerRaceHeader,
+  perLane: number,
+): DecodedLanes | null {
+  const layouts = [
+    layoutForTimes(header, perLane, header.numTimesPerLane),
+    layoutBesideButtons(header, perLane),
+  ].filter((layout) => layout !== null);
+  const ranked = layouts
+    .map((layout) => {
+      const lanes = readLanes(data, start, header.lanesInPool, layout);
+      const fit = layoutFit(header, layout) + (splitsAscend(lanes) ? 4 : 0);
+      return { lanes, fit };
+    })
+    .sort((a, b) => b.fit - a.fit);
+  const [best, runnerUp] = ranked;
+  if (!best) return null;
+  return best.fit === runnerUp?.fit
+    ? {
+        lanes: best.lanes,
+        warning: `Timer data fits two lane layouts for ${header.numTimesPerLane} times per lane; check these times against the console.`,
+      }
+    : { lanes: best.lanes };
+}
+
 function inferLayout(
   header: TimerRaceHeader,
   perLane: number,
-): { layout: LaneLayout; warning?: string } {
-  const declared = layoutForTimes(header, perLane, header.numTimesPerLane);
-  if (declared) return { layout: declared };
-
+): { layout: LaneLayout; warning: string } {
   // `num_times_for_each_lane` didn't explain the byte count. Prefer the
   // usual 3 relay exchanges, then fewer, then more.
   const exchangeGuesses = header.includes.relayJudging
@@ -241,45 +370,18 @@ export function decodeRace(
     );
   }
   const perLane = body / header.lanesInPool;
-  const { layout, warning } = inferLayout(header, perLane);
-
-  const lanes: TimerLane[] = [];
-  let at = size;
-  for (let lane = 1; lane <= header.lanesInPool; lane++) {
-    const raw = data[at]!;
-    const place = raw > 127 ? raw - 256 : raw;
-    at += 1;
-    const splitsMs: Array<number | null> = [];
-    for (let i = 0; i < layout.splits; i++, at += 4) {
-      splitsMs.push(time(u32(data, at)));
-    }
-    const buttonsMs: Array<number | null> = [];
-    for (let i = 0; i < layout.buttons; i++, at += 4) {
-      buttonsMs.push(time(u32(data, at)));
-    }
-    let backupMs: number | null = null;
-    if (layout.backup) {
-      backupMs = time(u32(data, at));
-      at += 4;
-    }
-    const relayExchangesMs: number[] = [];
-    for (let i = 0; i < layout.exchanges; i++, at += 2) {
-      relayExchangesMs.push(i16(data, at));
-    }
-    lanes.push({
-      lane,
-      place,
-      status: place < 0 ? "dq" : place === 0 ? "no-finish" : "finished",
-      finalMs: splitsMs[splitsMs.length - 1] ?? null,
-      splitsMs,
-      buttonsMs,
-      backupMs,
-      relayExchangesMs,
-    });
+  const declared = declaredLanes(data, size, header, perLane);
+  if (declared) {
+    return declared.warning
+      ? { ...header, lanes: declared.lanes, layoutWarning: declared.warning }
+      : { ...header, lanes: declared.lanes };
   }
-  return warning
-    ? { ...header, lanes, layoutWarning: warning }
-    : { ...header, lanes };
+  const { layout, warning } = inferLayout(header, perLane);
+  return {
+    ...header,
+    lanes: readLanes(data, size, header.lanesInPool, layout),
+    layoutWarning: warning,
+  };
 }
 
 // ---------------------------------------------------------------------------

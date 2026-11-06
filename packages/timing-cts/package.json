@@ -12,6 +12,7 @@
     "./errors": "./src/errors.ts",
     "./setups": "./src/setups.ts",
     "./client": "./src/client.ts",
+    "./diagnostics": "./src/diagnostics.ts",
     "./simulator": "./src/simulator.ts"
   },
   "scripts": {

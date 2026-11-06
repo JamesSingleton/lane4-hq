@@ -16,8 +16,13 @@ import {
   serial,
 } from "../lib/native";
 import { useMeet } from "../state/meet-context";
-import { lastPort, useTiming } from "../state/timing-context";
+import {
+  lastPort,
+  type TimingSource,
+  useTiming,
+} from "../state/timing-context";
 import { NativeSelect } from "./native-select";
+import { TimerTestDialog } from "./timer-test-dialog";
 
 const SIMULATOR = "__simulator__";
 
@@ -66,15 +71,23 @@ export function TimerBar() {
   }
 
   const connected = status.state === "connected";
+  const port = ports.find(
+    (p) => p.name === (source?.kind === "serial" ? source.port : choice),
+  );
+  const testTarget: TimingSource =
+    source ??
+    (choice === SIMULATOR
+      ? { kind: "simulator" }
+      : { kind: "serial", port: choice });
   const pool = connected ? status.identity.pool : null;
   const laneMismatch = pool && pool.lanesInPool !== meet.poolLanes;
 
   return (
-    <div className="flex flex-col gap-2 border-b px-4 py-3">
+    <div className="flex shrink-0 flex-col gap-1 border-b px-4 py-1.5">
       <div className="flex flex-wrap items-center gap-2">
         {connected || status.state === "connecting" ? (
           <>
-            <span className="text-sm font-medium">
+            <span className="shrink-0 text-sm font-medium">
               {source?.kind === "simulator"
                 ? "Simulated console"
                 : source?.kind === "serial"
@@ -82,7 +95,7 @@ export function TimerBar() {
                   : ""}
             </span>
             {connected ? (
-              <span className="text-sm text-muted-foreground">
+              <span className="min-w-0 flex-1 truncate text-sm text-muted-foreground">
                 {status.identity.version}
                 {status.identity.meetDate
                   ? ` · timer meet ${status.identity.meetDate.year}-${String(status.identity.meetDate.month).padStart(2, "0")}-${String(status.identity.meetDate.day).padStart(2, "0")}`
@@ -92,7 +105,7 @@ export function TimerBar() {
             ) : (
               <span className="text-sm text-muted-foreground">Connecting…</span>
             )}
-            <div className="ml-auto flex items-center gap-1.5">
+            <div className="ml-auto flex shrink-0 items-center gap-1.5">
               {connected ? (
                 <>
                   <CursorInput
@@ -108,6 +121,7 @@ export function TimerBar() {
                     <SkipForward />
                     Only new races
                   </Button>
+                  <TimerTestDialog target={testTarget} port={port} />
                   {status.polling ? (
                     <Button
                       size="sm"
@@ -170,9 +184,10 @@ export function TimerBar() {
               <Plug />
               {isPending ? "Connecting…" : "Connect"}
             </Button>
+            <TimerTestDialog target={testTarget} port={port} />
             <span className="text-xs text-muted-foreground">
               Colorado Time Systems System 6, System 5, 4000A, or Gen7 · top
-              RS232 port (COM 1) · 9600 baud
+              RS232 port (COM 1) · straight-through cable, not null-modem
             </span>
           </>
         )}

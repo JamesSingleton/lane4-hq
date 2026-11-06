@@ -1,4 +1,5 @@
 /** Error codes the timer returns as a 6-byte packet (two DATA bytes). */
+import { isReadSplitsSetup } from "./commands";
 
 export const ACK = 0x0006;
 
@@ -80,6 +81,22 @@ export class TimerResponseError extends Error {
 
 export function decodeErrorCode(data: Uint8Array): number {
   return data[0]! | (data[1]! << 8);
+}
+
+/**
+ * The error code in a reply, or `null` if it isn't one. Two DATA bytes are an
+ * error, except `Rg`, which returns two booleans. F397 never assigns an error
+ * the values those can make (0, 1, 256, 257), so anything else is still one.
+ */
+export function replyErrorCode(
+  command: Uint8Array,
+  reply: Uint8Array,
+): number | null {
+  if (reply.length !== 2) return null;
+  const code = decodeErrorCode(reply);
+  if (code === ACK) return null;
+  const booleans = [0, 1, 256, 257].includes(code);
+  return isReadSplitsSetup(command) && booleans ? null : code;
 }
 
 export function encodeErrorCode(code: number): Uint8Array {

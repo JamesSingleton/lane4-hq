@@ -24,7 +24,7 @@ pub const RETRIES: usize = 3;
 pub enum TransportError {
     #[error("No timer connected.")]
     NotConnected,
-    #[error("The timer didn't answer. Check that it's on, cabled to its top RS232 port (COM 1), and not in a menu.")]
+    #[error("The timer didn't answer. Check that it's on and connected to its top RS232 port (COM 1) with a straight-through cable, not a null-modem cable.")]
     Timeout,
     #[error("The timer's reply failed its checksum.")]
     BadChecksum,
@@ -134,16 +134,19 @@ fn retryable(e: &TransportError) -> bool {
     )
 }
 
-/// Send one command and return the verified DATA of the reply, re-sending on
-/// timeouts and line errors.
-pub fn request(link: &mut dyn Link, data: &[u8]) -> Result<Vec<u8>, TransportError> {
+/// Send one command and return the verified DATA of the reply. With `resend`,
+/// timeouts and line errors re-send it. The caller clears `resend` for commands
+/// that move a timer pointer, which may have acted even if the reply was lost.
+pub fn request(link: &mut dyn Link, data: &[u8], resend: bool) -> Result<Vec<u8>, TransportError> {
     let packet = encode(data)?;
+    let attempts = if resend { RETRIES + 1 } else { 1 };
     let mut last = TransportError::Timeout;
-    for attempt in 0..=RETRIES {
+    for attempt in 0..attempts {
         if attempt > 0 {
             thread::sleep(QUIET_GAP);
-            link.clear_input()?;
         }
+        // A late reply to an earlier command must not pass for this one's.
+        link.clear_input()?;
         link.write_all(&packet)?;
         link.flush()?;
         match read_packet(link) {
@@ -229,6 +232,8 @@ pub mod tests {
             ("53", "05 00 53 A7 FF"),
             ("06 00", "06 00 06 00 F3 FF"),
             ("07", "05 00 07 F3 FF"),
+            // `Rr` as sent in the worked example; its reply is the "07" above.
+            ("52 72 00", "07 00 52 72 00 34 FF"),
         ] {
             assert_eq!(encode(&hex(data)).unwrap(), hex(packet));
             assert_eq!(decode(&hex(packet)).unwrap(), hex(data));
@@ -257,7 +262,7 @@ pub mod tests {
         let data: Vec<u8> = (0..600).map(|i| (i % 251) as u8).collect();
         let reply = encode(&data).unwrap();
         let mut link = MockLink::new(vec![reply]);
-        assert_eq!(request(&mut link, b"S").unwrap(), data);
+        assert_eq!(request(&mut link, b"S", true).unwrap(), data);
         assert_eq!(link.written, vec![hex("05 00 53 A7 FF")]);
     }
 
@@ -267,15 +272,40 @@ pub mod tests {
         let mut corrupt = good.clone();
         *corrupt.last_mut().unwrap() ^= 0xff;
         let mut link = MockLink::new(vec![vec![], corrupt, good]);
-        assert_eq!(request(&mut link, b"W").unwrap(), b"SWIM 3.25\0".to_vec());
+        assert_eq!(
+            request(&mut link, b"W", true).unwrap(),
+            b"SWIM 3.25\0".to_vec()
+        );
         assert_eq!(link.written.len(), 3);
-        assert_eq!(link.cleared, 2);
+        assert_eq!(link.cleared, 3);
+    }
+
+    #[test]
+    fn clears_a_late_reply_before_sending() {
+        let good = encode(b"SWIM 3.25\0").unwrap();
+        let mut link = MockLink::new(vec![good]);
+        link.pending.extend([0x99, 0x00, 0x01]);
+        assert_eq!(
+            request(&mut link, b"W", true).unwrap(),
+            b"SWIM 3.25\0".to_vec()
+        );
+        assert_eq!(link.written.len(), 1);
+    }
+
+    #[test]
+    fn never_resends_when_told_not_to() {
+        let mut link = MockLink::new(vec![]);
+        assert_eq!(
+            request(&mut link, b"M+", false),
+            Err(TransportError::Timeout)
+        );
+        assert_eq!(link.written.len(), 1);
     }
 
     #[test]
     fn gives_up_after_three_retries() {
         let mut link = MockLink::new(vec![]);
-        assert_eq!(request(&mut link, b"W"), Err(TransportError::Timeout));
+        assert_eq!(request(&mut link, b"W", true), Err(TransportError::Timeout));
         assert_eq!(link.written.len(), RETRIES + 1);
     }
 
@@ -287,7 +317,10 @@ pub mod tests {
             vec![3, 0, 0],
             vec![3, 0, 0],
         ]);
-        assert_eq!(request(&mut link, b"W"), Err(TransportError::ShortPacket));
+        assert_eq!(
+            request(&mut link, b"W", true),
+            Err(TransportError::ShortPacket)
+        );
     }
 
     #[test]

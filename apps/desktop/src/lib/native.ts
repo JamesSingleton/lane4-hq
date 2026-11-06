@@ -1,4 +1,5 @@
 import type { TimerTransport } from "@lane4hq/timing-cts/client";
+import { isSafeToResend } from "@lane4hq/timing-cts/commands";
 import { invoke, isTauri } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import { getCurrentWebview } from "@tauri-apps/api/webview";
@@ -83,6 +84,7 @@ export const EXPORT_EXTENSIONS = [
   "csv",
   "pdf",
   "lane4meet",
+  "json",
 ] as const;
 
 export type ExportFile = { filename: string; bytes: Uint8Array };
@@ -196,6 +198,7 @@ export const serialTransport: TimerTransport = {
   async request(data) {
     const reply = await invoke<ArrayBuffer>("timing_request", {
       data: Array.from(data),
+      resend: isSafeToResend(data),
     });
     return new Uint8Array(reply);
   },

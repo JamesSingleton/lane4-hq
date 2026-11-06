@@ -162,10 +162,12 @@ pub async fn timing_connected_port(
 }
 
 /// Send one command's DATA bytes and return the reply's verified DATA bytes.
+/// `resend` is false for commands that must not be repeated.
 #[tauri::command]
 pub async fn timing_request(
     state: State<'_, TimingState>,
     data: Vec<u8>,
+    resend: bool,
 ) -> Result<Response, TransportError> {
     let state = state.inner().clone();
     tauri::async_runtime::spawn_blocking(move || {
@@ -174,7 +176,7 @@ pub async fn timing_request(
             .lock()
             .map_err(|_| TransportError::Io("Timing state poisoned.".into()))?;
         let connection = guard.as_mut().ok_or(TransportError::NotConnected)?;
-        let reply = frame::request(&mut connection.link, &data);
+        let reply = frame::request(&mut connection.link, &data, resend);
         if let Err(TransportError::Io(_)) = &reply {
             // The adapter was unplugged or the port died; drop it so the UI reconnects.
             *guard = None;
@@ -188,6 +190,46 @@ pub async fn timing_request(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// Runs the transport through the real `serialport` driver on a
+    /// pseudo-terminal, with a thread playing the timer.
+    #[cfg(unix)]
+    #[test]
+    fn talks_through_the_real_serial_driver() {
+        use std::io::{Read, Write};
+        use std::thread;
+
+        let (mut timer, port) = serialport::TTYPort::pair().unwrap();
+        let mut link = SerialLink(Box::new(port));
+        timer.set_timeout(Duration::from_secs(5)).unwrap();
+
+        let reply = frame::encode(b"SWIM 3.25\0").unwrap();
+        let peer = thread::spawn(move || {
+            let mut command = [0u8; 5];
+            timer.read_exact(&mut command).unwrap();
+            assert_eq!(command, [0x05, 0x00, 0x57, 0xA3, 0xFF]);
+            // Slow, as at 9600 baud: the gaps must not end the read.
+            for chunk in reply.chunks(3) {
+                thread::sleep(Duration::from_millis(30));
+                timer.write_all(chunk).unwrap();
+            }
+            // Take the next command and stay silent. A pseudo-terminal only
+            // drains when read, unlike a real port.
+            timer.read_exact(&mut command).unwrap();
+            timer
+        });
+        assert_eq!(
+            frame::request(&mut link, b"W", true).unwrap(),
+            b"SWIM 3.25\0".to_vec()
+        );
+
+        // No answer: the driver's timeout must surface as a timeout.
+        assert_eq!(
+            frame::request(&mut link, b"W", false),
+            Err(TransportError::Timeout)
+        );
+        let _timer = peer.join().unwrap();
+    }
 
     #[test]
     fn hides_blocking_tty_devices() {

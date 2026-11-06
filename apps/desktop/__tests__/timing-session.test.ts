@@ -2,11 +2,12 @@ import { addEvent, createMeet } from "@lane4hq/meet-engine/create";
 import { addIndividualEntry } from "@lane4hq/meet-engine/entries";
 import { seedEvent } from "@lane4hq/meet-engine/seeding";
 import type { TimerTransport } from "@lane4hq/timing-cts/client";
+import { encodeErrorCode } from "@lane4hq/timing-cts/errors";
 import { createSimulator } from "@lane4hq/timing-cts/simulator";
 import { describe, expect, it, vi } from "vitest";
 import { simulateHeat } from "../src/lib/simulate-heat";
 import {
-  resumeCursor,
+  resumePoint,
   type SessionStatus,
   TimingSession,
 } from "../src/lib/timing-session";
@@ -95,14 +96,14 @@ describe("TimingSession", () => {
       version: "SYS6 SWIM 1.110",
       pool: { lanesInPool: 6 },
     });
-    expect(await session.latestRaceNumber()).toBeNull();
+    expect(await session.latestRace()).toBeNull();
 
     simulateHeat(sim, meet, { eventId: meet.events[0]!.id, heat: 1 }, 1);
     simulateHeat(sim, meet, { eventId: meet.events[1]!.id, heat: 1 }, 2, {
       titled: false,
     });
     simulateHeat(sim, meet, { eventId: meet.events[0]!.id, heat: 1 }, 3);
-    expect(await session.latestRaceNumber()).toBe(3);
+    expect((await session.latestRace())?.raceNumber).toBe(3);
 
     session.start();
     session.start();
@@ -211,23 +212,229 @@ describe("TimingSession", () => {
     vi.useRealTimers();
   });
 
-  it("resumes after the last race captured from today's timer meet", () => {
-    const d = (day: number) => ({
+  it("resumes after the last race captured since the timer's meet began", () => {
+    const d = (day: number, hours = 9) => ({
       year: 2026,
       month: 10,
       day,
-      hours: 9,
+      hours,
       minutes: 0,
       seconds: 0,
       weekday: 0,
     });
     const captures = [
-      { race: { raceNumber: 4, date: d(25) } },
+      { race: { raceNumber: 4, date: d(25, 10) } },
+      { race: { raceNumber: 3, date: d(25, 9) } },
       { race: { raceNumber: 9, date: d(24) } },
       { race: { raceNumber: 2, date: null } },
     ];
-    expect(resumeCursor(captures, d(25))).toBe(4);
-    expect(resumeCursor(captures, null)).toBe(0);
+    expect(resumePoint(captures, d(25))).toEqual({
+      cursor: 4,
+      anchor: captures[0]!.race,
+    });
+    expect(resumePoint(captures, null)).toEqual({ cursor: 0, anchor: null });
+  });
+
+  it("doesn't resume across a power cycle on the same day", () => {
+    const at = (hours: number) => ({
+      year: 2026,
+      month: 10,
+      day: 25,
+      hours,
+      minutes: 0,
+      seconds: 0,
+      weekday: 0,
+    });
+    const morning = [{ race: { raceNumber: 40, date: at(9) } }];
+    expect(resumePoint(morning, at(13)).cursor).toBe(0);
+  });
+
+  it("connects to a timer that has no meet to report yet", async () => {
+    const sim = createSimulator({ now: () => NOW, pool: { lanesInPool: 6 } });
+    const transport: TimerTransport = {
+      request: (data) =>
+        data[0] === 0x54
+          ? Promise.resolve(encodeErrorCode(50))
+          : sim.request(data),
+    };
+    const session = new TimingSession({
+      transport,
+      onRace: () => {},
+      onStatus: () => {},
+    });
+    const identity = await session.connect();
+    expect(identity.meetDate).toBeNull();
+    expect(session.current.state).toBe("connected");
+  });
+
+  it("pulls races when the lowest numbers are gone from the timer", async () => {
+    const sim = createSimulator({
+      now: () => NOW,
+      capacity: 2,
+      pool: { lanesInPool: 6 },
+    });
+    for (let i = 0; i < 4; i++) {
+      sim.runRace({ lengths: 2, lanes: [{ lane: 1, finalMs: 60_000 + i }] });
+    }
+    const races: number[] = [];
+    const session = new TimingSession({
+      transport: sim,
+      onRace: (r) => {
+        races.push(r.race.raceNumber);
+      },
+      onStatus: () => {},
+    });
+    await session.connect();
+    await session.pollOnce();
+    expect(races).toEqual([3, 4]);
+    expect(session.current).toMatchObject({ cursor: 4 });
+    await session.pollOnce();
+    expect(races).toEqual([3, 4]);
+  });
+
+  it("follows the timer into a new meet after a power cycle", async () => {
+    let now = NOW;
+    const sim = createSimulator({ now: () => now, pool: { lanesInPool: 6 } });
+    const run = () =>
+      sim.runRace({ lengths: 2, lanes: [{ lane: 1, finalMs: 60_000 }] });
+    run();
+    run();
+    const races: Array<[number, number]> = [];
+    const session = new TimingSession({
+      transport: sim,
+      onRace: (r) => {
+        races.push([r.race.raceNumber, r.race.date!.hours]);
+      },
+      onStatus: () => {},
+    });
+    await session.connect();
+    await session.pollOnce();
+    expect(session.current).toMatchObject({ cursor: 2 });
+
+    now = new Date(2026, 9, 25, 13, 0, 0);
+    sim.powerOn();
+    run();
+    await session.pollOnce();
+    expect(races).toEqual([
+      [1, 9],
+      [2, 9],
+      [1, 13],
+    ]);
+    expect(session.current).toMatchObject({
+      cursor: 1,
+      identity: { meetDate: { hours: 13 } },
+    });
+  });
+
+  it("pulls a race again if storing it failed", async () => {
+    const sim = createSimulator({ now: () => NOW, pool: { lanesInPool: 6 } });
+    sim.runRace({ lengths: 2, lanes: [{ lane: 1, finalMs: 60_000 }] });
+    const stored: number[] = [];
+    let broken = true;
+    const session = new TimingSession({
+      transport: sim,
+      onRace: (r) => {
+        if (broken) throw new Error("Couldn't store the race");
+        stored.push(r.race.raceNumber);
+      },
+      onStatus: () => {},
+    });
+    await session.connect();
+    await session.pollOnce();
+    expect(session.current).toMatchObject({ cursor: 0 });
+    broken = false;
+    await session.pollOnce();
+    expect(stored).toEqual([1]);
+    expect(session.current).toMatchObject({ cursor: 1, error: null });
+  });
+
+  it("stops cleanly if the race found by pointer has gone", async () => {
+    const sim = createSimulator({ now: () => NOW, pool: { lanesInPool: 6 } });
+    sim.runRace({ lengths: 2, lanes: [{ lane: 1, finalMs: 60_000 }] });
+    sim.runRace({ lengths: 2, lanes: [{ lane: 1, finalMs: 60_000 }] });
+    const isRaceTwoPull = (data: Uint8Array) =>
+      data[0] === 0x53 && data.length > 4 && data[data.length - 2] === 2;
+    const transport: TimerTransport = {
+      request: (data) =>
+        isRaceTwoPull(data)
+          ? Promise.resolve(encodeErrorCode(50))
+          : sim.request(data),
+    };
+    const races: number[] = [];
+    const session = new TimingSession({
+      transport,
+      onRace: (r) => {
+        races.push(r.race.raceNumber);
+      },
+      onStatus: () => {},
+    });
+    await session.connect();
+    session.setCursor(1);
+    await session.pollOnce();
+    expect(races).toEqual([]);
+    expect(session.current).toMatchObject({ cursor: 1, error: null });
+  });
+
+  it("leaves the status alone if the session drops during a meet check", async () => {
+    let session: TimingSession;
+    const sim = createSimulator({ now: () => NOW, pool: { lanesInPool: 6 } });
+    let dropOnTime = false;
+    const transport: TimerTransport = {
+      request: (data) => {
+        if (data[0] === 0x54 && dropOnTime) session.disconnect();
+        return sim.request(data);
+      },
+    };
+    session = new TimingSession({
+      transport,
+      onRace: () => {},
+      onStatus: () => {},
+    });
+    await session.connect();
+    session.setCursor(7, { raceNumber: 7, date: null });
+    dropOnTime = true;
+    await session.pollOnce();
+    expect(session.current.state).toBe("idle");
+  });
+
+  it("pauses polling for a timer test and carries on after", async () => {
+    const sim = createSimulator({ now: () => NOW, pool: { lanesInPool: 6 } });
+    sim.runRace({ lengths: 2, lanes: [{ lane: 1, finalMs: 60_000 }] });
+    const timers = manualTimers();
+    const session = new TimingSession({
+      transport: sim,
+      onRace: () => {},
+      onStatus: () => {},
+      setTimer: timers.setTimer,
+      clearTimer: timers.clearTimer,
+    });
+    await session.connect();
+    session.start();
+    const report = await session.diagnose({ sleep: async () => {} });
+    expect(report.version).toBe("SYS6 SWIM 1.110");
+    expect(session.current).toMatchObject({ polling: true });
+
+    session.stop();
+    await session.diagnose({ sleep: async () => {} });
+    expect(session.current).toMatchObject({ polling: false });
+  });
+
+  it("keeps the meet when the race it stands on is unchanged", async () => {
+    const sim = createSimulator({ now: () => NOW, pool: { lanesInPool: 6 } });
+    const number = sim.runRace({
+      lengths: 2,
+      lanes: [{ lane: 1, finalMs: 60_000 }],
+    });
+    const session = new TimingSession({
+      transport: sim,
+      onRace: () => {},
+      onStatus: () => {},
+    });
+    await session.connect();
+    const newest = await session.latestRace();
+    session.setCursor(number, newest);
+    await session.pollOnce();
+    expect(session.current).toMatchObject({ cursor: number });
   });
 
   it("describes a non-error rejection and stops polling if the session drops", async () => {
