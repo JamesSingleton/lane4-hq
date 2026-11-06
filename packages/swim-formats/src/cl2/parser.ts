@@ -40,6 +40,9 @@ const RELAY_STROKE_DIGIT: Record<string, string> = {
   "8": "medley_relay",
 };
 
+/** D0 event code for diving: board metres then `H` (`1H`). */
+const DIVE_CODE = /^\d{1,2}H$/i;
+
 const TIME_RE = /(\d{0,2}:?\d{1,2}\.\d{2}|NT|DQ|NS|SCR|DNF)([YSL])?/gi;
 
 function parseMmDdYyyy(raw: string): string {
@@ -206,14 +209,21 @@ type AthleteIdentityCache = {
   teamCode?: string;
 };
 
-/** Extract "Last, First …" from Hy-Tek D0/G0 name field (cols 11–51-ish). */
+/** Last name column by record type: D0 is 12–39, G0 16–43, F0 18–45. */
+const NAME_END_COLUMN: Record<string, number> = { G0: 43, F0: 45 };
+
+/** Extract "Last, First …" from the Hy-Tek D0/G0 name field. */
 function parseHytekSwimmerName(line: string): {
   swimmerName: string;
   usaMemberId?: string;
 } {
-  const nameRegion = line.length > 11 ? line.substring(11, 55) : line;
+  // The 28-column name ends where the member id starts. A name that fills it
+  // touches the id, so never read past the column.
+  const nameEnd = NAME_END_COLUMN[line.slice(0, 2)] ?? 39;
+  const nameRegion = line.length > 11 ? line.substring(11, nameEnd) : line;
+  // A middle name must end at a space: `CD6942B2A140` is the member id.
   const commaMatch = nameRegion.match(
-    /([A-Za-z][^,]{0,30}),\s*([A-Za-z][A-Za-z.\-']*(?:\s+[A-Za-z][A-Za-z.\-']*)?)/,
+    /([A-Za-z][^,]{0,30}),\s*([A-Za-z][A-Za-z.\-']*(?:\s+[A-Za-z][A-Za-z.\-']*(?=\s|$))?)/,
   );
   if (commaMatch) {
     const parsed = parseLastFirstName(`${commaMatch[1]}, ${commaMatch[2]}`);
@@ -375,7 +385,10 @@ function extractD0Event(line: string): {
 } {
   const colCode = line.slice(68, 72).trim();
   const colNum = parsePositiveInt(line.slice(72, 76));
-  if (looksLikeHytekStrokeCode(colCode) && colNum != null) {
+  if (
+    (looksLikeHytekStrokeCode(colCode) || DIVE_CODE.test(colCode)) &&
+    colNum != null
+  ) {
     return { eventCode: colCode, eventNumber: colNum };
   }
 
@@ -411,6 +424,17 @@ function ensureEvent(
   const gender = opts.gender ?? "mixed";
   const course = opts.course ?? meet.course;
   /* v8 ignore stop -- @preserve */
+  if (stroke === "dive") {
+    meet.events.push({
+      eventNumber,
+      distance: 0,
+      stroke,
+      gender,
+      eventKey: `dive-${eventNumber}`,
+      eventKind: "dive",
+    });
+    return;
+  }
   meet.events.push({
     eventNumber,
     distance,
@@ -619,7 +643,15 @@ function parseD0Athlete(
     teamCode,
   });
 
-  if (eventNumber && decoded?.distance && decoded.stroke && !decoded.relay) {
+  const dive = eventCode != null && DIVE_CODE.test(eventCode);
+  if (eventNumber && dive) {
+    ensureEvent(meet, eventNumber, { stroke: "dive", gender, course });
+  } else if (
+    eventNumber &&
+    decoded?.distance &&
+    decoded.stroke &&
+    !decoded.relay
+  ) {
     ensureEvent(meet, eventNumber, {
       distance: decoded.distance,
       stroke: decoded.stroke,
@@ -631,7 +663,8 @@ function parseD0Athlete(
   }
   const swimTimes = times.filter((t) => !isNoTime(t.time) && t.time !== "NT");
   const special = times.find((t) => /^(DQ|NS|SCR|DNF)$/i.test(t.time));
-  const seedTime = swimTimes[0]?.time;
+  // A diver's seed is points written as a time (`4:27.05` for 267.05).
+  const seedTime = dive ? undefined : swimTimes[0]?.time;
 
   // Legacy Meet Results without G0: final time (or DQ/NS) on D0
   if (kind === "meet_results" && !hasG0) {
@@ -661,7 +694,7 @@ function parseD0Athlete(
     meet.entries.push({
       eventNumber,
       swimmerName,
-      seedTime: swimTimes.length > 1 ? swimTimes[0]!.time : undefined,
+      seedTime: !dive && swimTimes.length > 1 ? swimTimes[0]!.time : undefined,
       usaMemberId: usaMemberId || undefined,
     });
 
@@ -689,6 +722,9 @@ function parseD0Athlete(
   if (kind === "meet_results") {
     for (const round of fixedRoundResults(line, D0_ROUND_SLOTS)) {
       pendingRoundResults.push({
+        ...(dive && !round.isDq && !round.noSwim
+          ? { diveScore: Number.parseFloat(round.time) }
+          : {}),
         eventNumber,
         swimmerName,
         time: round.time,
@@ -706,9 +742,10 @@ function parseD0Athlete(
 
 /**
  * Team Manager G0 checkpoint lines (`1 2  50C 31.93 1:10.19`) are splits.
- * A line without that marker is still an official result.
+ * A line without that marker is still an official result. A two-digit split
+ * count runs straight into the 12-character member id (`…A140110  50C`).
  */
-const SPLIT_CHECKPOINT = /\d+\s+\d+\s+50[CSYL]/i;
+const SPLIT_CHECKPOINT = /\d\s+50[CSYL]/i;
 
 type SplitRound = NonNullable<ParsedResult["resultType"]>;
 

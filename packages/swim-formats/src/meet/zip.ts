@@ -1,6 +1,7 @@
 import { unzipSync } from "fflate";
 import { detectCl2FileKind } from "../cl2/kind";
 import type {
+  ParsedEntry,
   ParsedEvent,
   ParsedMeet,
   ParsedRelayEntry,
@@ -235,6 +236,28 @@ function indexKey(
   return `${(eventNumber ?? "").toString()}${eventSuffix ?? ""}|${name.trim().toLowerCase()}`;
 }
 
+/**
+ * HY3 names a swimmer by preferred name and CL2 by legal name, so one swim can
+ * arrive under both. Index the legal name too.
+ */
+function legalNameKeys(entries: ParsedEntry[]): string[] {
+  const keys: string[] = [];
+  for (const entry of entries) {
+    const { preferredName, legalFirstName, swimmerName } = entry;
+    if (!preferredName || !legalFirstName) continue;
+    if (!swimmerName.startsWith(`${preferredName} `)) continue;
+    const lastName = swimmerName.slice(preferredName.length + 1);
+    keys.push(
+      indexKey(
+        `${legalFirstName} ${lastName}`,
+        entry.eventNumber,
+        entry.eventSuffix,
+      ),
+    );
+  }
+  return keys;
+}
+
 function sameMergedEvent(a: ParsedEvent, b: ParsedEvent): boolean {
   if (
     a.eventNumber != null &&
@@ -407,11 +430,12 @@ export function mergeParsedMeets(
       merged.entries.push(entry);
     }
 
-    const resultKeys = new Set(
-      merged.results.map((r) =>
+    const resultKeys = new Set([
+      ...merged.results.map((r) =>
         indexKey(r.swimmerName, r.eventNumber, r.eventSuffix),
       ),
-    );
+      ...legalNameKeys(merged.entries),
+    ]);
     for (const result of extra.results) {
       const key = indexKey(
         result.swimmerName,

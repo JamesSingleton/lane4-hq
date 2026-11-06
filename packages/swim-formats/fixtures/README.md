@@ -9,6 +9,8 @@ Golden corpus for parser/integration testing. Families map to Hy-Tek export kind
 | `ctcc-meet-results-2005.cl2` / `.zip`   | Legacy Meet Manager CL2-only results (D0 times, no G0) |
 | `azsi-results.cl2` / `azsi-results.hy3` | Modern Meet Manager results (D0 + G0)                  |
 
+| `uil-region-results.hy3` / `.cl2` | Texas UIL Region meet (Meet Manager 8.0Gc): prelim/semifinal/final diving, prelim/final 500s and a relay. Events 9, 10, 15, 17 of the real file. Athletes, schools, ids, birth dates, and coaches replaced; checksums recomputed. Relay leg names don't match between the two files |
+
 ## Meet Entries / Roster (Team Manager packs)
 
 | File                                      | Purpose                                                                                                                                         |
@@ -31,6 +33,7 @@ Golden corpus for parser/integration testing. Families map to Hy-Tek export kind
 | `croswhite-2025-events.*` / `croswhite-2026-events.*` | Swim/Dive invite EV3+HYV                                                                                                               |
 | `croswhite-2026-invite-rev.ev3` / `.hyv`              | Later Croswhite Invite revision (8.0Gh). EV3 street scrubbed; HYV has no street. Trailing checksum not recomputed                      |
 | `desert-sunrise-events.*`                             | Swim-only EV3+HYV                                                                                                                      |
+| `uil-region-events.ev3` / `.hyv`                      | Texas UIL Region events: prelim/final swims, prelim/semifinal/final diving. EV3 street scrubbed; trailing checksum not recomputed      |
 | `azsi-events.ev3` / `.hyv`                            | Championship events with QTs                                                                                                           |
 
 ## Third-party

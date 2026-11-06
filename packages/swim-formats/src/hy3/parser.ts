@@ -53,6 +53,8 @@ const STROKE_CODES: Record<string, string> = {
   C: "breast",
   D: "fly",
   E: "im",
+  /** Diving. The distance field holds the dive count. */
+  F: "dive",
   "1": "free",
   "2": "back",
   "3": "breast",
@@ -102,6 +104,9 @@ type Hy3Entry = {
   eventSuffix?: string;
   teamCode?: string;
   relayLetter?: string;
+  dive?: boolean;
+  /** Rounds in file order; results keep Meet Manager's finals-first order. */
+  roundOrder: ResultKind[];
   legSwimmers: Map<number, number>;
   prelim?: RoundResult;
   swimoff?: RoundResult;
@@ -130,6 +135,7 @@ type Hy3Event = {
   ageMax?: number;
   relay: boolean;
   suffix?: string;
+  diveCount?: number;
 };
 
 type ParseState = {
@@ -137,6 +143,8 @@ type ParseState = {
   swimmers: Map<number, Hy3Swimmer>;
   events: Map<string, Hy3Event>;
   entries: Hy3Entry[];
+  /** Results files repeat E1/F1 once per round; each swim is one entry. */
+  entryIndex: Map<string, Hy3Entry>;
   lastTeamCode?: string;
   lastEventKey?: string;
   lastEntry?: Hy3Entry;
@@ -231,6 +239,7 @@ function applyRound(
   result: RoundResult,
 ): void {
   entry[kind] = result;
+  entry.roundOrder = [...entry.roundOrder.filter((k) => k !== kind), kind];
 }
 
 function parseResultKind(code: string): ResultKind | undefined {
@@ -245,7 +254,16 @@ function allRoundResults(
   entry: Hy3Entry,
 ): Array<{ kind: ResultKind; result: RoundResult }> {
   const rounds: Array<{ kind: ResultKind; result: RoundResult }> = [];
-  for (const kind of ["prelim", "swimoff", "finals"] as const) {
+  const inFileOrder = (["prelim", "swimoff", "finals"] as const)
+    .slice()
+    .sort((a, b) => {
+      const at = (kind: ResultKind) => {
+        const i = entry.roundOrder.indexOf(kind);
+        return i < 0 ? 3 : i;
+      };
+      return at(a) - at(b);
+    });
+  for (const kind of inFileOrder) {
     const result = entry[kind];
     if (result && (result.timeSeconds != null || result.timeCode)) {
       rounds.push({ kind, result });
@@ -254,7 +272,10 @@ function allRoundResults(
   return rounds;
 }
 
-function scoredRound(round: RoundResult): {
+function scoredRound(
+  round: RoundResult,
+  dive = false,
+): {
   time: string;
   isDq: boolean;
   noSwim: boolean;
@@ -266,7 +287,11 @@ function scoredRound(round: RoundResult): {
     !!round.dqCode ||
     DQ_TIME_CODES.has(round.timeCode ?? "") ||
     round.timeCode === "Q";
-  const time = secondsToTimeString(round.timeSeconds);
+  // Diving points sit in the time field; they aren't seconds.
+  const time =
+    dive && round.timeSeconds != null
+      ? round.timeSeconds.toFixed(2)
+      : secondsToTimeString(round.timeSeconds);
   if (!time && !isDq) return null;
   return { time: time ?? "DQ", isDq, noSwim: false };
 }
@@ -278,9 +303,12 @@ function pushResultFromRound(
   kind: ResultKind,
   round: RoundResult,
 ): void {
-  const scored = scoredRound(round);
+  const scored = scoredRound(round, entry.dive);
   if (!scored) return;
   results.push({
+    ...(entry.dive && round.timeSeconds != null
+      ? { diveScore: round.timeSeconds }
+      : {}),
     eventNumber: entry.eventNumber,
     swimmerName: swimmerDisplayName(swimmer),
     time: scored.time,
@@ -500,11 +528,13 @@ function parseE1(line: string, state: ParseState): void {
   const token = splitEventToken(eventNumberRaw);
   const eventNumber = token.eventNumber;
   const eventKey = eventNumberRaw || `${distance}-${stroke}-${eventGender}`;
+  const dive = stroke === "dive";
 
   ensureEvent(state, eventKey, {
     number: eventKey,
     eventNumber,
-    distance,
+    distance: dive ? 0 : distance,
+    diveCount: dive && distance > 0 ? distance : undefined,
     stroke,
     course: eventCourse,
     gender: eventGender,
@@ -514,6 +544,13 @@ function parseE1(line: string, state: ParseState): void {
     suffix: token.eventSuffix,
   });
 
+  state.lastEventKey = eventKey;
+  const indexKey = `I|${meetId}|${eventKey}`;
+  const repeated = state.entryIndex.get(indexKey);
+  if (repeated) {
+    state.lastEntry = repeated;
+    return;
+  }
   const entry: Hy3Entry = {
     eventNumber,
     meetId: meetId >= 0 ? meetId : undefined,
@@ -524,10 +561,12 @@ function parseE1(line: string, state: ParseState): void {
     meetDivision,
     entryMark,
     eventSuffix: token.eventSuffix,
+    dive,
+    roundOrder: [],
     legSwimmers: new Map(),
   };
   state.entries.push(entry);
-  state.lastEventKey = eventKey;
+  state.entryIndex.set(indexKey, entry);
   state.lastEntry = entry;
 }
 
@@ -589,6 +628,13 @@ function parseF1(line: string, state: ParseState): void {
     suffix: token.eventSuffix,
   });
 
+  state.lastEventKey = eventKey;
+  const indexKey = `R|${teamCode}|${relayLetter}|${eventKey}`;
+  const repeated = state.entryIndex.get(indexKey);
+  if (repeated) {
+    state.lastEntry = repeated;
+    return;
+  }
   const entry: Hy3Entry = {
     eventNumber,
     relay: true,
@@ -598,10 +644,11 @@ function parseF1(line: string, state: ParseState): void {
     teamCode,
     relayLetter,
     eventSuffix: token.eventSuffix,
+    roundOrder: [],
     legSwimmers: new Map(),
   };
   state.entries.push(entry);
-  state.lastEventKey = eventKey;
+  state.entryIndex.set(indexKey, entry);
   state.lastEntry = entry;
 }
 
@@ -667,12 +714,15 @@ function flatten(state: ParseState): ParsedMeet {
     const gender = event.gender;
     const stroke = event.stroke;
     const course = event.course;
-    const eventKey = buildEventKey(
-      event.distance,
-      stroke as Stroke | RelayStroke,
-      course,
-      gender,
-    );
+    const dive = stroke === "dive";
+    const eventKey = dive
+      ? `dive-${event.eventNumber}`
+      : buildEventKey(
+          event.distance,
+          stroke as Stroke | RelayStroke,
+          course,
+          gender,
+        );
     const ageGroup = formatAgeGroup(event.ageMin, event.ageMax);
     events.push({
       eventNumber: event.eventNumber,
@@ -682,6 +732,8 @@ function flatten(state: ParseState): ParsedMeet {
       ageGroup,
       eventKey,
       eventSuffix: event.suffix,
+      ...(dive ? { eventKind: "dive" as const } : {}),
+      ...(event.diveCount != null ? { diveCount: event.diveCount } : {}),
     });
   }
 
@@ -722,7 +774,8 @@ function flatten(state: ParseState): ParsedMeet {
     entries.push({
       eventNumber: entry.eventNumber,
       swimmerName,
-      seedTime: secondsToTimeString(entry.seedSeconds),
+      // A diver's seed is points, not a time.
+      seedTime: entry.dive ? undefined : secondsToTimeString(entry.seedSeconds),
       usaMemberId: swimmer.usaMemberId,
       dateOfBirth: swimmer.dateOfBirth,
       gender:
@@ -853,6 +906,7 @@ export function parseHy3(content: string): ParsedMeet {
     swimmers: new Map(),
     events: new Map(),
     entries: [],
+    entryIndex: new Map(),
   };
 
   for (const line of lines) {

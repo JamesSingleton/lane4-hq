@@ -743,3 +743,19 @@ describe("planAttachedRelayLineup", () => {
     expect(relayLineupKey("ev1", "a")).toBe("ev1:A");
   });
 });
+
+describe("planImportedIndividualResult diving", () => {
+  it("skips diving points so they never become a best time", () => {
+    expect(
+      planImportedIndividualResult({
+        isTeamAthlete: true,
+        resolved: true,
+        meetEventId: "dive-9",
+        isRelayEvent: false,
+        isDiveEvent: true,
+        time: "237.20",
+        isDq: false,
+      }),
+    ).toEqual({ outcome: "skip", countSkipped: true, countUnmatched: false });
+  });
+});

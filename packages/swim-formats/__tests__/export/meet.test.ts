@@ -1990,12 +1990,10 @@ describe("exportHyv", () => {
       qualifyingTimeMs: 28_500,
     });
 
+    // HYV has no dive count; Meet Manager writes 1 in that column.
     const dive = parsed.events.find((e) => e.eventKind === "dive");
-    expect(dive).toMatchObject({
-      eventNumber: 42,
-      diveCount: 6,
-      roundType: "finals",
-    });
+    expect(dive).toMatchObject({ eventNumber: 42, roundType: "finals" });
+    expect(dive?.diveCount).toBeUndefined();
   });
 
   it("covers SCM/LCM headers, relays, swimoff rounds, and unknown strokes", () => {
@@ -2080,8 +2078,8 @@ describe("exportHyv", () => {
     const text = exportHyv(meet);
     expect(text).toContain(";X;");
     expect(text).toContain(";0;");
-    expect(text).toContain(";5;6;");
-    expect(text).toContain(";0;6;");
+    expect(text).toContain(";1;6;");
+    expect(text).not.toContain(";5;6;");
     expect(text.startsWith("Sparse HYV;")).toBe(true);
     expect(text).toContain(";Y;");
 
@@ -2089,9 +2087,7 @@ describe("exportHyv", () => {
     expect(
       parsed.events.find((e) => e.roundType === "time_trial"),
     ).toBeTruthy();
-    expect(parsed.events.find((e) => e.eventKind === "dive")).toMatchObject({
-      diveCount: 5,
-    });
+    expect(parsed.events.some((e) => e.eventKind === "dive")).toBe(true);
   });
 });
 
