@@ -17,8 +17,12 @@ describe("commands", () => {
     expect(toHex(meetTimeAndDate())).toBe("54");
     expect(toHex(nextMeet())).toBe("4D 2B");
     expect(toHex(previousMeet())).toBe("4D 2D");
-    expect(toHex(readSetups("i"))).toBe("52 69");
-    expect(toHex(readSetups("r"))).toBe("52 72");
+  });
+
+  it("sends a zeroed structure with setups reads, as F397's examples do", () => {
+    expect(toHex(readSetups("r"))).toBe("52 72 00");
+    expect(toHex(readSetups("g"))).toBe("52 67 00 00");
+    expect(toHex(readSetups("i"))).toBe("52 69 00 00 00 00 00");
   });
 
   it("puts include options before the selector", () => {

@@ -4,7 +4,16 @@ import {
   type RaceResponse,
   type TimerTransport,
 } from "@lane4hq/timing-cts/client";
-import type { DecodeOptions, TimerDate } from "@lane4hq/timing-cts/race";
+import {
+  type DiagnosticOptions,
+  type DiagnosticReport,
+  diagnoseTimer,
+} from "@lane4hq/timing-cts/diagnostics";
+import type {
+  DecodeOptions,
+  TimerDate,
+  TimerRace,
+} from "@lane4hq/timing-cts/race";
 import type { PoolSetup } from "@lane4hq/timing-cts/setups";
 
 export type TimerIdentity = {
@@ -44,10 +53,14 @@ export type SessionOptions = {
   clearTimer?: (handle: unknown) => void;
 };
 
+/** The race the cursor sits on, as the timer reported it. */
+export type RaceAnchor = Pick<TimerRace, "raceNumber" | "date">;
+
 /**
  * One connection to a CTS console. Polls for new races by race number
  * (`S…R##`), which every console including Gen7 supports, starting after
- * `cursor`.
+ * `cursor`. When `cursor + 1` isn't there it checks the timer is still on the
+ * same meet, then walks the race pointer in case numbering has a gap.
  */
 export class TimingSession {
   private readonly timer: CtsTimer;
@@ -55,6 +68,7 @@ export class TimingSession {
   private handle: unknown = null;
   private failures = 0;
   private busy: Promise<void> | null = null;
+  private anchor: RaceAnchor | null = null;
 
   constructor(private readonly options: SessionOptions) {
     this.timer = new CtsTimer(options.transport, options.decode);
@@ -79,6 +93,7 @@ export class TimingSession {
   async connect(cursor = 0): Promise<TimerIdentity> {
     this.set({ state: "connecting" });
     try {
+      this.anchor = null;
       const version = await this.timer.whoAreYou();
       const meetDate = await this.timer.meetDate();
       const pool = await this.timer.poolSetup().catch(() => null);
@@ -98,13 +113,15 @@ export class TimingSession {
     }
   }
 
-  /** The race at the timer's pointer (normally its newest), or null. */
-  async latestRaceNumber(): Promise<number | null> {
-    const race = await this.timer.raceIfPresent({ kind: "pointer" }, {});
-    return race?.race.raceNumber ?? null;
+  /** The newest race on the timer, or null when its meet has none. */
+  async latestRace(): Promise<TimerRace | null> {
+    await this.busy;
+    return this.timer.newestRace();
   }
 
-  setCursor(cursor: number) {
+  /** Move the cursor. An `anchor` lets polling notice the race has gone. */
+  setCursor(cursor: number, anchor: RaceAnchor | null = null) {
+    this.anchor = anchor;
     if (this.status.state === "connected") this.set({ ...this.status, cursor });
   }
 
@@ -150,13 +167,18 @@ export class TimingSession {
     let cursor = this.status.cursor;
     try {
       for (let n = 0; n < max; n++) {
-        const race = await this.timer.raceIfPresent(
-          { kind: "race", raceNumber: cursor + 1 },
-          FULL_RACE_OPTIONS,
-        );
+        let race = await this.pull(cursor + 1);
+        if (!race) {
+          if (await this.meetChanged()) cursor = 0;
+          const next = await this.timer.nextRaceAfter(cursor);
+          if (next === null) break;
+          race = await this.pull(next);
+        }
         if (!race) break;
-        cursor = race.race.raceNumber;
+        // Only after it's stored: a failure here pulls the same race again.
         await this.options.onRace(race, this.status.identity);
+        cursor = race.race.raceNumber;
+        this.anchor = race.race;
       }
       this.failures = 0;
       if (this.status.state === "connected") {
@@ -179,12 +201,55 @@ export class TimingSession {
     }
   }
 
-  /** Fetch one race on demand (e.g. re-pull a race the operator asks for). */
-  async fetchRace(raceNumber: number): Promise<RaceResponse | null> {
+  private pull(raceNumber: number): Promise<RaceResponse | null> {
     return this.timer.raceIfPresent(
       { kind: "race", raceNumber },
       FULL_RACE_OPTIONS,
     );
+  }
+
+  /**
+   * True when the anchor race is gone or is a different race: the timer was
+   * power-cycled into a new meet, or discarded the race. Pulling the meet
+   * again is safe, because captures are matched by race number and date.
+   */
+  private async meetChanged(): Promise<boolean> {
+    const anchor = this.anchor;
+    if (!anchor) return false;
+    const same = await this.timer.raceIfPresent(
+      { kind: "race", raceNumber: anchor.raceNumber },
+      {},
+    );
+    if (
+      same &&
+      JSON.stringify(same.race.date) === JSON.stringify(anchor.date)
+    ) {
+      return false;
+    }
+    this.anchor = null;
+    const meetDate = await this.timer.meetDate();
+    if (this.status.state === "connected") {
+      const identity = { ...this.status.identity, meetDate };
+      this.set({ ...this.status, identity });
+    }
+    return true;
+  }
+
+  /** Test the console. Polling pauses, since the test moves the pointers. */
+  async diagnose(options: DiagnosticOptions): Promise<DiagnosticReport> {
+    const wasPolling = this.status.state === "connected" && this.status.polling;
+    this.stop();
+    await this.busy;
+    try {
+      return await diagnoseTimer(this.options.transport, options);
+    } finally {
+      if (wasPolling) this.start();
+    }
+  }
+
+  /** Fetch one race on demand (e.g. re-pull a race the operator asks for). */
+  fetchRace(raceNumber: number): Promise<RaceResponse | null> {
+    return this.pull(raceNumber);
   }
 
   disconnect() {
@@ -193,23 +258,26 @@ export class TimingSession {
   }
 }
 
-/** Highest captured race number from the timer's current meet (same day). */
-export function resumeCursor(
-  captures: Array<{ race: { raceNumber: number; date: TimerDate | null } }>,
+function stamp(d: TimerDate): number {
+  return Date.UTC(d.year, d.month - 1, d.day, d.hours, d.minutes, d.seconds);
+}
+
+/**
+ * Where to resume on the timer's current meet: the highest race captured since
+ * that meet began. A timer starts a new meet at every power-on, so two meets
+ * can share a day, and race numbers may repeat between them.
+ */
+export function resumePoint(
+  captures: Array<{ race: RaceAnchor }>,
   meetDate: TimerDate | null,
-): number {
-  if (!meetDate) return 0;
-  let cursor = 0;
-  for (const c of captures) {
-    const d = c.race.date;
-    if (
-      d &&
-      d.year === meetDate.year &&
-      d.month === meetDate.month &&
-      d.day === meetDate.day
-    ) {
-      cursor = Math.max(cursor, c.race.raceNumber);
+): { cursor: number; anchor: RaceAnchor | null } {
+  let anchor: RaceAnchor | null = null;
+  if (meetDate) {
+    const began = stamp(meetDate);
+    for (const { race } of captures) {
+      if (!race.date || stamp(race.date) < began) continue;
+      if (!anchor || race.raceNumber > anchor.raceNumber) anchor = race;
     }
   }
-  return cursor;
+  return { cursor: anchor?.raceNumber ?? 0, anchor };
 }

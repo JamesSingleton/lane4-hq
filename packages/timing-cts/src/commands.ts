@@ -44,6 +44,17 @@ export type SetupsSubCommand =
   /** Selected event sequence (uchar). Gen7: supported. */
   | "r";
 
+/**
+ * Size of each setups structure. Every read in F397's worked example sends
+ * `R`, the sub-command, then a zeroed structure of that size (`52 72 00` for
+ * the one-byte `r`), so reads here do the same.
+ */
+const SETUPS_BYTES: Readonly<Record<SetupsSubCommand, number>> = {
+  g: 2,
+  i: 5,
+  r: 1,
+};
+
 export function whoAreYou(): Uint8Array {
   return Uint8Array.of(W);
 }
@@ -61,7 +72,10 @@ export function previousMeet(): Uint8Array {
 }
 
 export function readSetups(sub: SetupsSubCommand): Uint8Array {
-  return Uint8Array.of(R, sub.charCodeAt(0));
+  const data = new Uint8Array(2 + SETUPS_BYTES[sub]);
+  data[0] = R;
+  data[1] = sub.charCodeAt(0);
+  return data;
 }
 
 function assertByte(value: number, label: string, min = 0): void {
@@ -133,5 +147,21 @@ export function swimData(
 
 /** True when `data` is a read-splits-setup (`Rg`) command, whose 2-byte response is not an error. */
 export function isReadSplitsSetup(data: Uint8Array): boolean {
-  return data.length === 2 && data[0] === R && data[1] === 0x67;
+  return data[0] === R && data[1] === 0x67;
+}
+
+/**
+ * False for commands that move a timer pointer (`M±`, `S…L`, `S…N`). The
+ * timer may have acted on a command whose reply was lost, so re-sending one
+ * would move the pointer twice.
+ */
+export function isSafeToResend(data: Uint8Array): boolean {
+  if (data[0] === M) return false;
+  if (data[0] !== S) return true;
+  // Options come first. The selector's arguments are binary, so anything
+  // after the selector byte can look like a command letter.
+  const selector = data.find(
+    (byte, at) => at > 0 && ![0x42, 0x49, 0x4a, 0x53, 0x58].includes(byte),
+  );
+  return selector !== 0x4c && selector !== 0x4e;
 }

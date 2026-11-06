@@ -70,6 +70,7 @@ Summarized from Colorado Time Systems, *System 6, System 5 & 4000A Swimming Meet
 | `W` (who are you) | `05 00 57 A3 FF` |
 | `S` (swim data, race at pointer) | `05 00 53 A7 FF` |
 | ACK | `06 00 06 00 F3 FF` |
+| `Rr` as sent in the worked example, with its zeroed `uchar` (DATA `52 72 00`) | `07 00 52 72 00 34 FF` |
 | Response to `Rr` (selected event sequence = 7) | `05 00 07 F3 FF` |
 
 ### Timing
@@ -98,7 +99,11 @@ Summarized from Colorado Time Systems, *System 6, System 5 & 4000A Swimming Meet
   - `R##`: race number, u16 LE.
 - With no selector, the timer returns the race at the pointer.
 
-v1 addressing strategy: walk races with `L`/`N` and fetch by `R##`, so it works on Gen7. Use `E#$` when the timer was run with event and heat titles.
+v1 addressing strategy: fetch by `R##`, so it works on Gen7, and walk with `L`/`N` when `cursor + 1` isn't there, because F397 doesn't promise numbering starts at 1 or has no gaps. `L`, `N`, and `M±` move a pointer, so they are never re-sent. Use `E#$` when the timer was run with event and heat titles.
+
+Setups reads send `R`, the sub-command, then a zeroed structure of that size, as the worked example does (`52 72 00`).
+
+See [F397 verification](cts-f397-verification.md) for what has been checked and what only hardware can answer.
 
 ### Race response layout
 
@@ -114,7 +119,7 @@ The header (`TYPE_MEETMGMT_HEADER`), in order:
    - `month` (1–12);
    - `day` (1–31);
    - `year` (0–99).
-5. Race shape: `race_lengths`, `lanes_in_pool` (lanes sending), `num_times_for_each_lane` (includes backups).
+5. Race shape: `race_lengths`, `lanes_in_pool` (lanes sending), `num_times_for_each_lane` (includes backups; F397 doesn't say whether it includes individual buttons, so the decoder handles both).
 6. `reserved1[MAX_NUM_LANES+1]`, `reserved2[MAX_NUM_LANES+1]`.
 7. `date_long_year`: `int`, 1990–2089, v3.25+. Reserved on older firmware.
 8. `ireserved2`: `int`.

@@ -48,7 +48,8 @@ What shipped, and where it departs from the decision above:
 - **Codec:** `packages/timing-cts` (`@lane4hq/timing-cts`):
   - `frame`, `commands`, `race`, `errors`, and `setups` hold the codec. `client` provides `CtsTimer` over a `TimerTransport`. `simulator` provides `TimerSimulator`.
   - Tests use the vendor golden vectors. Coverage is 100% of lines, functions, and statements.
-  - Header widths are parameters (`DecodeOptions.maxNumLanes`, default 10; `int` is 2-byte little-endian). The per-lane layout comes from `num_times_for_each_lane`. If that doesn't explain the byte count, the decoder infers the layout and sets `layoutWarning`, which the review screen shows. It never guesses silently.
+  - Header widths are parameters (`DecodeOptions.maxNumLanes`; `int` is 2-byte little-endian). `maxNumLanes` defaults to 10 and is learned from the length of the `T` reply, which is a bare header.
+  - The per-lane layout comes from `num_times_for_each_lane`, read both with and without individual buttons, because F397 doesn't say which. The two are ranked against `race_lengths`, the relay exchange count, and rising splits. A tie, or a byte count neither explains, sets `layoutWarning`, which the review screen shows. It never guesses silently.
 - **Rust transport:** `apps/desktop/src-tauri/src/timing/`:
   - Commands: `timing_list_ports`, `timing_open`, `timing_close`, `timing_connected_port`, `timing_request`. Tests run over a scripted mock link.
   - macOS lists only `/dev/cu.*`.
@@ -56,7 +57,9 @@ What shipped, and where it departs from the decision above:
 - **Timeouts:**
   - The first byte must arrive within 500 ms. After that, each byte must follow within 500 ms.
   - The vendor text says the *rest of the packet* must arrive within 500 ms, but a 10-lane 1650 response is several KB. At 9600 baud that takes seconds to send, so the window is applied between bytes.
-  - Up to 3 retries, with a 50 ms quiet gap and an input flush before each.
-- **Polling:** the app asks for race `cursor + 1` by number (`S B I J S R##`, supported on every console including Gen7) every 2 s. On connect, the cursor resumes after the last race captured from the timer's current meet. "Only new races" jumps it to the race at the timer's pointer.
-- **Setups:** read-only. `Ri` (pool setup) is read to warn about lane-count mismatches. `I…` writes are still not implemented.
-- **Still to confirm on hardware:** the `int` width, `MAX_NUM_LANES`, and the split count versus `race_lengths` ([#74](https://github.com/JamesSingleton/lane4-hq/issues/74)).
+  - Up to 3 retries, with a 50 ms quiet gap before each. Input is flushed before every send.
+  - `timing_request` takes `resend`. It is false for `M±`, `S…L`, and `S…N` (`isSafeToResend`), because the timer may have acted on a command whose reply was lost.
+- **Polling:** the app asks for race `cursor + 1` by number (`S B I J S R##`, which F397 doesn't exclude on any console) every 2 s. When that misses, it re-reads the race the cursor is on to catch a new meet, then walks the race pointer to the lowest number above the cursor, so a gap can't stall it. On connect, the cursor resumes after the last race captured since the timer's meet began. "Only new races" walks to the end of the race pointer.
+- **Setups:** read-only. `Ri` (pool setup) is read to warn about lane-count mismatches. Reads send a zeroed structure, as F397's worked example does. `I…` writes are still not implemented.
+- **Timer test:** `diagnoseTimer` runs read-only checks on a real console and saves a report. It lives in the codec package so it runs against the simulator in tests.
+- **Still to confirm on hardware:** see the checklist in [F397 verification](../specs/cts-f397-verification.md) and [#74](https://github.com/JamesSingleton/lane4-hq/issues/74).
