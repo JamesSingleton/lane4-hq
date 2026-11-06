@@ -5,7 +5,7 @@ Local-first desktop app for macOS and Windows, built with [Tauri v2](https://tau
 It is Lane4's meet manager: it runs a swim meet on the pool deck, fully offline.
 1. **Setup:** create a meet from the host's event file (EV3/HYV/ZIP), then import each team's entry pack (HY3/CL2/SD3/ZIP).
 2. **Heat sheet:** seed heats, scratch swimmers, and move lanes. Once prelims are verified, build A/B/C finals from them. Draw the dive order for diving events. Print the heat sheet.
-3. **Run meet:** connect a Colorado Time Systems console (System 6, System 5, 4000A, Gen7). Each finished race is pulled automatically and matched to its heat. An official checks pad, backup, and button times, fixes DQs and missed touches, and verifies. Diving is scored by hand on a scoresheet (dive code, DD, one award per judge).
+3. **Run meet:** connect a Colorado Time Systems console (System 6, System 5, 4000A, Gen7). Each finished race is pulled automatically and matched to its heat. The screen follows the meet: pick any heat from the event list, and every lane in the pool stays on screen. An official checks pad, backup, and button times, fixes DQs and missed touches, and verifies. Arrow keys change lane and heat, and Ctrl or ⌘ + Enter verifies and moves to the next heat. Team scores update as heats are verified. Diving is scored by hand on a scoresheet (dive code, DD, one award per judge).
 4. **Results:** event standings and team scores, printable per event or for the whole meet.
 5. **Export & publish:** a HY3 results ZIP per team (for Team Manager, TeamUnify, SwimTopia, Commit), a CSV, and a `.lane4meet` backup. Verified heats publish to the Lane4 API (`apps/api`) whenever the machine is online, and wait in a queue when it isn't. Sign in with a device code (approved at `/device` in admin) and choose the team hosting the meet.
 
@@ -20,6 +20,7 @@ Choose **Simulated CTS console** in the Run meet connection bar. It speaks the s
 - Cable the console's **top RS232 port (COM 1)** to the laptop, usually through a USB-serial adapter (FTDI or Prolific; install the driver on Windows if it doesn't show up).
 - The port appears as `COMn` on Windows or `/dev/cu.usbserial-…` on macOS. The link runs at 9600 baud, odd parity, 8 data bits, 1 stop bit.
 - **Last race pulled** controls where polling resumes. **Only new races** skips everything already stored on the console.
+- **Test this timer** checks the console, the cable, and the adapter without changing any setups, and saves a report to send to support. It works before connecting, so use it when a console won't connect. Run it between races, because polling pauses while it runs. See [F397 verification](../../docs/specs/cts-f397-verification.md).
 
 ### Where data lives
 
@@ -91,7 +92,7 @@ Bundles land in `src-tauri/target/release/bundle/`: `.app`/`.dmg` on macOS, and 
   - `write_export_file` for zip/hy3/cl2/sd3/csv/lane4meet;
   - the `store_*` commands, which only touch `meets/` in the app data directory and validate meet ids.
 - The Lane4 server is fixed per build, never chosen by the user. Debug builds talk to `http://localhost:8080` (API) and `http://localhost:3001` (admin, for sign-up and approving sign-ins). Release builds talk to `https://api.lane4hq.com` and `https://admin.lane4hq.com`. Set `LANE4_API_URL` / `LANE4_ADMIN_URL` when building to point a build elsewhere, e.g. staging. A token is only ever sent back to the server that issued it.
-- The server must be HTTPS (localhost excepted). Sign-in and POSTs are made from Rust, so the CSP doesn't need a `connect-src` exception. The session token and the pending device code never reach the webview.
+- The server must be HTTPS (localhost excepted). Sign-in and POSTs are made from Rust, so the CSP doesn't need a `connect-src` exception for them. The session token and the pending device code never reach the webview.
 - Handle paths with Tauri APIs; never hand-join path strings, because Windows uses `\`.
 
 - Sign-in uses the system browser (RFC 8252): the app starts a device code and opens admin's `/device` page with it filled in. After approval, the page opens `lane4://sign-in/approved` (`src-tauri/src/deep_link.rs`), which brings the app forward and polls immediately. The link carries nothing secret; only this app holds the device code that collects the token. The scheme is registered by the installers; on macOS it only works from a bundled app, so `pnpm tauri dev` falls back to the normal poll.
@@ -105,6 +106,6 @@ To ship an update (`.github/workflows/desktop-release.yml`):
 1. One time: run `pnpm --filter @lane4hq/desktop tauri signer generate -w ~/.tauri/lane4.key`. Save the private key and its password as repo secrets `TAURI_SIGNING_PRIVATE_KEY` and `TAURI_SIGNING_PRIVATE_KEY_PASSWORD`, and the public key as the repo variable `LANE4_UPDATER_PUBKEY`. Keep a backup of the private key: losing it means existing installs can't update.
 2. Bump `version` in `src-tauri/tauri.conf.json`, merge, then push the tag `desktop-v<version>`.
 3. The workflow builds signed updater bundles into a draft release. Publish the draft to ship it; within 5 minutes `GET /v1/desktop/update` offers it.
-4. Optional: set GitHub Actions variables `VITE_POSTHOG_PROJECT_TOKEN` and `VITE_POSTHOG_HOST`. The release workflow inlines them. Empty values leave analytics off. The release tag is the analytics `release`.
+4. Optional: set GitHub Actions variables `VITE_POSTHOG_PROJECT_TOKEN` and `VITE_POSTHOG_HOST`. The release workflow inlines them. Empty values leave analytics off. A host other than `https://us.i.posthog.com` must also be added to `connect-src` in `tauri.conf.json`, because analytics runs in the webview. The release tag is the analytics `release`.
 
 The app checks for an update on the meets list only, and installs only when the user chooses, so it never restarts in the middle of a meet. macOS signing and notarization start working once the `APPLE_*` secrets exist; Windows Authenticode is still to do.

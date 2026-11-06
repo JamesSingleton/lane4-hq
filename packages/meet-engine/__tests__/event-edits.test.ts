@@ -90,7 +90,7 @@ describe("updateEvent", () => {
       NOW,
     );
     const edited = next.events.find((e) => e.id === free.id)!;
-    expect(eventTitle(edited)).toBe("Female JV 100 Backstroke");
+    expect(eventTitle(edited)).toBe("Girls JV 100 Backstroke");
     expect(next.events[next.events.length - 1]!.id).toBe(free.id);
     expect(next.updatedAt).toBe(NOW.toISOString());
   });
@@ -190,8 +190,8 @@ describe("gender order", () => {
     const boys = swapGenderOrder(meet, NOW);
     expect(genderOrder(boys)).toBe("boys");
     expect(boys.events.slice(0, 2).map(eventTitle)).toEqual([
-      "Male 200 Medley Relay",
-      "Female 200 Medley Relay",
+      "Boys 200 Medley Relay",
+      "Girls 200 Medley Relay",
     ]);
     expect(boys.events.map((e) => e.number)).toEqual(
       meet.events.map((e) => e.number),

@@ -9,168 +9,408 @@ import {
   verifyHeat,
 } from "@lane4hq/meet-engine/adjudicate";
 import { eventTitle, heatLabel } from "@lane4hq/meet-engine/labels";
-import { heatKey, type TimerCapture } from "@lane4hq/meet-engine/model";
-import { runsEvent } from "@lane4hq/meet-engine/pools";
-import { heatsForEvent } from "@lane4hq/meet-engine/seeding";
+import type { LaneResult, TimerCapture } from "@lane4hq/meet-engine/model";
 import { Badge } from "@lane4hq/ui/components/badge";
 import { Button } from "@lane4hq/ui/components/button";
 import { cn } from "@lane4hq/ui/lib/utils";
-import { Keyboard, Play } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { Play } from "lucide-react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { DivingPanel } from "../components/diving-panel";
-import { NativeSelect } from "../components/native-select";
 import { ReviewPanel } from "../components/review-panel";
 import { TimerBar } from "../components/timer-bar";
+import {
+  firstOpenHeat,
+  type HeatPosition,
+  type HeatState,
+  heatCaptures,
+  nextWaitingRace,
+  runOrder,
+  scoreboard,
+  stepHeat,
+  withEveryLane,
+} from "../lib/run-order";
 import { simulateHeat } from "../lib/simulate-heat";
 import { useMeet } from "../state/meet-context";
 import { useTiming } from "../state/timing-context";
 
-type Selection =
-  | { kind: "capture"; id: string }
-  | { kind: "manual"; eventId: string; heat: number }
-  | null;
+type Selection = {
+  position: HeatPosition | null;
+  /** A specific race, when it isn't simply the newest one on the heat. */
+  captureId: string | null;
+};
+
+function sameHeat(a: HeatPosition | null, b: HeatPosition | null): boolean {
+  return a?.eventId === b?.eventId && a?.heat === b?.heat;
+}
 
 export function RunScreen() {
   const {
-    state: { meet },
+    state: { meet, saveState },
     actions: { update },
   } = useMeet();
   const {
     state: { lastCaptureId },
     meta: { simulator },
   } = useTiming();
-  const [selection, setSelection] = useState<Selection>(() => {
-    const open = [...meet.captures].reverse().find((c) => c.state === "new");
-    return open ? { kind: "capture", id: open.id } : null;
-  });
+  const [selection, setSelection] = useState<Selection>(() => ({
+    position: firstOpenHeat(meet),
+    captureId: null,
+  }));
+  const [tab, setTab] = useState<"events" | "races">("events");
+  const drafts = useRef(new Map<string, Map<number, LaneResult>>());
 
-  // Follow the console: jump to each new race unless the operator is mid-review.
+  const picked = selection.captureId
+    ? meet.captures.find((c) => c.id === selection.captureId)
+    : undefined;
+  const position = picked?.assignment ?? selection.position;
+  const capture =
+    picked ?? (position ? heatCaptures(meet, position)[0] : undefined);
+
+  function open(next: HeatPosition | null) {
+    setSelection({ position: next, captureId: null });
+  }
+
+  function openRace(race: TimerCapture) {
+    setTab(race.assignment ? "events" : "races");
+    setSelection({ position: race.assignment, captureId: race.id });
+  }
+
+  // Follow the console, unless this heat has a race still waiting for review.
   useEffect(() => {
     if (!lastCaptureId) return;
-    setSelection((current) => {
-      if (current?.kind === "capture") {
-        const c = meet.captures.find((x) => x.id === current.id);
-        if (c?.state === "new") return current;
-      }
-      return { kind: "capture", id: lastCaptureId };
-    });
+    const race = meet.captures.find((c) => c.id === lastCaptureId);
+    if (!race) return;
+    const reviewing = capture?.state === "new" && capture.id !== race.id;
+    if (!reviewing) openRace(race);
   }, [lastCaptureId]);
 
-  const capture =
-    selection?.kind === "capture"
-      ? meet.captures.find((c) => c.id === selection.id)
-      : undefined;
-
   const review: HeatReview | null = useMemo(() => {
-    if (selection?.kind === "manual")
-      return manualReview(meet, selection.eventId, selection.heat);
-    if (
-      capture?.assignment &&
-      meet.events.some((e) => e.id === capture.assignment!.eventId)
-    ) {
-      return reviewCapture(meet, capture);
+    if (capture?.assignment) {
+      const assigned = capture.assignment.eventId;
+      return meet.events.some((e) => e.id === assigned)
+        ? reviewCapture(meet, capture)
+        : null;
     }
-    return null;
-  }, [meet, selection, capture]);
-
-  const isDiveEvent = (eventId: string) =>
-    meet.events.some((e) => e.id === eventId && e.kind === "dive");
-  const captures = [...meet.captures].reverse();
-  const pendingCount = meet.captures.filter((c) => c.state === "new").length;
-
-  function selectNext() {
-    const next = meet.captures.find(
-      (c) => c.state === "new" && c.id !== capture?.id,
+    if (capture || !position) return null;
+    return withEveryLane(
+      meet,
+      manualReview(meet, position.eventId, position.heat),
     );
-    setSelection(next ? { kind: "capture", id: next.id } : null);
-  }
+  }, [meet, position, capture]);
+
+  const waiting = nextWaitingRace(meet, position);
+  const unassigned = meet.captures.filter(
+    (c) => c.state === "new" && !c.assignment,
+  ).length;
+  const event = position
+    ? meet.events.find((e) => e.id === position.eventId)
+    : undefined;
+  const panelKey = `${capture?.id ?? "manual"}:${review?.eventId}:${review?.heat}`;
+  const step = position
+    ? (direction: 1 | -1) => {
+        const next = stepHeat(meet, position, direction);
+        if (next) open(next);
+      }
+    : null;
 
   return (
     <div className="flex h-full flex-col">
+      {saveState.status === "error" ? (
+        <p
+          role="alert"
+          className="shrink-0 bg-destructive/10 px-4 py-1.5 text-sm text-destructive"
+        >
+          Not saved: {saveState.message}
+        </p>
+      ) : null}
       <TimerBar />
       {simulator ? <SimulatorBar /> : null}
       <div className="flex min-h-0 flex-1">
-        <aside className="flex w-72 shrink-0 flex-col border-r">
-          <div className="flex items-center justify-between border-b px-3 py-2">
-            <h2 className="text-sm font-semibold">
-              Races from the console
-              {pendingCount ? (
-                <Badge className="ml-2">{pendingCount} to review</Badge>
+        <aside className="flex w-44 shrink-0 flex-col border-r lg:w-60">
+          <div className="flex shrink-0 gap-1 border-b p-1.5" role="tablist">
+            <TabButton
+              active={tab === "events"}
+              onClick={() => setTab("events")}
+            >
+              Events
+            </TabButton>
+            <TabButton active={tab === "races"} onClick={() => setTab("races")}>
+              Console races
+              {unassigned ? (
+                <Badge className="ml-1.5">{unassigned}</Badge>
               ) : null}
-            </h2>
+            </TabButton>
           </div>
-          <ManualEntryPicker
-            onPick={(eventId, heat) =>
-              setSelection({ kind: "manual", eventId, heat })
-            }
-          />
-          <ul className="min-h-0 flex-1 overflow-auto p-1">
-            {captures.length === 0 ? (
-              <li className="p-3 text-sm text-muted-foreground">
-                Races appear here as they finish on the timing console.
-              </li>
-            ) : null}
-            {captures.map((c) => (
-              <li key={c.id}>
-                <CaptureRow
-                  capture={c}
-                  selected={
-                    selection?.kind === "capture" && selection.id === c.id
-                  }
-                  onSelect={() => setSelection({ kind: "capture", id: c.id })}
-                />
-              </li>
-            ))}
-          </ul>
-        </aside>
-        <section className="min-w-0 flex-1 overflow-auto">
-          {selection?.kind === "manual" && isDiveEvent(selection.eventId) ? (
-            <DivingPanel
-              key={selection.eventId}
-              eventId={selection.eventId}
-              onVerify={(results) =>
-                update((m) =>
-                  verifyHeat(
-                    m,
-                    { eventId: selection.eventId, heat: 1 },
-                    results,
-                  ),
-                )
-              }
-            />
-          ) : capture || selection?.kind === "manual" ? (
-            <ReviewPanel
-              key={`${selection?.kind === "capture" ? capture?.id : "manual"}:${review?.eventId}:${review?.heat}`}
-              capture={capture ?? null}
-              review={review}
-              onAssign={(assignment) =>
-                capture &&
-                update((m) => assignCapture(m, capture.id, assignment))
-              }
-              onIgnore={() => {
-                if (capture) update((m) => ignoreCapture(m, capture.id));
-                selectNext();
-              }}
-              onVerify={(results) => {
-                if (!review) return;
-                update((m) => verifyHeat(m, review, results));
-                selectNext();
-              }}
-            />
+          {tab === "events" ? (
+            <EventList position={position} onOpen={open} />
           ) : (
-            <div className="flex h-full items-center justify-center p-10 text-center">
-              <div className="flex max-w-sm flex-col items-center gap-2">
-                <p className="text-sm font-medium">Nothing to review</p>
-                <p className="text-sm text-muted-foreground">
-                  Connect the timing console above. Each finished race is pulled
-                  automatically; check it against the heat sheet and verify it
-                  to make it official.
-                </p>
-              </div>
-            </div>
+            <ul className="min-h-0 flex-1 overflow-auto p-1">
+              {meet.captures.length === 0 ? (
+                <li className="p-3 text-sm text-muted-foreground">
+                  Races appear here as they finish on the timing console.
+                </li>
+              ) : null}
+              {[...meet.captures].reverse().map((c) => (
+                <li key={c.id}>
+                  <CaptureRow
+                    capture={c}
+                    selected={capture?.id === c.id}
+                    onSelect={() => openRace(c)}
+                  />
+                </li>
+              ))}
+            </ul>
           )}
+          <TeamScores />
+        </aside>
+        <section className="flex min-w-0 flex-1 flex-col">
+          {waiting ? <WaitingRace race={waiting} onOpen={openRace} /> : null}
+          <div className="min-h-0 flex-1 overflow-auto">
+            {event?.kind === "dive" && position ? (
+              <DivingPanel
+                key={event.id}
+                eventId={event.id}
+                onVerify={(results) =>
+                  update((m) =>
+                    verifyHeat(m, { eventId: event.id, heat: 1 }, results),
+                  )
+                }
+              />
+            ) : capture || position ? (
+              <ReviewPanel
+                key={panelKey}
+                capture={capture ?? null}
+                review={review}
+                draft={drafts.current.get(panelKey)}
+                onDraft={(edits) => drafts.current.set(panelKey, edits)}
+                onStep={step}
+                onAssign={(assignment) => {
+                  if (!capture) return;
+                  update((m) => assignCapture(m, capture.id, assignment));
+                  setSelection({ position: assignment, captureId: capture.id });
+                }}
+                onIgnore={() => {
+                  if (!capture) return;
+                  update((m) => ignoreCapture(m, capture.id));
+                  open(position);
+                }}
+                onVerify={(results) => {
+                  if (!review) return;
+                  const next = update((m) => verifyHeat(m, review, results));
+                  drafts.current.delete(panelKey);
+                  open(nextHeat(next, review) ?? review);
+                }}
+              />
+            ) : (
+              <div className="flex h-full items-center justify-center p-10 text-center">
+                <div className="flex max-w-sm flex-col items-center gap-2">
+                  <p className="text-sm font-medium">No heats yet</p>
+                  <p className="text-sm text-muted-foreground">
+                    Seed events on the Heat sheet, then connect the timing
+                    console above.
+                  </p>
+                </div>
+              </div>
+            )}
+          </div>
         </section>
       </div>
+    </div>
+  );
+}
+
+function TabButton({
+  active,
+  onClick,
+  children,
+}: {
+  active: boolean;
+  onClick: () => void;
+  children: React.ReactNode;
+}) {
+  return (
+    <button
+      type="button"
+      role="tab"
+      aria-selected={active}
+      onClick={onClick}
+      className={cn(
+        "flex h-7 flex-1 items-center justify-center rounded-md text-xs text-muted-foreground outline-none hover:bg-muted focus-visible:ring-3 focus-visible:ring-ring/50",
+        active && "bg-muted font-medium text-foreground",
+      )}
+    >
+      {children}
+    </button>
+  );
+}
+
+const HEAT_STATE_LABEL: Record<HeatState, string> = {
+  waiting: "not swum",
+  ready: "ready to verify",
+  verified: "verified",
+};
+
+function EventList({
+  position,
+  onOpen,
+}: {
+  position: HeatPosition | null;
+  onOpen: (position: HeatPosition) => void;
+}) {
+  const {
+    state: { meet },
+  } = useMeet();
+  const events = useMemo(() => runOrder(meet), [meet]);
+  const current = useRef<HTMLLIElement>(null);
+
+  useEffect(() => {
+    current.current?.scrollIntoView({ block: "nearest" });
+  }, [position?.eventId]);
+
+  if (events.length === 0) {
+    return (
+      <p className="min-h-0 flex-1 p-3 text-sm text-muted-foreground">
+        Seeded events appear here in meet order.
+      </p>
+    );
+  }
+  return (
+    <ul className="min-h-0 flex-1 overflow-auto p-1">
+      {events.map(({ event, heats }) => {
+        const here = position?.eventId === event.id;
+        const firstOpen =
+          heats.find((h) => h.state !== "verified") ?? heats[0]!;
+        return (
+          <li
+            key={event.id}
+            ref={here ? current : undefined}
+            className={cn("rounded-md px-2 py-1.5", here && "bg-muted")}
+          >
+            <button
+              type="button"
+              aria-current={here ? "true" : undefined}
+              onClick={() =>
+                onOpen({ eventId: event.id, heat: firstOpen.number })
+              }
+              className="flex w-full items-baseline gap-2 rounded text-left text-sm outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
+            >
+              <span className="w-6 shrink-0 text-right font-semibold tabular-nums">
+                {event.number}
+              </span>
+              <span className="truncate">{eventTitle(event)}</span>
+            </button>
+            <div className="mt-1 flex flex-wrap gap-1 pl-8">
+              {heats.map((heat) => {
+                const open = sameHeat(position, {
+                  eventId: event.id,
+                  heat: heat.number,
+                });
+                return (
+                  <button
+                    key={heat.number}
+                    type="button"
+                    aria-label={`Event ${event.number}, heat ${heat.number}, ${HEAT_STATE_LABEL[heat.state]}`}
+                    aria-current={open ? "true" : undefined}
+                    title={`Heat ${heat.number}, ${HEAT_STATE_LABEL[heat.state]}`}
+                    onClick={() =>
+                      onOpen({ eventId: event.id, heat: heat.number })
+                    }
+                    className={cn(
+                      "flex size-5 items-center justify-center rounded text-[11px] tabular-nums outline-none focus-visible:ring-3 focus-visible:ring-ring/50",
+                      heat.state === "waiting" &&
+                        "border text-muted-foreground",
+                      heat.state === "ready" &&
+                        "bg-amber-500 font-medium text-black",
+                      heat.state === "verified" &&
+                        "bg-primary text-primary-foreground",
+                      open &&
+                        "ring-2 ring-foreground ring-offset-1 ring-offset-background",
+                    )}
+                  >
+                    {heat.number}
+                  </button>
+                );
+              })}
+            </div>
+          </li>
+        );
+      })}
+    </ul>
+  );
+}
+
+function TeamScores() {
+  const {
+    state: { meet },
+  } = useMeet();
+  const { columns, rows } = useMemo(() => scoreboard(meet), [meet]);
+  if (rows.length === 0) return null;
+  return (
+    <table className="w-full shrink-0 border-t text-xs">
+      <caption className="px-3 pt-2 text-left font-medium">Team scores</caption>
+      <thead className="text-muted-foreground">
+        <tr>
+          <th scope="col" className="px-3 py-1 text-left font-normal">
+            Team
+          </th>
+          {columns.map((column) => (
+            <th
+              key={column}
+              scope="col"
+              className="pr-3 text-right font-normal"
+            >
+              {column}
+            </th>
+          ))}
+        </tr>
+      </thead>
+      <tbody className="tabular-nums">
+        {rows.slice(0, 6).map((row) => (
+          <tr key={row.teamCode}>
+            <th scope="row" className="px-3 pb-1 text-left font-medium">
+              {row.teamCode}
+            </th>
+            {row.points.map((points, i) => (
+              <td key={columns[i]} className="pr-3 pb-1 text-right">
+                {points}
+              </td>
+            ))}
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  );
+}
+
+function WaitingRace({
+  race,
+  onOpen,
+}: {
+  race: TimerCapture;
+  onOpen: (race: TimerCapture) => void;
+}) {
+  const {
+    state: { meet },
+  } = useMeet();
+  const event = race.assignment
+    ? meet.events.find((e) => e.id === race.assignment!.eventId)
+    : undefined;
+  return (
+    <div className="flex shrink-0 items-center gap-3 border-b bg-amber-500/10 px-4 py-1.5 text-sm">
+      <span>
+        Race {race.race.raceNumber} finished
+        {event
+          ? `: Event ${event.number}, ${heatLabel(event, race.assignment!.heat)}`
+          : ", and it needs a heat"}
+      </span>
+      <Button
+        size="sm"
+        variant="outline"
+        className="ml-auto"
+        onClick={() => onOpen(race)}
+      >
+        Load times
+      </Button>
     </div>
   );
 }
@@ -229,49 +469,6 @@ function CaptureRow({
   );
 }
 
-function ManualEntryPicker({
-  onPick,
-}: {
-  onPick: (eventId: string, heat: number) => void;
-}) {
-  const {
-    state: { meet },
-  } = useMeet();
-  // A split meet times only this pool's heats here.
-  const options = meet.events.flatMap((event) =>
-    (runsEvent(meet, event.id) ? heatsForEvent(meet, event.id) : []).map(
-      (h) => ({ event, heat: h.number }),
-    ),
-  );
-  if (options.length === 0) return null;
-  return (
-    <div className="flex items-center gap-1.5 border-b px-3 py-2">
-      <Keyboard className="size-3.5 shrink-0 text-muted-foreground" />
-      <NativeSelect
-        aria-label="Enter a heat by hand"
-        className="flex-1"
-        value=""
-        onChange={(e) => {
-          const [eventId, heat] = e.currentTarget.value.split("|");
-          if (eventId && heat) onPick(eventId, Number(heat));
-        }}
-      >
-        <option value="">Enter a heat by hand…</option>
-        {options.map(({ event, heat }) => (
-          <option key={`${event.id}|${heat}`} value={`${event.id}|${heat}`}>
-            E{event.number}{" "}
-            {event.kind === "dive"
-              ? "Scores"
-              : heatLabel(event, heat, { short: true })}
-            {meet.heatRecords[heatKey(event.id, heat)] ? " ✓" : ""} ·{" "}
-            {eventTitle(event)}
-          </option>
-        ))}
-      </NativeSelect>
-    </div>
-  );
-}
-
 function SimulatorBar() {
   const {
     state: { meet },
@@ -295,7 +492,7 @@ function SimulatorBar() {
   return (
     <div className="flex flex-wrap items-center gap-3 border-b bg-amber-500/5 px-4 py-2 text-sm">
       <Badge variant="outline">Simulator</Badge>
-      <span className="text-muted-foreground">
+      <span className="hidden text-muted-foreground lg:inline">
         A pretend console for training and testing. Nothing here touches real
         timing.
       </span>
