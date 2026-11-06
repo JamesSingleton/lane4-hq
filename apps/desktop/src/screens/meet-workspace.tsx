@@ -64,53 +64,73 @@ function WorkspaceLayout({ initialSection }: { initialSection: Section }) {
     actions: { close },
   } = useMeet();
 
+  // Running a meet needs every pixel, so the navigation shrinks to icons.
+  const compact = section === "run";
+
   return (
     <div className="flex h-full">
-      <nav className="flex w-52 shrink-0 flex-col gap-1 border-r bg-muted/30 p-2">
+      <nav
+        className={cn(
+          "flex shrink-0 flex-col gap-1 border-r bg-muted/30 p-2",
+          compact ? "w-12 items-center" : "w-52",
+        )}
+      >
         <Button
           variant="ghost"
-          size="sm"
-          className="mb-1 justify-start text-muted-foreground"
-          onClick={close}
+          size={compact ? "icon-sm" : "sm"}
+          aria-label="All meets"
+          title="All meets"
+          className={cn(
+            "mb-1 text-muted-foreground",
+            !compact && "justify-start",
+          )}
+          onClick={() => void close()}
         >
           <ArrowLeft />
-          All meets
+          {compact ? null : "All meets"}
         </Button>
-        <div className="mb-2 px-2">
-          <p className="line-clamp-2 text-sm font-semibold leading-snug">
-            {meet.name}
-          </p>
-          <p className="text-xs text-muted-foreground">
-            {[
-              formatDateRange(meet.startDate, meet.endDate),
-              meet.course,
-              `${meet.poolLanes} lanes`,
-            ]
-              .filter(Boolean)
-              .join(" · ")}
-          </p>
-        </div>
+        {compact ? null : (
+          <div className="mb-2 px-2">
+            <p className="line-clamp-2 text-sm font-semibold leading-snug">
+              {meet.name}
+            </p>
+            <p className="text-xs text-muted-foreground">
+              {[
+                formatDateRange(meet.startDate, meet.endDate),
+                meet.course,
+                `${meet.poolLanes} lanes`,
+              ]
+                .filter(Boolean)
+                .join(" · ")}
+            </p>
+          </div>
+        )}
         {NAV.map((item) => (
           <button
             key={item.id}
             type="button"
+            aria-label={item.label}
+            title={item.label}
             aria-current={section === item.id ? "page" : undefined}
             onClick={() => setSection(item.id)}
             className={cn(
-              "flex h-8 items-center gap-2 rounded-lg px-2 text-sm outline-none transition-colors hover:bg-muted focus-visible:ring-3 focus-visible:ring-ring/50 [&_svg]:size-4 [&_svg]:text-muted-foreground",
+              "flex h-8 items-center gap-2 rounded-lg text-sm outline-none transition-colors hover:bg-muted focus-visible:ring-3 focus-visible:ring-ring/50 [&_svg]:size-4 [&_svg]:text-muted-foreground",
+              compact ? "w-8 justify-center" : "px-2",
               section === item.id &&
                 "bg-muted font-medium [&_svg]:text-foreground",
             )}
           >
             {item.icon}
-            {item.label}
+            {compact ? null : item.label}
           </button>
         ))}
-        <div className="mt-auto flex flex-col gap-1.5 px-2 pb-1">
-          <TimerPill onClick={() => setSection("run")} />
-          <PublishPill onClick={() => setSection("export")} />
-          <SavePill />
-        </div>
+        {compact ? null : (
+          <div className="mt-auto flex flex-col gap-1.5 px-2 pb-1">
+            <TimerPill onClick={() => setSection("run")} />
+            <PublishPill onClick={() => setSection("export")} />
+            <SavePill />
+          </div>
+        )}
       </nav>
       <main className="min-w-0 flex-1 overflow-auto">
         {section === "setup" ? (

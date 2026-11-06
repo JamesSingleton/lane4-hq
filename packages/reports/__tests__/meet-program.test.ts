@@ -140,10 +140,10 @@ describe("meet program reports", () => {
     const report = buildHeatSheetReport(meet, { generatedAt: NOW });
     expect(report.meetDateLabel).toBe("25-Oct-26 to 26-Oct-26");
     expect(report.events.map((e) => e.title)).toEqual([
-      "Female 100 Butterfly Prelims",
-      "Male 200 Medley Relay",
-      "Female Diving (1 dives)",
-      "Female 100 Butterfly Finals",
+      "Girls 100 Butterfly Prelims",
+      "Boys 200 Medley Relay",
+      "Girls Diving (1 dives)",
+      "Girls 100 Butterfly Finals",
     ]);
     const [prelim, relay, dive, finals] = report.events;
     expect(prelim!.heats.map((h) => h.label)).toEqual([

@@ -1,4 +1,4 @@
-import { formatEventName, formatGenderLabel } from "@lane4hq/swim-core/events";
+import { formatEventName } from "@lane4hq/swim-core/events";
 import { formatTime } from "@lane4hq/swim-core/times";
 import type {
   Athlete,
@@ -24,10 +24,16 @@ const ROUND_SUFFIX: Record<MeetEvent["round"], string> = {
   final: " Finals",
 };
 
+const GENDER_TITLE: Record<MeetEvent["gender"], string> = {
+  female: "Girls",
+  male: "Boys",
+  mixed: "Mixed",
+};
+
 export function eventTitle(event: MeetEvent): string {
   const age = event.ageGroup ? `${event.ageGroup} ` : "";
   const name = formatEventName(event.distance, event.stroke, event.diveCount);
-  return `${formatGenderLabel(event.gender)} ${age}${name}${ROUND_SUFFIX[event.round]}`;
+  return `${GENDER_TITLE[event.gender]} ${age}${name}${ROUND_SUFFIX[event.round]}`;
 }
 
 /** "A Final", "B Final", … for a finals heat; null for other heats. */

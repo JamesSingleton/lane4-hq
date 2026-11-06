@@ -156,7 +156,7 @@ describe("prelims to finals", () => {
       finalHeats: 2,
       prelimEventId: "p1",
     });
-    expect(eventTitle(finals)).toBe("Female 50 Freestyle Finals");
+    expect(eventTitle(finals)).toBe("Girls 50 Freestyle Finals");
     expect(meet.events.map((e) => e.id)).toEqual(["p1", "d2", finals.id]);
     expect(built.plan.alternates.map((r) => name(meet, r.entry.id))).toEqual([
       "12",
@@ -430,7 +430,7 @@ describe("diving", () => {
 
     const csv = strFromU8(exportResultsCsv(meet).bytes);
     expect(csv).toContain("63.00");
-    expect(csv).toContain("Female Diving (2 dives)");
+    expect(csv).toContain("Girls Diving (2 dives)");
     expect(buildHeatPublication(meet, "d2", 1).lanes[0]!.dive).toBeDefined();
   });
 

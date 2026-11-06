@@ -116,7 +116,7 @@ describe("bulk event edits", () => {
     });
     expect(meet.events).toHaveLength(25);
     expect(nextEventNumber(meet)).toBe(26);
-    expect(eventTitle(meet.events[1]!)).toBe("Female 200 Medley Relay");
+    expect(eventTitle(meet.events[1]!)).toBe("Girls 200 Medley Relay");
     expect(meet.updatedAt).toBe(NOW.toISOString());
   });
 
