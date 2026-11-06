@@ -14,6 +14,8 @@ type JournalLine = {
   captureId?: string;
   at?: string;
   timer?: string;
+  /** Header width the race was decoded with. Older lines don't have it. */
+  maxNumLanes?: number;
   raw: string;
 };
 
@@ -29,6 +31,7 @@ function parseJournalLine(line: string): JournalLine | null {
     captureId?: unknown;
     at?: unknown;
     timer?: unknown;
+    maxNumLanes?: unknown;
     raw?: unknown;
   };
   if (typeof record.raw !== "string" || record.raw.length === 0) return null;
@@ -41,6 +44,8 @@ function parseJournalLine(line: string): JournalLine | null {
         : undefined,
     at,
     timer: typeof record.timer === "string" ? record.timer : undefined,
+    maxNumLanes:
+      typeof record.maxNumLanes === "number" ? record.maxNumLanes : undefined,
     raw: record.raw,
   };
 }
@@ -73,7 +78,7 @@ export function replayCaptureJournal(
     let raw: Uint8Array;
     try {
       raw = fromHex(parsed.raw);
-      const race = decodeRace(raw);
+      const race = decodeRace(raw, { maxNumLanes: parsed.maxNumLanes });
       if (findCapture(current, race)) {
         alreadyRecorded += 1;
         continue;

@@ -111,14 +111,32 @@ export function createBrowserRepository(
 
 /**
  * Serializes saves so the newest document always wins and writes never
- * overlap: while one save runs, later changes coalesce into the next one.
+ * overlap: while one save runs, later changes coalesce into the next one. A
+ * failed save is kept and retried, so a change can't be lost just because
+ * nothing else changed after it.
  */
 export function createSaveQueue(
   save: (meet: Meet) => Promise<void>,
   onState: (state: SaveState) => void,
+  retryMs = 5000,
 ) {
   let pending: Meet | null = null;
+  let unsaved: Meet | null = null;
   let running: Promise<void> | null = null;
+  let retry: ReturnType<typeof setTimeout> | null = null;
+
+  function clearRetry() {
+    if (retry !== null) clearTimeout(retry);
+    retry = null;
+  }
+
+  function push(meet: Meet) {
+    clearRetry();
+    pending = meet;
+    unsaved = meet;
+    running ??= run();
+    return running;
+  }
 
   async function run() {
     while (pending) {
@@ -127,6 +145,7 @@ export function createSaveQueue(
       onState({ status: "saving" });
       try {
         await save(next);
+        if (unsaved === next) unsaved = null;
         onState({ status: pending ? "saving" : "saved", at: next.updatedAt });
       } catch (error) {
         onState({
@@ -136,17 +155,26 @@ export function createSaveQueue(
       }
     }
     running = null;
+    const failed = unsaved;
+    if (failed) retry = setTimeout(() => void push(failed), retryMs);
   }
 
   return {
-    push(meet: Meet) {
-      pending = meet;
-      running ??= run();
-      return running;
+    push,
+    /**
+     * Waits for saves in progress, and tries once more if the last one failed.
+     * Resolves whether everything pushed so far is on disk.
+     */
+    async flush(): Promise<boolean> {
+      await running;
+      if (unsaved) await push(unsaved);
+      return unsaved === null;
     },
-    /** Resolves when everything pushed so far is on disk. */
-    flush(): Promise<void> {
-      return running ?? Promise.resolve();
+    /** Give up on anything unsaved. */
+    discard() {
+      clearRetry();
+      pending = null;
+      unsaved = null;
     },
   };
 }

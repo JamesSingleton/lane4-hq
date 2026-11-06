@@ -1,6 +1,6 @@
 import { createMeet } from "@lane4hq/meet-engine/create";
 import type { Meet } from "@lane4hq/meet-engine/model";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import {
   createBrowserRepository,
   createSaveQueue,
@@ -115,6 +115,81 @@ describe("save queue", () => {
       async () => {},
       () => {},
     ).flush();
+  });
+
+  it("retries a failed save until it lands", async () => {
+    vi.useFakeTimers();
+    try {
+      const written: string[] = [];
+      let broken = true;
+      const states: SaveState[] = [];
+      const queue = createSaveQueue(
+        async (m) => {
+          if (broken) throw new Error("Disk full");
+          written.push(m.name);
+        },
+        (s) => states.push(s),
+        1000,
+      );
+      await queue.push(meet("x", "1"));
+      expect(states.at(-1)?.status).toBe("error");
+      broken = false;
+      await vi.advanceTimersByTimeAsync(1000);
+      expect(written).toEqual(["x"]);
+      expect(states.at(-1)).toEqual({ status: "saved", at: "1" });
+      await vi.advanceTimersByTimeAsync(5000);
+      expect(written).toEqual(["x"]);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("flush tries again and reports whether the meet is on disk", async () => {
+    let broken = true;
+    const queue = createSaveQueue(
+      async () => {
+        if (broken) throw new Error("Disk full");
+      },
+      () => {},
+      60_000,
+    );
+    await queue.push(meet("x", "1"));
+    expect(await queue.flush()).toBe(false);
+    broken = false;
+    expect(await queue.flush()).toBe(true);
+  });
+
+  it("a newer change replaces a failed one", async () => {
+    const attempts: string[] = [];
+    const queue = createSaveQueue(
+      async (m) => {
+        attempts.push(m.name);
+        if (m.name === "one") throw new Error("Disk full");
+      },
+      () => {},
+      60_000,
+    );
+    await queue.push(meet("one", "1"));
+    await queue.push(meet("two", "2"));
+    expect(await queue.flush()).toBe(true);
+    expect(attempts).toEqual(["one", "two"]);
+  });
+
+  it("stops retrying once told to discard", async () => {
+    vi.useFakeTimers();
+    try {
+      const save = vi.fn(async () => {
+        throw new Error("Disk full");
+      });
+      const queue = createSaveQueue(save, () => {}, 1000);
+      await queue.push(meet("x", "1"));
+      queue.discard();
+      await vi.advanceTimersByTimeAsync(5000);
+      expect(save).toHaveBeenCalledTimes(1);
+      expect(await queue.flush()).toBe(true);
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it("reports failures", async () => {

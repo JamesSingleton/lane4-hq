@@ -27,7 +27,7 @@
         "style-src": "'self' 'unsafe-inline'",
         "img-src": "'self' data: asset: http://asset.localhost",
         "font-src": "'self' data:",
-        "connect-src": "ipc: http://ipc.localhost",
+        "connect-src": "ipc: http://ipc.localhost https://us.i.posthog.com",
         "object-src": "'none'",
         "base-uri": "'self'",
         "frame-ancestors": "'none'"
@@ -43,7 +43,7 @@
   "bundle": {
     "active": true,
     "targets": ["app", "dmg", "nsis", "msi"],
-    "category": "SportsGame",
+    "category": "Sports",
     "shortDescription": "Lane4 swim team desktop app",
     "copyright": "Lane4",
     "icon": [

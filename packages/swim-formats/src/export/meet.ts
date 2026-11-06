@@ -744,10 +744,16 @@ export function exportHy3(meet: ParsedMeet): string {
   const entryUnits: EntryUnit[] = [];
   const seenUnitKeys = new Set<string>();
   for (const entry of meet.entries) {
-    entryUnits.push({ ...entry });
-    seenUnitKeys.add(
-      resultGroupKey(entry.eventNumber, entry.swimmerName, entry.eventSuffix),
+    const key = resultGroupKey(
+      entry.eventNumber,
+      entry.swimmerName,
+      entry.eventSuffix,
     );
+    // A prelim and final swim parse as two entries but share one E1, which
+    // carries both results. A second E1 would write them all again.
+    if (seenUnitKeys.has(key)) continue;
+    entryUnits.push({ ...entry });
+    seenUnitKeys.add(key);
   }
   for (const result of meet.results) {
     const key = resultGroupKey(

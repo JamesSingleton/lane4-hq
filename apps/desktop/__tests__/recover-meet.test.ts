@@ -55,6 +55,20 @@ function line(input: {
   });
 }
 
+describe("journal lines from a wider console", () => {
+  it("decodes with the header width the line recorded", () => {
+    const meet = createMeet(
+      { name: "Wide", course: "SCY" },
+      { newId: () => "wide" },
+    );
+    const raw = toHex(encodeRace(race(7), { maxNumLanes: 12 }));
+    const line = JSON.stringify({ captureId: "c", raw, maxNumLanes: 12 });
+    const replay = replayCaptureJournal(meet, line);
+    expect(replay).toMatchObject({ added: 1, unreadable: 0 });
+    expect(replay.meet.captures[0]?.race.raceNumber).toBe(7);
+  });
+});
+
 describe("capture journal replay", () => {
   const meet = createMeet(
     { name: "Invite", course: "SCY" },

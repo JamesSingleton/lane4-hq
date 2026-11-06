@@ -302,8 +302,16 @@ export function exportAllTeamResults(
   scope: ResultsScope = {},
 ): ExportFile {
   const files: Record<string, Uint8Array> = {};
+  const inScope = new Set(
+    meet.events
+      .filter((e) => !scope.gender || e.gender === scope.gender)
+      .map((e) => e.id),
+  );
   for (const team of meet.teams) {
-    if (!meet.entries.some((e) => e.teamCode === team.code)) continue;
+    const entered = meet.entries.some(
+      (e) => e.teamCode === team.code && inScope.has(e.eventId),
+    );
+    if (!entered) continue;
     Object.assign(files, teamFiles(meet, team.code, scope, `${team.code}/`));
   }
   const date = ddMmmYyyy(meet.startDate);
@@ -350,7 +358,7 @@ export function exportResultsCsv(meet: Meet): ExportFile {
     .map((r) =>
       r
         .map((cell) =>
-          /[",\n]/.test(cell) ? `"${cell.replaceAll('"', '""')}"` : cell,
+          /[",\r\n]/.test(cell) ? `"${cell.replaceAll('"', '""')}"` : cell,
         )
         .join(","),
     )

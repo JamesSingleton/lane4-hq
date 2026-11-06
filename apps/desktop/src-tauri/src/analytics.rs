@@ -70,10 +70,7 @@ mod tests {
     #[test]
     fn panic_files_are_base_names() {
         assert_eq!(exception_file("src/export_file.rs"), "export_file.rs");
-        assert_eq!(
-            exception_file(r"C:\Users\coach\meets\main.rs"),
-            "main.rs"
-        );
+        assert_eq!(exception_file(r"C:\Users\coach\meets\main.rs"), "main.rs");
         assert_eq!(exception_file(""), "unknown");
         assert_eq!(exception_file("/"), "unknown");
     }
