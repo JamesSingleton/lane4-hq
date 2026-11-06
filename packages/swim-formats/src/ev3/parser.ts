@@ -133,6 +133,16 @@ function firstQualifyingTimeMs(
   return undefined;
 }
 
+/** Hy-Tek round letter, shared by EV3 and HYV. Blank means not stated. */
+function parseRoundCode(raw: string): ParsedEvent["roundType"] {
+  const code = raw.trim().toUpperCase();
+  if (!code) return undefined;
+  if (code === "P") return "prelim";
+  if (code === "S") return "swimoff";
+  if (code === "X") return "time_trial";
+  return "finals";
+}
+
 /** Parse Hy-Tek Meet Manager EV3 event template files. */
 export function parseEv3(
   content: string,
@@ -202,6 +212,7 @@ export function parseEv3(
     const ageGroup = formatAgeGroup(parts[6] || "", parts[7] || "");
     // Primary entry QT slots [19]/[20] (match HYV [8]/[9]).
     const qualifyingTimeMs = firstQualifyingTimeMs(parts[19], parts[20]);
+    const roundType = parseRoundCode(parts[2]!);
 
     if (isDiveStrokeCode(parts[9]!)) {
       if (!includeDiveEvents) {
@@ -217,6 +228,7 @@ export function parseEv3(
         ageGroup,
         eventKey: `dive-${eventNumber}`,
         eventKind: "dive",
+        ...(roundType ? { roundType } : {}),
         ...(Number.isFinite(diveCount) && diveCount > 0 ? { diveCount } : {}),
         ...(qualifyingTimeMs != null ? { qualifyingTimeMs } : {}),
       });
@@ -233,6 +245,7 @@ export function parseEv3(
       gender,
       ageGroup,
       eventKey: eventKeyFor(distance, stroke, meet.course, gender),
+      ...(roundType ? { roundType } : {}),
       ...(qualifyingTimeMs != null ? { qualifyingTimeMs } : {}),
     };
     meet.events.push(event);
@@ -282,18 +295,11 @@ export function parseHyv(
     const eventNumber = Number.parseInt(eventToken.replace(/\D/g, ""), 10);
     if (!Number.isFinite(eventNumber)) continue;
 
-    const roundRaw = (parts[1] || "F").toUpperCase();
-    const roundType =
-      roundRaw === "P"
-        ? ("prelim" as const)
-        : roundRaw === "S"
-          ? ("swimoff" as const)
-          : roundRaw === "X"
-            ? ("time_trial" as const)
-            : ("finals" as const);
+    const roundType = parseRoundCode(parts[1] || "F");
 
     // HYV: [1]=round, [2]=gender F/M, [3]=I/R, [4-5]=age, [6]=distance, [7]=stroke
-    // Dive events use stroke code 6; [6] holds the dive count instead of a distance.
+    // Dive events use stroke code 6. Meet Manager writes `1` in [6] even when
+    // the paired EV3 has 11 dives, so it isn't a dive count. HYV has none.
     if (isDiveStrokeCode(parts[7]!)) {
       if (!includeDiveEvents) {
         meet.skippedDiveEvents = (meet.skippedDiveEvents ?? 0) + 1;
@@ -301,7 +307,6 @@ export function parseHyv(
       }
       const diveGender = mapGender(parts[2] || "M");
       const diveAgeGroup = formatAgeGroup(parts[4] || "", parts[5] || "");
-      const diveCount = Number.parseInt(parts[6] || "", 10);
       meet.events.push({
         eventNumber,
         distance: 0,
@@ -311,7 +316,6 @@ export function parseHyv(
         eventKey: `dive-${eventNumber}`,
         eventKind: "dive",
         roundType,
-        ...(Number.isFinite(diveCount) && diveCount > 0 ? { diveCount } : {}),
       });
       continue;
     }

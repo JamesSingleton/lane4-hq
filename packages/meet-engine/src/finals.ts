@@ -127,6 +127,11 @@ export function createFinals(
 ): { meet: Meet; finalEventId: string; plan: FinalsPlan } {
   assertRunsEvent(meet, prelimEventId);
   const prelim = prelimEvent(meet, prelimEventId);
+  if (prelim.kind === "dive") {
+    throw new Error(
+      "Diving rounds are one dive card. Set the dive count on the event instead of building finals.",
+    );
+  }
   const progress = eventProgress(meet, prelimEventId);
   if (progress.heats === 0 || progress.state !== "complete") {
     throw new Error("Verify every prelim heat before building finals.");

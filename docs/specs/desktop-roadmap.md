@@ -55,6 +55,8 @@ Still to do:
 - [ ] CL2 and SD3 result writers in `swim-formats` that round-trip, so team packs can include them again.
 - [ ] Split records (HY3 G1) in the HY3 export.
 - [ ] Diving in the HY3/CL2 export (dive results are shown, printed, and scored, but team packs carry swims only).
+- [ ] Championship diving rounds: prelims, semifinals, and finals with cuts between them. A meet file's prelim diving imports as one 11-dive card, so a diver cut after 8 dives can't be scored yet, and semifinal scores import labeled as a swim-off.
+- [ ] Advancer files for postseason meets (needs a real sample from Meet Manager).
 - [ ] Hardware validation on a real console ([#74](https://github.com/JamesSingleton/lane4-hq/issues/74)).
 
 ## Milestone 3: Follow a meet (web first)

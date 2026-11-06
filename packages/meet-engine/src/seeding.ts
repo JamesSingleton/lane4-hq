@@ -62,6 +62,19 @@ export function heatSizes(
   return sizes;
 }
 
+/**
+ * Meet Manager spreads a field that fits exactly the circle-seeded heats
+ * evenly, short heats first: 18 in three heats of 8 lanes swim 6/6/6, 20 swim
+ * 6/7/7. `heatSizes` would fill the fast heats and give 3/7/8.
+ */
+function circleHeatSizes(swimmers: number, heats: number): number[] {
+  const base = Math.floor(swimmers / heats);
+  const extra = swimmers % heats;
+  return Array.from({ length: heats }, (_, i) =>
+    i >= heats - extra ? base + 1 : base,
+  );
+}
+
 function placeInLanes(entries: Entry[], lanes: number): Heat["lanes"] {
   const order = laneOrder(lanes);
   return entries
@@ -76,7 +89,11 @@ export function seedEntries(
   options: SeedOptions,
 ): Heat[] {
   const ranked = [...entries].sort(compareSeeds);
-  const sizes = heatSizes(ranked.length, options.lanes, options.minFirstHeat);
+  const filled = heatSizes(ranked.length, options.lanes, options.minFirstHeat);
+  const sizes =
+    filled.length === options.circleHeats
+      ? circleHeatSizes(ranked.length, filled.length)
+      : filled;
   const buckets: Entry[][] = sizes.map(() => []);
   const circle = Math.min(options.circleHeats ?? 0, sizes.length);
 
